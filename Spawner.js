@@ -440,6 +440,48 @@
     }
     return(null);
  }
+ 
+ function quickestUnitToDie(currentRole, activeSource)
+ {
+	var lowestTick = 1500;	//Lowest tick to live
+	var lowestUnit;
+	if(currentRole != null && activeSource != null)
+	{
+		var secondRole;
+		//Workers also pair up with role == lazy, this isn't true for any other role so we're
+		//allowing to send in 'worker' and count both types of units.
+		if(currentRole == 'worker')
+		{
+			secondRole = 'lazy';
+		}
+		else if(currentRole == 'lazy')
+		{
+			secondRole = 'worker';
+		}
+		else
+		{
+			secondRole = currentRole;
+		}
+		
+		for(var x in Game.creeps)
+		{
+			//Count up relevant body if the unit is going to the same id as the current unit and is the same role
+			//We have a issue where previous calls of this function could have marked a previous unit to be skipped
+			//however until it dies later calls of this have no way of knowing this, so we're going assume all older
+			//units then the current one are marked for death (not to be used in the next cycle) that way we don't go
+			//through an entire list of units trying to mark off 1 unneeded unit and instead mark off all of them.
+			if(Game.creeps[x].memory.usingSourceId == activeSource && 
+				(Game.creeps[x].memory.role == currentRole || Game.creeps[x].memory.role == secondRole) &&
+				Game.creeps[x].ticksToLive < lowestTick)
+			{
+				lowestTick = Game.creeps[x].ticksToLive;
+				lowestUnit = Game.creeps[x];
+			}
+		}
+	}
+	
+	return(lowestUnit);
+ }
 
  function findDeadUnitBody(spawner, nextName)
  {
@@ -458,12 +500,25 @@
 		{
 			var pathLength = Memory.creeps[nextName].pathLength;
 			var countActiveGather = countGatherAtSource(nextName);
+			var respawnThreshold = (pathLength*3*10);
 			
+			var replaceUnit = quickestUnitToDie(role, Memory.creeps[nextName].usingSourceId);
+			//If a unit will die at/before we arrive if we spawn a unit now and
+			//If when this unit dies, we'll below the threshold we need, spawn this unit
+			//TO DO: Increase the threshold of how early the unit can arrive if other units spawning
+			//		or other stalls prevent the unit from arriving in time
+			if(replaceUnit.ticksToLive <= (pathLength + returnBody.length*3) &&
+				(countActiveGather-replaceUnit.getActiveBodyparts(CARRY))*50 < respawnThreshold)
+			{
+				return(returnBody);
+			}
 			//If, even without this unit, we have enough carrying capacity to support this source
 			//running at full capacity. Skip this unit.
 			//Logic is if we have the total carrying capacity (numOfParts*50) and this is >= the amount
 			//we'd need for the units to go there and back again (pathLength*2) at full capacity (*10 per tick)
-			if((countActiveGather*50) > (pathLength*3*10))
+			//Added a bit extra to pathLength since the gather still has to run around and deposit energy to a few areas
+			//and so we need a buffer for them to be able to do that.
+			else if((countActiveGather*50) >= respawnThreshold)
 			{
 				console.log(nextName + ' found ' + (countActiveGather*50) + ' capacity of needed ' + (pathLength*2*10) + ' moving to end.');
 				extractNextName(spawner);
@@ -475,11 +530,29 @@
 		else if(role == 'worker' || role == 'lazy')
 		{
 			var countActiveWork = countWorkAtSource(nextName);
+			var respawnThreshold = 10;
 			
+			if(nextName != null && Memory.creeps[nextName] != null && 
+				Memory.creeps[nextName].pathLength != null)
+			{
+				var pathLength = Memory.creeps[nextName].pathLength;
+				
+				var replaceUnit = quickestUnitToDie(role, Memory.creeps[nextName].usingSourceId);
+				//If a unit will die at/before we arrive if we spawn a unit now and
+				//If when this unit dies, we'll below the threshold we need, spawn this unit
+				//TO DO: Increase the threshold of how early the unit can arrive if other units spawning
+				//		or other stalls prevent the unit from arriving in time
+				if(replaceUnit.ticksToLive <= (pathLength + returnBody.length*3) &&
+					(countActiveWork-replaceUnit.getActiveBodyparts(WORK))*2 < respawnThreshold)
+				{
+					console.log(nextName + ' found next death ' + replaceUnit.name
+					return(returnBody);
+				}
+			}
 			//If even without this unit we'd have enough harvesting capacity to clean out this source, skip the unit
 			//Logic is each unit of body harvests 2 units per tick. Each source carries 3000 units, recharging at 300 ticks.
 			//Leading to 10 Energy/Tick being the optimal harvest rate. So Body*2 should be at or barely above 10
-			if((countActiveWork*2) > 10)
+			if((countActiveWork*2) >= respawnThreshold)
 			{
 				console.log(nextName + ' found ' + (countActiveWork*2) + ' work of needed ' + 10 + ' moving to end.');
 				extractNextName(spawner);
@@ -573,60 +646,6 @@
 	return(countActiveGather);
  }
  
- //There is a problem with gatherers and workers having to many units on the field after the capacity for
- //energy has increased since the number of units to spawn, increasing their effeciency to the point where
- //we have twice or more units trying to move or harvest energy than needed. Since attempts to look
- //at unit data has failed since I can't seem to directly reference the name of the unit from memory we'll
- //correct this by looking at live units, if they have to many units on the field and we're going to spawn 
- //this unit next we'll skip this unit instead of spawning it again, which would recreate the same problem. 
- //This will mitigate and not solve the problem. Since only every other cycle will be correct
- //Benefits of this method instead of deleting the unit from the respawn list is that if things go wrong and we
- //need more units again, it will bounce back without any issues.
- function skipRedundant(spawner, unit)
- {
-	if(unit != null)
-	{
-		var currentRole = unit.memory.role;
-		if(currentRole == 'gather' && unit.memory.usingSourceId != null && unit.memory.pathLength != null) 
-		{
-			var pathLength = unit.memory.pathLength;
-			var carryBody = unit.getActiveBodyparts(CARRY);
-			var countActiveGather = countGatherAtSource(unit.name);
-			
-			//If, even without this unit, we have enough carrying capacity to support this source
-			//running at full capacity. Skip this unit.
-			//Logic is if we have the total carrying capacity (numOfParts*50) and this is >= the amount
-			//we'd need for the units to go there and back again (pathLength*2) at full capacity (*10 per tick)
-			if((countActiveGather*50-carryBody*50) > (pathLength*3*10))
-			{
-				extractNextName(spawner);
-				extractNextRespawnTime(spawner);
-				addRespawnEnd(spawner, unit.body, unit.name);
-				console.log(unit.name + ' is found to have excessive ' + carryBody*50 + ' capacity of remaining ' + countActiveGather*50 + ' for this energy source when we only need ' + (pathLength*2*10) + '. Moving unit to end of respawn.');
-				return(true);
-			}
-		}
-		else if((currentRole == 'worker' || currentRole == 'lazy') && unit.memory.usingSourceId != null)
-		{
-			var workBody = unit.getActiveBodyparts(WORK);
-			var countActiveWork = countWorkAtSource(unit.name);
-			
-			//If even without this unit we'd have enough harvesting capacity to clean out this source, skip the unit
-			//Logic is each unit of body harvests 2 units per tick. Each source carries 3000 units, recharging at 300 ticks.
-			//Leading to 10 Energy/Tick being the optimal harvest rate. So Body*2 should be at or barely above 10
-			if((countActiveWork*2-workBody*2) > 10)
-			{
-				extractNextName(spawner);
-				extractNextRespawnTime(spawner);
-				addRespawnEnd(spawner, unit.body, unit.name);
-				console.log(unit.name + ' is found to have excessive ' + workBody*2 + ' harvest of remaining ' + countActiveWork*2 + ' for this energy source when we only need ' + 10 + '. Moving unit to end of respawn.');
-				return(true);
-			}
-		}
-	}
-	return(false);
- }
- 
  //Returns true if a unit with a matching name is living. Otherwise it's dead and returns false
  function findNameIsLiving(nextName)
  {
@@ -644,12 +663,11 @@
 	//Pull next unit from the respawn list
 	var nextName = getNextName(spawner);
 	var foundName = findNameIsLiving(nextName);
-	var skipUnit = skipRedundant(spawner, findUnitByName(nextName));
 
 	//If we're overdue for respawning the unit based on time or the unit is dead, respawn the unit
 	//If the unit is found to be unneeded don't bother to respawn this unit (skipRedudant is
 	//fixing this issue, this tick if returning true, we'll be looking at a different unit next tick)
-    if((Game.time > getNextRespawnTime(spawner) || foundName == false) && skipUnit == false)
+    if(Game.time > getNextRespawnTime(spawner) || foundName == false)
     {
         return(nextName);
     }
