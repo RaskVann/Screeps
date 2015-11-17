@@ -54,7 +54,7 @@ module.exports.loop = function()
 		}
 		else if(creep.memory.role == 'scout')
 		{
-			//previousScoutState = defense.scout(creep, scoutsSeen, previousScoutState);
+			previousScoutState = defense.scout(creep, scoutsSeen, previousScoutState);
 			scoutsSeen++;
 		}
     	else if(creep.memory.role == 'builder') 

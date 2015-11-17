@@ -294,8 +294,8 @@
 			var harvestError = unit.harvest(activeSource);
 			if(harvestError == ERR_NOT_IN_RANGE)	//-9
 			{
-				if(unit.memory.pathTo != null)
-				{
+				//if(unit.memory.pathTo != null)
+				//{
 					//The paths to the energy sources will stop 2 spaces away from the energy sources for the gatherers
 					//to pick up what they need. When they only need to move 1 more space to be in position, manually move
 					//them that last spot.
@@ -310,21 +310,21 @@
 					{
 						followFlagForward(unit, unit.carry.energy < unit.carryCapacity || unit.carryCapacity == 0);
 					}
-				}
-				else
-				{
-					saveAndPathToNew(unit, saveAtSpawn.pos, unit.memory.harvestLocation);
-				}
+				//}
+				//else
+				//{
+				//	saveAndPathToNew(unit, saveAtSpawn.pos, unit.memory.harvestLocation);
+				//}
 			}
         }
         else if(saveAtSpawn != null)
         {
-            if(unit.memory.pathTo != null)
-            {
+            //if(unit.memory.pathTo != null)
+            //{
 				//The unit is full so move in reverse back towards the spawn for drop-off
 				followFlagForward(unit, unit.carry.energy < unit.carryCapacity);
                 //saveAndPathFrom(unit, unit.memory.pathTo[0]);
-            }
+            //}
         	//unit.moveTo(saveAtSpawn);
         	unit.transferEnergy(saveAtSpawn);
         }
@@ -459,8 +459,8 @@
                 }
                 else
                 {
-					if(unit.memory.pathTo != null)
-					{
+					//if(unit.memory.pathTo != null)
+					//{
 					    //console.log(unit.pos.getRangeTo(activeSource));
 						//The paths to the energy sources will stop 2 spaces away from the energy sources for the gatherers
 						//to pick up what they need. When they only need to move 1 more space to be in position, manually move
@@ -478,11 +478,11 @@
 							//unit.moveTo(activeSource);
 							followFlagForward(unit, unit.getActiveBodyparts(CARRY) == 0 || (unit.carry.energy < unit.carryCapacity));
 						}
-					}
-					else 
-					{
-						saveAndPathToNew(unit, saveAtSpawn.pos, harvestSpot);
-					}
+					//}
+					//else 
+					//{
+					//	saveAndPathToNew(unit, saveAtSpawn.pos, harvestSpot);
+					//}
 				}
 			}
         }
@@ -608,11 +608,20 @@
  //under the gatherer, if none exists the unit creates one for the builders to get to later.
  function findRoadOrCreate(unit)
  {
+	var workComponents = unit.getActiveBodyparts(WORK);
 	var findStructure = unit.pos.lookFor('structure');
 	for(var x = 0; findStructure != null && x < findStructure.length; x++)
 	{
 		if(findStructure[x].structureType == STRUCTURE_ROAD)
 		{
+			//Go through all structures at current builder's spot, if they have less hits then what the builder
+			//would repair, repair the structure
+			if(workComponents > 0 && 
+				findStructure[x].hits < (findStructure[x].hitsMax - (workComponents*100)) &&
+				unit.carry.energy >= workComponents)
+			{
+				unit.repair(findStructure[x]);
+			}
 			return(true);
 		}
 	}
@@ -622,6 +631,10 @@
 	{
 		if(findConstruction[y].structureType == STRUCTURE_ROAD)
 		{
+			if(unit.carry.energy > 0 && workComponents > 0)
+			{
+				unit.build(findConstruction[y]);
+			}
 			return(true);	//Road is already being built, ignore
 		}
 	}
@@ -655,15 +668,15 @@
 		//Legacy code, creates a path that goes to creates pathTo which at the moment is more accurate then
 		//the path created in followFlagForward, this is used in followFlagForward which helps for gatherers
 		//made for the spawn room
-		if(returnResources != null && unit.memory.currentGatherSpot != null && unit.memory.pathTo == null)
-		{
-			saveAndPathToNew(unit, returnResources.pos, unit.memory.currentGatherSpot);
-		}
-		else
-		{
+		//if(returnResources != null && unit.memory.currentGatherSpot != null && unit.memory.pathTo == null)
+		//{
+		//	saveAndPathToNew(unit, returnResources.pos, unit.memory.currentGatherSpot);
+		//}
+		//else
+		//{
 			findRoadOrCreate(unit);
 			followFlagForward(unit, unit.carry.energy < unit.carryCapacity);
-		}
+		//}
 		
 		if(returnResources != null)
 		{
@@ -721,6 +734,7 @@
 			}
 			if(transferTarget != null)
 			{
+				findRoadOrCreate(unit);
 				var cpu = Game.getUsedCpu();
 				//unit.moveTo(transferTarget);
 				unit.moveByPath(unit.pos.findPathTo(transferTarget), {maxOps: 100});

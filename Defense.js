@@ -562,7 +562,7 @@
 		//Otherwise the previousValue is updated and we can use it.
 		return(unit.memory.previousRoom);
 	}
-	console.log(unit.name + ' found roomName and previousRoom not defined.');
+	//console.log(unit.name + ' found roomName and previousRoom not defined.');
 	return(null);
  }
  
@@ -582,21 +582,24 @@
 			lastScout.room.controller.owner != null &&
 			lastScout.room.controller.owner.username == 'RaskVann')
 		{
-			console.log('Starting from ' + unit.name + ' there is a scout in each room ending at ' + lastScout.name + ' in my room');
+			//console.log('Starting from ' + unit.name + ' there is a scout in each room ending at ' + lastScout.name + ' in my room');
 			return(true);
 		}
 		else
 		{
-			console.log('Starting from ' + unit.name + ' there is a scout in each room ending at ' + lastScout.name + ' in ' + lastScout.room.name);
+			//console.log('Starting from ' + unit.name + ' there is a scout in each room ending at ' + lastScout.name + ' in ' + lastScout.room.name);
 			return(false);
 		}
+	}
+	else
+	{
+		//console.log(unit.name + ' in ' + unit.room.name + ' trying to find scout in ' + getPreviousRoom(unit) + ' failed in ' + unit.memory.previousRoom + ' or in subsequent room.');
 	}
 	
 	if(count+1 >= limit)
 	{
 		console.log(unit.name + ' ran into infinite loop looking through previousRoom');
 	}
-	console.log(unit.name + ' could not find a unit in ' + unit.memory.previousRoom + ' or a subsequent room.');
 	return(false);
  }
  
@@ -614,7 +617,7 @@
 				return(Game.creeps[scouts]);
 			}
 		}
-		console.log('scoutFromRoomName: could not find scout in ' + roomName + ' needed for creation of route.');
+		//console.log('scoutFromRoomName: could not find scout in ' + roomName + ' needed for creation of route.');
 	}
 	return(null);
  }
@@ -624,7 +627,7 @@
 	if(unit.ticksToLive <= 2)
 	{	//Unit ran out of time, could still have more room to explore so we're not calling exploreEnd
 		//This should be fixed to call removeScout(unit) when the scouts are properly working
-		console.log(unit.name + ' attempted to remove memory ' + Memory.creeps[unit.name] + ' before death.');
+		//console.log(unit.name + ' attempted to remove memory ' + Memory.creeps[unit.name] + ' before death.');
 		delete Memory.creeps[unit.name];
 		unit.suicide();
 		return('travel');
@@ -667,10 +670,13 @@
 	var useSpawn = getSpawnId(unit);
 	var scoutsInAllPreviousRooms = scoutsInEachRoom(unit);
 	
-	//When entering a new room
+	//When entering a new room and if the room is the room we intended and there are scouts
+	//in all previous rooms for us to send information to.
 	//TO DO: Potentially reach a state in that roomName is changed but the path isn't created. May want to check
 	//		if the flag isn't found and create a path independent of entering a new room.
-	if(((unit.memory.roomName != unit.room.name) || unit.memory.roomName == null) && scoutsInAllPreviousRooms)
+	if(((unit.memory.roomName != unit.room.name) || unit.memory.roomName == null) && 
+		(unit.room.name == unit.memory.usingSourceId || unit.memory.usingSourceId == null) && 
+		scoutsInAllPreviousRooms)
 	{
 		//Visited all exits from this room, we need to find another room, hopefully down this path
 		//and go to that room to continue exploring
@@ -807,7 +813,7 @@
 							//TO DO: Should be able to append information or place new flags onto all places in this room where 
 							//		nextScout.memory.usingSourceId is found on flags since a route was previously laid out.
 							nextSourceId = createPathToExit(nextScout, nextScout.room, newExit);
-							nextScout.memory.usingSourceId = newExit;
+							//nextScout.memory.usingSourceId = newExit;
 							//Shouldn't need delete direction since this should be the same route as what was origionally followed
 						}
 						console.log(unit.name + ' creating path in room ' + unit.room.name + ' createPath returned ' + nextSourceId);
@@ -827,6 +833,17 @@
 				}
 			}
 		}
+	}
+	//If the scout is in a new room and it's the room we intend to be in and it's 
+	//found that there isn't scouts in all the rooms we need, the spawn isn't spawning 
+	//anything (not needed, but this ensures it will react within 1 tick), and there 
+	//isn't a scout in the spawn room, spawn a scout
+	else if(unit.memory.roomName != unit.room.name && 
+			(unit.room.name == unit.memory.usingSourceId || unit.memory.usingSourceId == null) && 
+			scoutsInAllPreviousRooms == false && useSpawn != null && useSpawn.spawning == null && 
+			scoutFromRoomName(useSpawn.room.name) == null)
+	{
+		useSpawn.memory.requestScout = 1;
 	}
 
 	//This unit shouldn't be created until the spawner has the chance to set everything it needs in the core room. This is for every other room the scout visits.

@@ -153,6 +153,21 @@
 	}
  }
  
+ //Removes all flags in each room thrown into this function and 
+ //each flag going to each of the exits in this room
+ function clearEachExitInRoom(newRoom)
+ {
+	var roomExits = Game.map.describeExits(newRoom.name);
+	for(var x in roomExits)
+	{
+		if(roomExits[x] != null)
+		{
+			removeFlagsWithId(roomExits[x]);
+		}
+	}
+	removeFlagsWithId(newRoom.name);
+ }
+ 
  //Other then the flags we remove all evidence that scouts ever existed.
  //Predominantly used for clean up when scouting fails during implementation/testing
  //Use in conjuncture with removeFlagsWithId(removeId) to remove offending flags
@@ -169,6 +184,13 @@
 			//delete Memory.rooms[x].owner;
 			//delete Memory.rooms[x].threat;
 		}
+	}
+	
+	//Remove flags associated with scouts
+	//TO DO: Ignores flags in rooms we're not in, ignores flags to sources
+	for(var z in Game.rooms)
+	{
+		clearEachExitInRoom(Game.rooms[z]);
 	}
 	
 	//Remove the creeps and associated memory of scouts

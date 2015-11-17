@@ -29,9 +29,9 @@
 					  { cost: 800, body: [CARRY, MOVE, CARRY, MOVE, CARRY, MOVE, CARRY, MOVE, CARRY, MOVE, CARRY, MOVE, CARRY, MOVE, CARRY, MOVE] },
 					  { cost: 1000, body: [CARRY, MOVE, CARRY, MOVE, CARRY, MOVE, CARRY, MOVE, CARRY, MOVE, CARRY, MOVE, CARRY, MOVE, CARRY, MOVE, CARRY, MOVE, CARRY, MOVE] }, 
 					  { cost: 1200, body: [CARRY, MOVE, CARRY, MOVE, CARRY, MOVE, CARRY, MOVE, CARRY, MOVE, CARRY, MOVE, CARRY, MOVE, CARRY, MOVE, CARRY, MOVE, CARRY, MOVE, CARRY, MOVE, CARRY, MOVE] } ];
- var gatherRoadBody = [ { cost: 300, body: [CARRY, CARRY, CARRY, CARRY, MOVE, MOVE] },
-                      { cost: 600, body: [CARRY, CARRY, CARRY, CARRY, CARRY, CARRY, CARRY, CARRY, MOVE, MOVE, MOVE, MOVE] },
-					  { cost: 1200, body: [CARRY, CARRY, CARRY, CARRY, CARRY, CARRY, CARRY, CARRY, CARRY, CARRY, CARRY, CARRY, CARRY, CARRY, CARRY, CARRY, MOVE, MOVE, MOVE, MOVE, MOVE, MOVE, MOVE, MOVE] } ];
+ var gatherRoadBody = [ { cost: 500, body: [WORK, CARRY, CARRY, CARRY, CARRY, CARRY, MOVE, MOVE, MOVE] },
+                      { cost: 800, body: [WORK, CARRY, CARRY, CARRY, CARRY, CARRY, CARRY, CARRY, CARRY, CARRY, MOVE, MOVE, MOVE, MOVE, MOVE] },
+					  { cost: 1250, body: [WORK, CARRY, CARRY, CARRY, CARRY, CARRY, CARRY, CARRY, CARRY, CARRY, CARRY, CARRY, CARRY, CARRY, CARRY, CARRY, MOVE, MOVE, MOVE, MOVE, MOVE, MOVE, MOVE, MOVE] } ];
 // var builderBody = [WORK, CARRY, MOVE, CARRY, MOVE];
  var builderBody = [ { cost: 300, body: [WORK, CARRY, CARRY, MOVE, MOVE] },
                       { cost: 450, body: [WORK, WORK, CARRY, CARRY, MOVE, MOVE, MOVE] },
@@ -77,7 +77,7 @@
 	}
 	else	//nextNeedGather and nextNeedHarvest should trigger this, but just in case this is here
 	{
-		updateHarvestGatherList();
+		updateHarvestGatherList(spawn);
 		return(spawn.memory.harvestId0);
 	}
  }
@@ -107,11 +107,13 @@
 	}
 	else if(spawn.memory.needGather0 > 0 || spawn.memory.needHarvest0 > 0)
 	{
-		return(spawn.memory.needGather0--);
+		var updateHarvest = spawn.memory.needGather0--;
+		updateHarvestGatherList(spawn);
+		return(updateHarvest);
 	}
 	else
 	{
-		updateHarvestGatherList();
+		updateHarvestGatherList(spawn);
 		return(spawn.memory.needGather0);
 	}
  }
@@ -141,34 +143,39 @@
 	}
 	else if(spawn.memory.needGather0 > 0 || spawn.memory.needHarvest0 > 0)
 	{
-		return(spawn.memory.needHarvest0--);
+		var updateHarvest = spawn.memory.needHarvest0--;
+		updateHarvestGatherList(spawn);
+		return(updateHarvest);
 	}
 	else
 	{
-		updateHarvestGatherList();
+		updateHarvestGatherList(spawn);
 		return(spawn.memory.needHarvest0);
 	}
  }
  
  //Push all three parts of the list closer to the top to be retrieved, no more gatherers
  //or harvesters were found.
- function updateHarvestGatherList()
+ function updateHarvestGatherList(spawn)
  {
 	var resetValue = -1;
-	spawn.memory.needHarvest0 = spawn.memory.needHarvest1;
-	spawn.memory.needHarvest1 = spawn.memory.needHarvest2;
-	spawn.memory.needHarvest2 = spawn.memory.needHarvest3;
-	spawn.memory.needHarvest3 = resetValue;
-	
-	spawn.memory.needGather0 = spawn.memory.needGather1;
-	spawn.memory.needGather1 = spawn.memory.needGather2;
-	spawn.memory.needGather2 = spawn.memory.needGather3;
-	spawn.memory.needGather3 = resetValue;
-	
-	spawn.memory.harvestId0 = spawn.memory.harvestId1;
-	spawn.memory.harvestId1 = spawn.memory.harvestId2;
-	spawn.memory.harvestId2 = spawn.memory.harvestId3;
-	spawn.memory.harvestId3 = resetValue;
+	if(spawn != null && spawn.memory.needGather0 <= 0 && spawn.memory.needHarvest0 <= 0)
+	{
+		spawn.memory.needHarvest0 = spawn.memory.needHarvest1;
+		spawn.memory.needHarvest1 = spawn.memory.needHarvest2;
+		spawn.memory.needHarvest2 = spawn.memory.needHarvest3;
+		spawn.memory.needHarvest3 = resetValue;
+		
+		spawn.memory.needGather0 = spawn.memory.needGather1;
+		spawn.memory.needGather1 = spawn.memory.needGather2;
+		spawn.memory.needGather2 = spawn.memory.needGather3;
+		spawn.memory.needGather3 = resetValue;
+		
+		spawn.memory.harvestId0 = spawn.memory.harvestId1;
+		spawn.memory.harvestId1 = spawn.memory.harvestId2;
+		spawn.memory.harvestId2 = spawn.memory.harvestId3;
+		spawn.memory.harvestId3 = resetValue;
+	}
  }
  
  //Need to reference how many harvesters we've deployed already
@@ -274,19 +281,21 @@
 			filter: { structureType: STRUCTURE_ROAD }
 		});
 		
-		if(findRoads != null && findRoads.length > 10)
+		if(findRoads != null && findRoads.length > 20)
 		{
-			var findConstruction = spawner.room.find(FIND_CONSTRUCTION_SITES, {
-				filter: { structureType: STRUCTURE_ROAD }
-			});
+			//var findConstruction = spawner.room.find(FIND_CONSTRUCTION_SITES, {
+			//	filter: { structureType: STRUCTURE_ROAD }
+			//});
 			
 			//If all construction sites for roads have been built (there are no construction found for roads)
 			//Go ahead and build the road version of the gather, otherwise build the gatherBody
-			if(findConstruction == null)	
+			//if(findConstruction == null)	
 				newBody = upgradeBody(availableEnergy, gatherRoadBody);
 		}
-		
-		newBody = upgradeBody(availableEnergy, gatherBody);
+		else
+		{
+			newBody = upgradeBody(availableEnergy, gatherBody);
+		}
     }
     //WORK, WORK, CARRY, MOVE works better at short distance, 6 or under
     //WORK, CARRY, CARRY, MOVE, MOVE works better at longer distance, 7 or higher
@@ -479,7 +488,7 @@
 			}
 		}
 	}
-	
+
 	return(lowestUnit);
  }
 
@@ -505,11 +514,12 @@
 			var replaceUnit = quickestUnitToDie(role, Memory.creeps[nextName].usingSourceId);
 			//If a unit will die at/before we arrive if we spawn a unit now and
 			//If when this unit dies, we'll below the threshold we need, spawn this unit
-			//TO DO: Increase the threshold of how early the unit can arrive if other units spawning
-			//		or other stalls prevent the unit from arriving in time
-			if(replaceUnit.ticksToLive <= (pathLength + returnBody.length*3) &&
+			//It takes pathLength+spawnTime(returnBody.length*3) to move to the source we're working at
+			//but this code isn't being triggered so I'm extending the time to help trigger this
+			if(replaceUnit != null && replaceUnit.ticksToLive <= (pathLength + returnBody.length*12) &&
 				(countActiveGather-replaceUnit.getActiveBodyparts(CARRY))*50 < respawnThreshold)
 			{
+				console.log(nextName + ' found next death to replace early ' + replaceUnit.name);
 				return(returnBody);
 			}
 			//If, even without this unit, we have enough carrying capacity to support this source
@@ -540,12 +550,12 @@
 				var replaceUnit = quickestUnitToDie(role, Memory.creeps[nextName].usingSourceId);
 				//If a unit will die at/before we arrive if we spawn a unit now and
 				//If when this unit dies, we'll below the threshold we need, spawn this unit
-				//TO DO: Increase the threshold of how early the unit can arrive if other units spawning
-				//		or other stalls prevent the unit from arriving in time
-				if(replaceUnit.ticksToLive <= (pathLength + returnBody.length*3) &&
+				//It takes pathLength+spawnTime(returnBody.length*3) to move to the source we're working at
+				//but this code isn't being triggered so I'm extending the time to help trigger this
+				if(replaceUnit != null && replaceUnit.ticksToLive <= (pathLength + returnBody.length*12) &&
 					(countActiveWork-replaceUnit.getActiveBodyparts(WORK))*2 < respawnThreshold)
 				{
-					console.log(nextName + ' found next death ' + replaceUnit.name
+					console.log(nextName + ' found next death to replace early ' + replaceUnit.name);
 					return(returnBody);
 				}
 			}
@@ -940,8 +950,8 @@
 		{
 			if(Game.creeps[units].name == name)
 			{
-				//console.log('next unit: ' + name + ' is still alive for ' + Game.creeps[units].ticksToLive + ' but we are at full power, so suiciding this unit ');
-				//Game.creeps[units].suicide();		//Disabling for now, trying to force only high level units to spawn
+				console.log('next unit: ' + name + ' is still alive for ' + Game.creeps[units].ticksToLive + ' but we are at full power, so suiciding this unit ');
+				Game.creeps[units].suicide();		//Disabling for now, trying to force only high level units to spawn
 				break;
 			}
 		}
