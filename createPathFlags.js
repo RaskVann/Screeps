@@ -108,10 +108,15 @@
  {
 	if(unit != null && foundFlag != null &&
 		foundFlag.memory.usingDestinationId == unit.memory.usingSourceId &&
-		foundFlag.memory.pathLength != null && foundFlag.memory.pathLength > unit.memory.pathLength)
+		foundFlag.memory.pathLength != null && 
+		(unit.memory.pathLength == null || foundFlag.memory.pathLength > unit.memory.pathLength))
 	{
 		unit.memory.pathLength = foundFlag.memory.pathLength;
 		return(unit.memory.pathLength);
+	}
+	else
+	{
+		//console.log(unit.name + ' not copying path. Flag id: ' + foundFlag.memory.usingDestinationId + ' vs ' + unit.memory.usingSourceId);
 	}
 	return(null);
  }
@@ -353,38 +358,38 @@
 	{
 		if(currentPos.x <= 1)
 		{
-			return(LEFT);
+			return(RIGHT);
 		}
 		else if(currentPos.x >= 48)
 		{
-			return(RIGHT);
+			return(LEFT);
 		}
 		if(currentPos.y <= 1)
 		{
-			return(TOP);
+			return(BOTTOM);
 		}
 		else if(currentPos.y >= 48)
 		{
-			return(BOTTOM);
+			return(TOP);
 		}
 	}
 	else if(onEdgeOfMap(currentPos) && movingInside == false)
 	{
 		if(currentPos.x <= 1)
 		{
-			return(RIGHT);
+			return(LEFT);
 		}
 		else if(currentPos.x >= 48)
 		{
-			return(LEFT);
+			return(RIGHT);
 		}
 		if(currentPos.y <= 1)
 		{
-			return(BOTTOM);
+			return(TOP);
 		}
 		else if(currentPos.y >= 48)
 		{
-			return(TOP);
+			return(BOTTOM);
 		}
 	}
 	return(defaultDirection);

@@ -1202,6 +1202,7 @@
 	{
 		nextRoomMove = useSpawn.memory.scoutsAlive != null && unit.memory.roomsMoved != null && (useSpawn.memory.scoutsAlive-unit.memory.roomsMoved > scoutsSeen+1);
 	}
+	//console.log(unit.name + ' harvest: ' + harvestEmptyAndRoomUpdated + ' nextRoom: ' + nextRoomMove);
 	return(edgeOfMap || (harvestEmptyAndRoomUpdated && nextRoomMove));
  }
 

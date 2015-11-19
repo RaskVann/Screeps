@@ -507,19 +507,28 @@
 		if(role == 'gather')
 		{
 			var countActiveGather = countGatherAtSource(nextName);
-			var respawnThreshold = (pathLength*2*10);
-
-			//If, even without this unit, we have enough carrying capacity to support this source
-			//running at full capacity. Skip this unit.
-			//Logic is if we have the total carrying capacity (numOfParts*50) and this is >= the amount
-			//we'd need for the units to go there and back again (pathLength*2) at full capacity (*10 per tick)
-			if((countActiveGather*50) >= respawnThreshold*1.5)
+			var pathLength = 5;
+			if(Memory.creeps[nextName] != null && Memory.creeps[nextName].pathLength != null)
 			{
-				console.log(nextName + ' found ' + (countActiveGather*50) + ' capacity of needed ' + respawnThreshold + ' moving to end.');
-				extractNextName(spawner);
-				extractNextRespawnTime(spawner);
-				addRespawnEnd(spawner, returnBody, nextName);
-				return(null);
+				pathLength = Memory.creeps[nextName].pathLength;
+				var respawnThreshold = (pathLength*2*10);
+
+				//If, even without this unit, we have enough carrying capacity to support this source
+				//running at full capacity. Skip this unit.
+				//Logic is if we have the total carrying capacity (numOfParts*50) and this is >= the amount
+				//we'd need for the units to go there and back again (pathLength*2) at full capacity (*10 per tick)
+				if((countActiveGather*50) >= respawnThreshold*1.5)
+				{
+					//console.log(nextName + ' found ' + (countActiveGather*50) + ' capacity of needed ' + respawnThreshold + ' moving to end.');
+					extractNextName(spawner);
+					extractNextRespawnTime(spawner);
+					addRespawnEnd(spawner, returnBody, nextName);
+					return(null);
+				}
+			}
+			else
+			{
+				console.log(nextName + ' cant find path length in ' + Memory.creeps[nextName]);
 			}
 		}
 		else if(role == 'worker' || role == 'lazy')
@@ -532,7 +541,7 @@
 			//Leading to 10 Energy/Tick being the optimal harvest rate. So Body*2 should be at or barely above 10
 			if((countActiveWork*2) >= respawnThreshold*1.5)
 			{
-				console.log(nextName + ' found ' + (countActiveWork*2) + ' work of needed ' + respawnThreshold + ' moving to end.');
+				//console.log(nextName + ' found ' + (countActiveWork*2) + ' work of needed ' + respawnThreshold + ' moving to end.');
 				extractNextName(spawner);
 				extractNextRespawnTime(spawner);
 				addRespawnEnd(spawner, returnBody, nextName);
@@ -675,7 +684,15 @@
 	var creepMaxLife = 1500;
 	var totalCreeps = Object.keys(Game.creeps).length;
 	var buffer = Math.ceil(creepMaxLife/totalCreeps);
-	var nextSpawnTime = Game.time+creepMaxLife+(body.length*3);
+	var nextSpawnTime;
+	if(body != null && body.length != null)
+	{
+		nextSpawnTime = Game.time+creepMaxLife+(body.length*3);
+	}
+	else
+	{
+		nextSpawnTime = Game.time+creepMaxLife+(5*3);
+	}
 	
 	//If we have to few units the buffer time is going to be insane (at 10 creeps, 150 ticks 
 	//between units). Reduce the buffer if this is the case
@@ -751,8 +768,10 @@
 		{
 			nextName = respawnName.substring(0, respawnName.indexOf(","));
 			respawnName = respawnName.substring(respawnName.indexOf(",")+1);
-			if((Memory.creeps[nextName].usingSourceId == null || replaceSourceId == null || (Memory.creeps[nextName].usingSourceId != null && Memory.creeps[nextName].usingSourceId == replaceSourceId)) && 
-				findDeadUnitRole(spawner, nextName) == checkRole && findNameIsLiving(nextName) == false)
+			if(Memory.creeps[nextName] != null &&
+				((Memory.creeps[nextName].usingSourceId == null || replaceSourceId == null || 
+				(Memory.creeps[nextName].usingSourceId != null && Memory.creeps[nextName].usingSourceId == replaceSourceId)) && 
+				findDeadUnitRole(spawner, nextName) == checkRole && findNameIsLiving(nextName) == false))
 			{
 				//Cut name we're spawning out of the list and add it to end
 				var newRespawnList = consideredNames + respawnName + nextName + ",";
@@ -853,13 +872,12 @@
  function quickestToDieRespawn(spawner)
  {
 	var unit = nextToDie();
-	var pathLength = 0;
-	var estimatedBodyLength;
+	var pathLength = 5;
+	var estimatedBodyLength = 1;
 	var sourceId;
 	var role;
 	if(unit != null)
 	{
-		pathLength = 0;
 		//Not going to bother calculating something more complicated, estimate 
 		//we're spending 50 energy per body and we can make the highest possible 
 		//body count we can right now, plus any path we might have stored.
@@ -1070,8 +1088,13 @@
 		{
 			if(Game.creeps[units].name == name)
 			{
-				console.log('next unit: ' + name + ' is still alive for ' + Game.creeps[units].ticksToLive + ' but we are at full power, so suiciding this unit ');
-				Game.creeps[units].suicide();		//Disabling for now, trying to force only high level units to spawn
+				//console.log('next unit: ' + name + ' is still alive for ' + Game.creeps[units].ticksToLive + ' but we are at full power, so suiciding this unit ');
+				//Game.creeps[units].suicide();		//Disabling for now, trying to force only high level units to spawn
+				//Skip over unit
+				console.log('next unit: ' + name + ' is still alive for ' + Game.creeps[units].ticksToLive + ' but we are at full power, skipping over.');
+				extractNextName(spawner);
+				extractNextRespawnTime(spawner);
+				addRespawnEnd(spawner, body, name);
 				break;
 			}
 		}
@@ -1120,9 +1143,10 @@
 	//new. Only then do we go through the spawning logic to save processing time.
 	if(spawner.spawning == null)
 	{
-		//if(quickestToDieRespawn(spawner) == false)
-		//{
-			spawnNextInQueue(spawner, harvestersSeen, gatherersSeen, buildersSeen, attackersSeen, scoutsSeen);
-		//}
+		if(quickestToDieRespawn(spawner) == false)
+		{
+			//If it fails to find something to replace a unit.
+		}
+		spawnNextInQueue(spawner, harvestersSeen, gatherersSeen, buildersSeen, attackersSeen, scoutsSeen);
 	}
  }
