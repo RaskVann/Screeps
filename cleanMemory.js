@@ -218,6 +218,7 @@
 		
 		delete Memory.spawns[y].consecutiveReady;
 		delete Memory.spawns[y].scoutsAlive;
+		Memory.spawns[y].maxScouts = 1;
 	}
  }
  
