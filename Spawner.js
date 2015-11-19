@@ -418,6 +418,30 @@
 	return(null);   //Nothing else to spawn, look to expand buildings or territory
  }
  
+ function findRoleWithinName(nextName)
+ {
+	var lowestFoundNumber = 99999;
+	if(nextName != null)
+	{
+		var findNumber = "0123456789";
+		for(var number in findNumber)
+		{
+			var findNext = nextName.indexOf(number);
+			if(findNext > 0 && findNext < lowestFoundNumber)
+			{
+				lowestFoundNumber = findNext;
+			}
+		}
+		if(lowestFoundNumber != 99999)
+		{
+			var returningJob = nextName.substring(0, lowestFoundNumber);
+			//console.log("Respawn job: " + returningJob);
+			return(returningJob);
+		}
+	}
+	return(null);
+ }
+ 
  //The unit's name is formated 'Role''Num''Room'. This finds the first possible number in the name
  //and cuts out that and everything right of that, leaving the role to be extracted from the name
  function findDeadUnitRole(spawner, nextName)
@@ -427,26 +451,8 @@
     if(Game.time > getNextRespawnTime(spawner) || foundName == false)
     //if(Game.time > getNextRespawnTime(spawner))
     {
-        var nextName = findDeadUnitName(spawner);
-        var lowestFoundNumber = 99999;
-        if(nextName != null)
-        {
-            var findNumber = "0123456789";
-            for(var number in findNumber)
-            {
-                var findNext = nextName.indexOf(number);
-                if(findNext > 0 && findNext < lowestFoundNumber)
-                {
-                    lowestFoundNumber = findNext;
-                }
-            }
-            if(lowestFoundNumber != 99999)
-            {
-                var returningJob = nextName.substring(0, lowestFoundNumber);
-                //console.log("Respawn job: " + returningJob);
-                return(returningJob);
-            }
-        }
+		var nextName = findDeadUnitName(spawner);
+        return(findRoleWithinName(nextName));
     }
     return(null);
  }
@@ -517,7 +523,7 @@
 				//running at full capacity. Skip this unit.
 				//Logic is if we have the total carrying capacity (numOfParts*50) and this is >= the amount
 				//we'd need for the units to go there and back again (pathLength*2) at full capacity (*10 per tick)
-				if((countActiveGather*50) >= respawnThreshold*1.5)
+				if((countActiveGather*50) >= respawnThreshold)
 				{
 					//console.log(nextName + ' found ' + (countActiveGather*50) + ' capacity of needed ' + respawnThreshold + ' moving to end.');
 					extractNextName(spawner);
@@ -539,7 +545,7 @@
 			//If even without this unit we'd have enough harvesting capacity to clean out this source, skip the unit
 			//Logic is each unit of body harvests 2 units per tick. Each source carries 3000 units, recharging at 300 ticks.
 			//Leading to 10 Energy/Tick being the optimal harvest rate. So Body*2 should be at or barely above 10
-			if((countActiveWork*2) >= respawnThreshold*1.5)
+			if((countActiveWork*2) >= respawnThreshold)
 			{
 				//console.log(nextName + ' found ' + (countActiveWork*2) + ' work of needed ' + respawnThreshold + ' moving to end.');
 				extractNextName(spawner);
@@ -771,11 +777,11 @@
 			if(Memory.creeps[nextName] != null &&
 				((Memory.creeps[nextName].usingSourceId == null || replaceSourceId == null || 
 				(Memory.creeps[nextName].usingSourceId != null && Memory.creeps[nextName].usingSourceId == replaceSourceId)) && 
-				findDeadUnitRole(spawner, nextName) == checkRole && findNameIsLiving(nextName) == false))
+				findRoleWithinName(nextName) == checkRole && findNameIsLiving(nextName) == false))
 			{
 				//Cut name we're spawning out of the list and add it to end
 				var newRespawnList = consideredNames + respawnName + nextName + ",";
-				console.log('Trying to find dead ' + checkRole + ' found dead unit ' + nextName + ' from list ' + spawner.memory.respawnName + ' making new list ' + newRespawnList);
+				//console.log('Trying to find dead ' + checkRole + ' found dead unit ' + nextName + ' from list ' + spawner.memory.respawnName + ' making new list ' + newRespawnList);
 				//spawner.memory.respawnName = newRespawnList;
 				return(nextName);
 			}
@@ -836,8 +842,8 @@
 		role = findDeadUnitRole(spawner, name);
 	}
 
-	if((role == 'attack' && Math.min(harvestersSeen*2, gatherersSeen) <= attackersSeen+1) || 
-		(role == 'builder' && Math.min(harvestersSeen*2, gatherersSeen) <= buildersSeen+1))
+	if((role == 'attack' && Math.min(harvestersSeen*2, gatherersSeen*2) <= attackersSeen+1) || 
+		(role == 'builder' && Math.min(harvestersSeen*2, gatherersSeen*2) <= buildersSeen+1))
 	{	//Respawn denied, move to end of list and allow next unit an attempt.
 		extractNextName(spawner);
 		extractNextRespawnTime(spawner);
@@ -907,7 +913,7 @@
 		unit != null && unit.ticksToLive <= estimatedBodyLength*3+pathLength)
 	{
 		var replaceWithName = nextDeadRoleName(spawner, role, sourceId);
-		var returnRole = findDeadUnitRole(spawner, replaceWithName);
+		var returnRole = findRoleWithinName(replaceWithName);
 		var returnBody = retrieveBody(returnRole, spawner);
 		if(replaceWithName != null && returnRole != null && returnBody != null)
 		{
@@ -920,7 +926,7 @@
 				{
 					var badSpawn = spawner.createCreep(returnBody, replaceWithName);
 					//TO DO: Update respawn list, move unit we're spawning here to end.
-					console.log('Spawn: ' + replaceWithName + ' to replace ' + unit.name + ' dieing in ' + unit.ticksToLive + ' ticks.');
+					console.log('Spawn: ' + replaceWithName + ' to replace ' + unit.name + ' dieing in ' + unit.ticksToLive + ' ticks. Found ' + (countActiveGather-unit.getActiveBodyparts(CARRY))*50 + ' gather of needed ' + respawnThreshold);
 					return(true);
 				}
 			}
@@ -933,7 +939,7 @@
 				{
 					var badSpawn = spawner.createCreep(returnBody, replaceWithName);
 					//TO DO: Update respawn list, move unit we're spawning here to end.
-					console.log('Spawn: ' + replaceWithName + ' to replace ' + unit.name + ' dieing in ' + unit.ticksToLive + ' ticks.');
+					console.log('Spawn: ' + replaceWithName + ' to replace ' + unit.name + ' dieing in ' + unit.ticksToLive + ' ticks. Found ' + (countActiveWork-unit.getActiveBodyparts(WORK))*2 + ' work of needed ' + respawnThreshold);
 					return(true);
 				}
 			}
