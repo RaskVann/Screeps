@@ -47,6 +47,11 @@ module.exports.loop = function()
 			harvester.gather(creep, gatherersSeen);
 			gatherersSeen++;
 		}
+		else if(creep.memory.role == 'builder') 
+        {
+			builder(creep, buildersSeen);
+    	    buildersSeen++;
+        }
 		else if(creep.memory.role == 'attack' || creep.memory.role == 'defend')
 		{
 			defense.attack(creep, attackersSeen);
@@ -57,11 +62,6 @@ module.exports.loop = function()
 			previousScoutState = defense.scout(creep, scoutsSeen, previousScoutState);
 			scoutsSeen++;
 		}
-    	else if(creep.memory.role == 'builder') 
-        {
-			builder(creep, buildersSeen);
-    	    buildersSeen++;
-        }
 		
 		var calc = Game.getUsedCpu()-individualCPU;
 		if((calc > 10 && Game.cpuLimit < 400) || calc > 20)
@@ -86,6 +86,9 @@ module.exports.loop = function()
 	if((Game.getUsedCpu() > 30 && Game.cpuLimit < 400) || Game.getUsedCpu() > 60)
 	{
 	    console.log('Initialize: ' + reportInitializeCpuUsed + ', Creep: ' + reportCreepCpuUsed + ', Spawn: ' + reportSpawnCpuUsed + ', Report: ' + reportCPUCpuUsed);
-		//Game.notify('LIMIT EXCEEDED-Initialize: ' + reportInitializeCpuUsed + ', Creep: ' + reportCreepCpuUsed + ', Spawn: ' + reportSpawnCpuUsed + ', Report: ' + reportCPUCpuUsed, 10);
+	}
+	else if(Game.cpuLimit < 200)
+	{
+		console.log('LOW LIMIT: ' + Game.cpuLimit + ' Initialize: ' + reportInitializeCpuUsed + ', Creep: ' + reportCreepCpuUsed + ', Spawn: ' + reportSpawnCpuUsed + ', Report: ' + reportCPUCpuUsed);
 	}
 }

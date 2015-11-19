@@ -504,34 +504,18 @@
 		
 		//If next dead unit is a gather or worker and we already have enough units fielded for this source, do not spawn and
 		//add to the end of the list.
-		if(role == 'gather' && 
-			nextName != null && Memory.creeps[nextName] != null && 
-			Memory.creeps[nextName].pathLength != null)
+		if(role == 'gather')
 		{
-			var pathLength = Memory.creeps[nextName].pathLength;
 			var countActiveGather = countGatherAtSource(nextName);
-			var respawnThreshold = (pathLength*3*10);
-			
-			var replaceUnit = quickestUnitToDie(role, Memory.creeps[nextName].usingSourceId);
-			//If a unit will die at/before we arrive if we spawn a unit now and
-			//If when this unit dies, we'll below the threshold we need, spawn this unit
-			//It takes pathLength+spawnTime(returnBody.length*3) to move to the source we're working at
-			//but this code isn't being triggered so I'm extending the time to help trigger this
-			if(replaceUnit != null && replaceUnit.ticksToLive <= (pathLength + returnBody.length*12) &&
-				(countActiveGather-replaceUnit.getActiveBodyparts(CARRY))*50 < respawnThreshold)
-			{
-				console.log(nextName + ' found next death to replace early ' + replaceUnit.name);
-				return(returnBody);
-			}
+			var respawnThreshold = (pathLength*2*10);
+
 			//If, even without this unit, we have enough carrying capacity to support this source
 			//running at full capacity. Skip this unit.
 			//Logic is if we have the total carrying capacity (numOfParts*50) and this is >= the amount
 			//we'd need for the units to go there and back again (pathLength*2) at full capacity (*10 per tick)
-			//Added a bit extra to pathLength since the gather still has to run around and deposit energy to a few areas
-			//and so we need a buffer for them to be able to do that.
-			else if((countActiveGather*50) >= respawnThreshold)
+			if((countActiveGather*50) >= respawnThreshold*1.5)
 			{
-				console.log(nextName + ' found ' + (countActiveGather*50) + ' capacity of needed ' + (pathLength*2*10) + ' moving to end.');
+				console.log(nextName + ' found ' + (countActiveGather*50) + ' capacity of needed ' + respawnThreshold + ' moving to end.');
 				extractNextName(spawner);
 				extractNextRespawnTime(spawner);
 				addRespawnEnd(spawner, returnBody, nextName);
@@ -542,30 +526,13 @@
 		{
 			var countActiveWork = countWorkAtSource(nextName);
 			var respawnThreshold = 10;
-			
-			if(nextName != null && Memory.creeps[nextName] != null && 
-				Memory.creeps[nextName].pathLength != null)
-			{
-				var pathLength = Memory.creeps[nextName].pathLength;
-				
-				var replaceUnit = quickestUnitToDie(role, Memory.creeps[nextName].usingSourceId);
-				//If a unit will die at/before we arrive if we spawn a unit now and
-				//If when this unit dies, we'll below the threshold we need, spawn this unit
-				//It takes pathLength+spawnTime(returnBody.length*3) to move to the source we're working at
-				//but this code isn't being triggered so I'm extending the time to help trigger this
-				if(replaceUnit != null && replaceUnit.ticksToLive <= (pathLength + returnBody.length*12) &&
-					(countActiveWork-replaceUnit.getActiveBodyparts(WORK))*2 < respawnThreshold)
-				{
-					console.log(nextName + ' found next death to replace early ' + replaceUnit.name);
-					return(returnBody);
-				}
-			}
+
 			//If even without this unit we'd have enough harvesting capacity to clean out this source, skip the unit
 			//Logic is each unit of body harvests 2 units per tick. Each source carries 3000 units, recharging at 300 ticks.
 			//Leading to 10 Energy/Tick being the optimal harvest rate. So Body*2 should be at or barely above 10
-			if((countActiveWork*2) >= respawnThreshold)
+			if((countActiveWork*2) >= respawnThreshold*1.5)
 			{
-				console.log(nextName + ' found ' + (countActiveWork*2) + ' work of needed ' + 10 + ' moving to end.');
+				console.log(nextName + ' found ' + (countActiveWork*2) + ' work of needed ' + respawnThreshold + ' moving to end.');
 				extractNextName(spawner);
 				extractNextRespawnTime(spawner);
 				addRespawnEnd(spawner, returnBody, nextName);
@@ -620,8 +587,8 @@
 			}
 		}
 	}
-	if(countActiveWork <= 0)
-		console.log(unitName + ' is trying to count work and it came back with ' + countActiveWork);
+	//if(countActiveWork <= 0)
+		//console.log(unitName + ' is trying to count work and it came back with ' + countActiveWork);
 	
 	return(countActiveWork);
  }
@@ -651,8 +618,8 @@
 			}
 		}
 	}
-	if(countActiveGather <= 0)
-		console.log(unitName + ' is trying to count gather and it came back with ' + countActiveGather);
+	//if(countActiveGather <= 0)
+		//console.log(unitName + ' is trying to count gather and it came back with ' + countActiveGather);
 	
 	return(countActiveGather);
  }
@@ -770,6 +737,37 @@
     }
     return(Game.time+9999); //Make it fail the check, respawnTime doesn't exist yet
  }
+ 
+ //If a sourceId exists, attempts to find the next dead unit that shares the same sourceId and role.
+ //Otherwise just finds the next dead unit that share the same role.
+ function nextDeadRoleName(spawner, checkRole, replaceSourceId)
+ {
+	if(spawner.memory.respawnName != null && checkRole != null)
+    {
+        var respawnName = spawner.memory.respawnName;
+        var nextName;
+		var consideredNames = "";
+		do
+		{
+			nextName = respawnName.substring(0, respawnName.indexOf(","));
+			respawnName = respawnName.substring(respawnName.indexOf(",")+1);
+			if((Memory.creeps[nextName].usingSourceId == null || replaceSourceId == null || (Memory.creeps[nextName].usingSourceId != null && Memory.creeps[nextName].usingSourceId == replaceSourceId)) && 
+				findDeadUnitRole(spawner, nextName) == checkRole && findNameIsLiving(nextName) == false)
+			{
+				//Cut name we're spawning out of the list and add it to end
+				var newRespawnList = consideredNames + respawnName + nextName + ",";
+				console.log('Trying to find dead ' + checkRole + ' found dead unit ' + nextName + ' from list ' + spawner.memory.respawnName + ' making new list ' + newRespawnList);
+				//spawner.memory.respawnName = newRespawnList;
+				return(nextName);
+			}
+			else
+			{
+				consideredNames += nextName + ","
+			}
+		} while (respawnName.length > 1);
+    }
+	return(null);
+ }
 
  function getNextName(spawner)
  {
@@ -809,6 +807,128 @@
 		spawner.memory.respawnName += name+",";
 	}
  }
+ 
+ //Only spawn attackers and builders if there is enough supporting gatherers and harvesters, move them to the
+ //end of the respawn list if this isn't the case.
+ function checkSkipUnit(spawner, name, body, role, harvestersSeen, gatherersSeen, buildersSeen, attackersSeen)
+ {
+	if(role == null)
+	{
+		role = findDeadUnitRole(spawner, name);
+	}
+
+	if((role == 'attack' && Math.min(harvestersSeen*2, gatherersSeen) <= attackersSeen+1) || 
+		(role == 'builder' && Math.min(harvestersSeen*2, gatherersSeen) <= buildersSeen+1))
+	{	//Respawn denied, move to end of list and allow next unit an attempt.
+		extractNextName(spawner);
+		extractNextRespawnTime(spawner);
+		addRespawnEnd(spawner, body, name);
+		//console.log('adding ' + name + ' to end of respawn list.');
+		return(true);
+	}
+	return(false);
+ }
+ 
+ function nextToDie()
+ {
+	var lowestTick = 1500;	//Lowest tick to live
+	var lowestUnit;
+	for(var x in Game.creeps)
+	{
+		if(Game.creeps[x].ticksToLive < lowestTick)
+		{
+			lowestTick = Game.creeps[x].ticksToLive;
+			lowestUnit = Game.creeps[x];
+		}
+	}
+	return(lowestUnit);
+  }
+ 
+ //Check the next unit to die, if it is critical to have this unit up and running at all times
+ //This function will spawn that unit when it hits enough ticks to live so it will die when the unit
+ //we're spawning with this function builds itself and has enough time to travel over.
+ //Note: This assumes there is always a dead unit to pull from that is assigned to the source we're 
+ //		interested in to spawn ahead of the dieing unit to replace it. It simply won't spawn anything
+ //		if there isn't anything in the respawn list to take its place.
+ function quickestToDieRespawn(spawner)
+ {
+	var unit = nextToDie();
+	var pathLength = 0;
+	var estimatedBodyLength;
+	var sourceId;
+	var role;
+	if(unit != null)
+	{
+		pathLength = 0;
+		//Not going to bother calculating something more complicated, estimate 
+		//we're spending 50 energy per body and we can make the highest possible 
+		//body count we can right now, plus any path we might have stored.
+		estimatedBodyLength = spawner.room.energyAvailable/50;
+		if(unit.memory.pathLength != null)
+		{
+			pathLength = unit.memory.pathLength;
+		}
+		if(unit.memory.usingSourceId != null)
+		{
+			sourceId = unit.memory.usingSourceId;
+		}
+		if(unit.memory.role != null)
+		{
+			role = unit.memory.role;
+		}
+	}
+	else
+	{
+		//If can't find a unit, kill it here
+		return(false);
+	}
+	
+	//If the spawner is able to handle our request and
+	//If we pass this we have a unit near death that if a unit spawns now can take it's place or close to it when we need it.
+	if(spawner != null && spawner.spawning == null && 
+		unit != null && unit.ticksToLive <= estimatedBodyLength*3+pathLength)
+	{
+		var replaceWithName = nextDeadRoleName(spawner, role, sourceId);
+		var returnRole = findDeadUnitRole(spawner, replaceWithName);
+		var returnBody = retrieveBody(returnRole, spawner);
+		if(replaceWithName != null && returnRole != null && returnBody != null)
+		{
+			if(returnRole == 'gather')
+			{
+				var countActiveGather = countGatherAtSource(unit.name);
+				var respawnThreshold = (pathLength*2*10);
+				if((countActiveGather-unit.getActiveBodyparts(CARRY))*50 < respawnThreshold &&
+					spawner.canCreateCreep(returnBody, replaceWithName) == 0)
+				{
+					var badSpawn = spawner.createCreep(returnBody, replaceWithName);
+					//TO DO: Update respawn list, move unit we're spawning here to end.
+					console.log('Spawn: ' + replaceWithName + ' to replace ' + unit.name + ' dieing in ' + unit.ticksToLive + ' ticks.');
+					return(true);
+				}
+			}
+			else if(returnRole == 'worker')
+			{
+				var countActiveWork = countWorkAtSource(unit.name);
+				var respawnThreshold = 10;
+				if((countActiveWork-unit.getActiveBodyparts(WORK))*2 < respawnThreshold &&
+					spawner.canCreateCreep(returnBody, replaceWithName) == 0)
+				{
+					var badSpawn = spawner.createCreep(returnBody, replaceWithName);
+					//TO DO: Update respawn list, move unit we're spawning here to end.
+					console.log('Spawn: ' + replaceWithName + ' to replace ' + unit.name + ' dieing in ' + unit.ticksToLive + ' ticks.');
+					return(true);
+				}
+			}
+			else
+			{
+				//Note: Track something like how much carry modules are assigned to this task to ensure
+				//		that you don't over spawn units with this function.
+				//Nothing else is as time intensive as these, expand if necessary
+			}
+		}
+	}
+	return(false);
+ }
 
  function spawnNextInQueue(spawner, harvestersSeen, gatherersSeen, buildersSeen, attackersSeen)
  {
@@ -833,6 +953,11 @@
         body = retrieveBody('defend', spawner);
         role = 'defend';
     }
+	
+	if(checkSkipUnit(spawner, name, body, role, harvestersSeen, gatherersSeen, buildersSeen, attackersSeen))
+	{
+		return(false);
+	}
 
 	var canCreateUnit;
 	if(name == null)
@@ -843,7 +968,7 @@
 	{
 		canCreateUnit = spawner.canCreateCreep(body, name);
 	}
-	if(!canCreateUnit)
+	if(canCreateUnit == 0)
 	{
 		var _ = require('lodash');
 		var badSpawn;
@@ -857,19 +982,13 @@
 			extractNextRespawnTime(spawner);
 			//If is a attack or build unit, check if we have at least as many harvesters/gatherers as the amount 
 			//of attackers/builders we're trying to make, if there isn't, skip them.
-			if((role == 'attack' && Math.min(harvestersSeen*2, gatherersSeen) > attackersSeen+1) || 
-				(role == 'builder' && Math.min(harvestersSeen*2, gatherersSeen) > buildersSeen+1))
+			if(role == 'attack' || role == 'builder' || role == 'gather' || role == 'worker')
 			{
 				badSpawn = spawner.createCreep(body, name);
 			}
-			else if(role == 'gather' || role == 'worker')    //Is a harvester or gatherer presumably, go ahead and allow respawn
+			else    //Not expecting this here
 			{
-				badSpawn = spawner.createCreep(body, name);
-			}
-			else    //Respawn denied, move to end of list and allow next unit an attempt.
-			{
-				addRespawnEnd(spawner, body, name);
-				//console.log('adding ' + name + ' to end of respawn list.');
+				console.log('Unit ' + name + ' with role ' + role + ' found to respawn when not expected. Removed from respawning.');
 				return(false);
 			}
 		}
@@ -1001,6 +1120,9 @@
 	//new. Only then do we go through the spawning logic to save processing time.
 	if(spawner.spawning == null)
 	{
-		spawnNextInQueue(spawner, harvestersSeen, gatherersSeen, buildersSeen, attackersSeen, scoutsSeen);
+		//if(quickestToDieRespawn(spawner) == false)
+		//{
+			spawnNextInQueue(spawner, harvestersSeen, gatherersSeen, buildersSeen, attackersSeen, scoutsSeen);
+		//}
 	}
  }

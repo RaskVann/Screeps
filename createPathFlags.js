@@ -415,6 +415,7 @@
 	//We remove any starting or ending locations that we can't move through, the remaining locations recieve flags where appropriate
 	var start = clampStartPos(currentRoom, currentPath);
 	var end = clampEndPos(currentRoom, currentPath);
+	var flagCreationSuccess = false;
 	
     for(var position = start; position < end; position++)
 	{
@@ -449,9 +450,11 @@
 				if(createdFlag < 0)
 				{
 				    console.log('error creating flag: ' + createdFlag);
+					return(false);
 				}
 				else
 				{
+					flagCreationSuccess = true;
 					if(position == start)
 					{
 						if(previousDirection != null && currentSourceId != null && currentPath != null)
@@ -514,7 +517,7 @@
 	{
 		capPathEnd(currentRoom, currentPath, currentSourceId, end);
 	}
-	return(false);
+	return(flagCreationSuccess);
  }
  
  function updatePathLength(sourceId, newLength)
@@ -590,8 +593,8 @@
 		var selectSpawn = currentRoom.find(FIND_MY_SPAWNS);
 		for(var i = 0; selectSpawn != null && i < selectSpawn.length; i++)
 		{
-			createPathToFlags(currentRoom, selectSpawn[i].pos.findPathTo(exitPos.x, exitPos.y, {maxOps: 2000}), pathId, false);
 			console.log('creating path in room-' + exitPos.roomName + ' to go to exit source with id: ' + pathId);
+			return(createPathToFlags(currentRoom, selectSpawn[i].pos.findPathTo(exitPos.x, exitPos.y, {maxOps: 4000}), pathId, false));
 		}
 		//exitPos.remove();
 	}
@@ -600,6 +603,7 @@
 		console.log('TO DO: multiple energy spawns were found in adjoining room, create flag at spawn with \nusingDestinationId: ' + spawnId +
 					' to use the same path that will diverge in the next room.');
 	}
+	return(false);
  }
 
  //TO USE:
@@ -678,7 +682,7 @@
  //Creates a path from the spawn to exit location, replaced later by scout logic
  module.exports.createPathFromSpawn = function(exit, currentRoom, spawnId)
  {
-	pathSpawnToExit(exit, currentRoom, spawnId);
+	return(pathSpawnToExit(exit, currentRoom, spawnId));
  }
 
  //Used if we're using a enterance and exit flag to create a custom path
@@ -696,7 +700,7 @@
  //generated in
  module.exports.createDefinedPath = function(inRoom, path, spawnId, capEnd)
  {
-	createPathToFlags(inRoom, path, spawnId, capEnd);
+	return(createPathToFlags(inRoom, path, spawnId, capEnd));
  }
 
  module.exports.findFlag = function(unit, findSourceId)

@@ -288,6 +288,56 @@
 	//return(null);	//All exits lead to rooms we've been to, end of path reached.
 	return(getRoomForExit(unit, currentRoom.memory.exitsVisited));
  }
+ 
+ function createPreviousExit()
+ {
+	if(Game.cpuLimit >= 500)
+	{
+		var route = getRoute();
+		
+		var sourceId = route.usingSourceId;
+		var currentRoom = route.routeStart.roomName;
+		var startPosition = new RoomPosition(unit.memory.startPos.x, unit.memory.startPos.y, unit.memory.startPos.roomName);
+		var exit = route.routeEnd;
+		//console.log('found exit: ' + sourceId + ' with route ' + routeToExit + ' at destination ' + exit);
+		
+		//If in room I control, make path from spawns to relevant exit, otherwise from current
+		//position to the relevant exit.
+		if(currentRoom.controller != null && currentRoom.controller.owner != null && 
+			currentRoom.controller.owner.username == 'RaskVann')
+		{
+			var pathMade = followFlagForward.createPathFromSpawn(exit, currentRoom, sourceId);
+			if(pathMade)
+			{
+				popRoute();
+				return(true);
+			}
+			else
+			{
+				return(false);
+			}
+		}
+		else if(startPosition != null && exit != null)
+		{
+			//console.log(currentRoom + ', ' + startPosition + ', ' + exit + ', ' + sourceId);
+			var pathMade = followFlagForward.createDefinedPath(currentRoom, startPosition.findPathTo(exit, {maxOps: 4000}), sourceId, false);
+			if(pathMade)
+			{
+				popRoute();
+				return(true);
+			}
+			else
+			{
+				return(false);
+			}
+		}
+		else
+		{
+			console.log(unit.name + ' trying to create path in room: ' + unit.room.name + ' with null values.');
+		}
+	}
+	return(false);
+ }
 
  //This unit creates a path in it's current room to the newExit passed in. It links itself to this new
  //path so it can follow it
@@ -306,15 +356,19 @@
 		if(currentRoom.controller != null && currentRoom.controller.owner != null && 
 			currentRoom.controller.owner.username == 'RaskVann')
 		{
-			followFlagForward.createPathFromSpawn(exit, currentRoom, newExit);
-			//There shouldn't be any scouts for this to send to, unless this is another spawn of mine
-			return(newExit);
+			if(followFlagForward.createPathFromSpawn(exit, currentRoom, newExit))
+			{
+				//There shouldn't be any scouts for this to send to, unless this is another spawn of mine
+				return(newExit);
+			}
 		}
 		else if(startPosition != null && exit != null)
 		{
 			//console.log(currentRoom + ', ' + startPosition + ', ' + exit + ', ' + newExit);
-			followFlagForward.createDefinedPath(currentRoom, startPosition.findPathTo(exit, {maxOps: 2000}), newExit, false);
-			return(newExit);
+			if(followFlagForward.createDefinedPath(currentRoom, startPosition.findPathTo(exit, {maxOps: 2000}), newExit, false))
+			{
+				return(newExit);
+			}
 		}
 		else
 		{
@@ -621,6 +675,94 @@
 	}
 	return(null);
  }
+ 
+ function getRoute()
+ {
+	if(Memory.scoutRoute != null && Memory.scoutRoute.scoutRoute0 != null)
+	{
+		return(Memory.scoutRoute.scoutRoute0);
+	}
+	return(null);
+ }
+ 
+ function popRoute()
+ {
+	Memory.scoutRoute.scoutRoute0 = Memory.scoutRoute.scoutRoute1;
+	Memory.scoutRoute.scoutRoute1 = Memory.scoutRoute.scoutRoute2;
+	Memory.scoutRoute.scoutRoute2 = Memory.scoutRoute.scoutRoute3;
+	Memory.scoutRoute.scoutRoute3 = Memory.scoutRoute.scoutRoute4;
+	Memory.scoutRoute.scoutRoute4 = Memory.scoutRoute.scoutRoute5;
+	Memory.scoutRoute.scoutRoute5 = Memory.scoutRoute.scoutRoute6;
+	Memory.scoutRoute.scoutRoute6 = Memory.scoutRoute.scoutRoute7;
+	Memory.scoutRoute.scoutRoute7 = null;
+ }
+ 
+ function isScoutRouteEmpty()
+ {
+	if(Memory.scoutRoute == null)
+	{
+		return(true);
+	}
+	else
+	{
+		return(Memory.scoutRoute.scoutRoute0 == null && Memory.scoutRoute.scoutRoute1 == null && 
+				Memory.scoutRoute.scoutRoute2 == null && Memory.scoutRoute.scoutRoute3 == null && 
+				Memory.scoutRoute.scoutRoute4 == null && Memory.scoutRoute.scoutRoute5 == null && 
+				Memory.scoutRoute.scoutRoute6 == null && Memory.scoutRoute.scoutRoute7 == null);
+	}
+ }
+ 
+ function storeRoute(unit, id)
+ {
+	var routeToExit = Game.map.findExit(unit.room.name, id);
+	var startPosition = new RoomPosition(unit.memory.startPos.x, unit.memory.startPos.y, unit.memory.startPos.roomName);
+	var exit = startPosition.findClosestByRange(routeToExit);
+	
+	var route = [ { routeStart: startPosition, routeEnd: exit, usingSourceId: id } ];
+	if(Memory.scoutRoute == null || Memory.scoutRoute.scoutRoute0 == null)
+	{
+		Memory.scoutRoute.scoutRoute0 = route;
+		Memory.scoutRoute.scoutRoute1 = null;
+		Memory.scoutRoute.scoutRoute2 = null;
+		Memory.scoutRoute.scoutRoute3 = null;
+		Memory.scoutRoute.scoutRoute4 = null;
+		Memory.scoutRoute.scoutRoute5 = null;
+		Memory.scoutRoute.scoutRoute6 = null;
+		Memory.scoutRoute.scoutRoute7 = null;
+	}
+	else if(Memory.scoutRoute.scoutRoute1 == null)
+	{
+		Memory.scoutRoute.scoutRoute1 = route;
+	}
+	else if(Memory.scoutRoute.scoutRoute2 == null)
+	{
+		Memory.scoutRoute.scoutRoute2 = route;
+	}
+	else if(Memory.scoutRoute.scoutRoute3 == null)
+	{
+		Memory.scoutRoute.scoutRoute3 = route;
+	}
+	else if(Memory.scoutRoute.scoutRoute4 == null)
+	{
+		Memory.scoutRoute.scoutRoute4 = route;
+	}
+	else if(Memory.scoutRoute.scoutRoute5 == null)
+	{
+		Memory.scoutRoute.scoutRoute5 = route;
+	}
+	else if(Memory.scoutRoute.scoutRoute6 == null)
+	{
+		Memory.scoutRoute.scoutRoute6 = route;
+	}
+	else if(Memory.scoutRoute.scoutRoute7 == null)
+	{
+		Memory.scoutRoute.scoutRoute7 = route;
+	}
+	else
+	{
+		console.log('scout route is full and trying to store another.');
+	}
+ }
 
  function scout(unit, scoutsSeen, previousScoutState)
  {
@@ -653,7 +795,7 @@
 	}
 	else if(previousScoutState != null)
 	{
-		consoel.log('DEPRECATED, STOP THE SOURCE');
+		console.log('DEPRECATED, STOP THE SOURCE');
 		console.log(unit.name + ' creating path: ' + previousScoutState + ' in ' + unit.room + ' usedCpu: ' + Game.getUsedCpu() + ' limit: ' + Game.cpuLimit);
 		//If got this far then we've sent a new id to be implemented in a route, create it and
 		//send to the next scout waiting further behind
@@ -802,6 +944,7 @@
 					//there that creates a path going to the current exit/path in the previous room. We keep going to previous rooms
 					//and create paths to this new place for as long as there is a new previousRoom 
 					var nextSourceId = createPathToExit(unit, currentRoom, newExit);
+					//storeRoute(unit, newExit)
 					unit.memory.usingSourceId = newExit;
 					delete unit.memory.direction;	//Attach self to new route
 					
@@ -1049,17 +1192,17 @@
  {
 	var edgeOfMap = (1 > unit.pos.x || unit.pos.x > 48 || 1 > unit.pos.y || unit.pos.y > 48);
 	var harvestEmptyAndRoomUpdated = (harvestEmpty(useSpawn) && 
-									unit.memory.roomName != null && unit.memory.roomName == unit.room.name &&
-									useSpawn.memory.scoutsAlive != null && unit.memory.roomsMoved != null);
+									unit.memory.roomName != null && unit.memory.roomName == unit.room.name);
+	var nextRoomMove;
 	if(scoutsSeen == 0)	//If the leader
 	{
-		harvestEmptyAndRoomUpdated &= (useSpawn.memory.scoutsAlive-unit.memory.roomsMoved > scoutsSeen);
+		nextRoomMove = useSpawn.memory.scoutsAlive != null && unit.memory.roomsMoved != null && (useSpawn.memory.scoutsAlive-unit.memory.roomsMoved > scoutsSeen);
 	}
 	else
 	{
-		harvestEmptyAndRoomUpdated &= (useSpawn.memory.scoutsAlive-unit.memory.roomsMoved > scoutsSeen+1);
+		nextRoomMove = useSpawn.memory.scoutsAlive != null && unit.memory.roomsMoved != null && (useSpawn.memory.scoutsAlive-unit.memory.roomsMoved > scoutsSeen+1);
 	}
-	return(edgeOfMap || harvestEmptyAndRoomUpdated);
+	return(edgeOfMap || (harvestEmptyAndRoomUpdated && nextRoomMove));
  }
 
  function defendBase(unit)
