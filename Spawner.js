@@ -833,18 +833,51 @@
 	}
  }
  
- //Only spawn attackers and builders if there is enough supporting gatherers and harvesters, move them to the
- //end of the respawn list if this isn't the case.
- function checkSkipUnit(spawner, name, body, role, harvestersSeen, gatherersSeen, buildersSeen, attackersSeen)
+ //Looks at the first object in the nextName respawn list and skips it if any prerequisits haven't been met
+ //Attackers will only be allowed through if there is enough harvesters and gathers to support the ecconomy
+ //Builders will only be allowed through if there is enough harvesters and gatherers, unless we're at the energy cap
+ //Gatherers will only be allowed through if there is at least 1 harvester already at the source they're going for.
+ //Additional logic to gate harvesters and gatherers are in the dead unit retrieval (quickestToDieRespawn() and findDeadUnitBody())
+ //which only allows harvester/gathers through when we are under the limit for that source or a unit dieing will cause us
+ //to be under that limit.
+ function checkSkipUnit(spawner, body, harvestersSeen, gatherersSeen, buildersSeen, attackersSeen)
  {
+	var name = getNextName(spawner);
+	var role = findRoleWithinName(name);
 	if(role == null)
 	{
 		role = findDeadUnitRole(spawner, name);
 	}
-
-	if((role == 'attack' && Math.min(harvestersSeen*2, gatherersSeen*2) <= attackersSeen+1) || 
-		(role == 'builder' && Math.min(harvestersSeen*2, gatherersSeen*2) <= buildersSeen+1))
-	{	//Respawn denied, move to end of list and allow next unit an attempt.
+	
+	//Skip over gatherers if there are no workers present
+	//or
+	//Skip over gatherers if we can't find a live worker at this source already
+	if(role == 'gather' && 
+		(harvestersSeen <= 0 || 
+		(Memory.creeps[name] != null && Memory.creeps[name].usingSourceId != null && quickestUnitToDie('worker', Memory.creeps[name].usingSourceId) == null)))
+	{
+		extractNextName(spawner);
+		extractNextRespawnTime(spawner);
+		addRespawnEnd(spawner, body, name);
+		//console.log('adding ' + name + ' to end of respawn list.');
+		return(true);
+	}
+	//If there aren't harvesters and gatherers, skip over attackers
+	else if(role == 'attack' && Math.min(harvestersSeen*2, gatherersSeen*2) <= attackersSeen+1)
+	{
+		extractNextName(spawner);
+		extractNextRespawnTime(spawner);
+		addRespawnEnd(spawner, body, name);
+		//console.log('adding ' + name + ' to end of respawn list.');
+		return(true);
+	}
+	//If you're a builder and there isn't enough gatherers and harvesters already, skip over
+	//ignore the gatherer/harvester limit if we are at the energy cap.
+	else if(role == 'builder' && 
+			(Math.min(harvestersSeen*2, gatherersSeen*2) <= buildersSeen+1 && 
+			spawner.room.energyAvailable < spawner.room.energyCapacityAvailable))
+			
+	{
 		extractNextName(spawner);
 		extractNextRespawnTime(spawner);
 		addRespawnEnd(spawner, body, name);
@@ -978,7 +1011,10 @@
         role = 'defend';
     }
 	
-	if(checkSkipUnit(spawner, name, body, role, harvestersSeen, gatherersSeen, buildersSeen, attackersSeen))
+	//Independant of all other checks in spawnNextInQueue logic, recieves body as a conveniance
+	//to better calculate time more then anything else. If this fails however any work we were
+	//doing in spawnNextInQueue will be stopped and tried again next tick.
+	if(checkSkipUnit(spawner, body, harvestersSeen, gatherersSeen, buildersSeen, attackersSeen))
 	{
 		return(false);
 	}
@@ -1013,7 +1049,7 @@
 			else    //Not expecting this here
 			{
 				console.log('Unit ' + name + ' with role ' + role + ' found to respawn when not expected. Removed from respawning.');
-				return(false);
+				//return(false);
 			}
 		}
 		//Have body and role, don't have name, should only be true for 'defend'

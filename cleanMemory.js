@@ -220,6 +220,9 @@
 		delete Memory.spawns[y].scoutsAlive;
 		Memory.spawns[y].maxScouts = 1;
 	}
+	
+	delete Memory.scoutRoute.length;
+	delete Memory.scoutRoute;
  }
  
  module.exports = function()

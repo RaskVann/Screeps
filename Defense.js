@@ -294,44 +294,78 @@
  //So I'm not going to change it.
  function createPreviousExit(unit)
  {
-	var route = getRoute();
-	if(Game.cpuLimit >= 500 && route != null && 
-		route.startPos.roomName == unit.room.name && 
-		followFlagForward.findFlag(unit, route.usingSourceId) == null)
+	//var route = getRoute();
+	var routePos = getRouteFromRoom(unit.room.name);
+	var route = getRoutePos(routePos);
+	if(route != null)
+	{
+		console.log('route: ' + route + ' translating into ' + route[0]);
+		route = route[0];
+	}
+	
+	if(route == null || (route != null && route.startPos.roomName != unit.room.name))
+	{
+		//Unit doesn't exist in the room we're interested in to create a route, skip.
+		return(false);
+	}
+	
+	if(route != null && route.startPos.roomName == unit.room.name &&
+		followFlagForward.findFlag(unit, route.usingSourceId) != null)
+	{
+		//Flag has been found, so this route already exists in this room. Go ahead and remove
+		removeRouteLocation(routePos);
+		console.log(unit.name + ' found route ' + route.usingSourceId + ' in ' + unit.room + ' removing from list since already created.');
+		return(true);
+	}
+	
+	//We have more then enough time, and there is a unit in the 
+	//room we need access to, to create the path in flags
+	if(Game.cpuLimit >= 500 && route != null && unit != null &&
+		route.startPos.roomName == unit.room.name)
 	{
 		var sourceId = route.usingSourceId;
 		var currentRoom = route.routeStart.roomName;
 		var startPosition = new RoomPosition(route.startPos.x, route.startPos.y, route.startPos.roomName);
 		var exit = route.routeEnd;
-		//console.log('found exit: ' + sourceId + ' with route ' + routeToExit + ' at destination ' + exit);
+		var cap = route.cap;
+		console.log('Attempting Creation: found start: ' + startPosition + ' with route ' + sourceId + ' to exit: ' + exit);
 		
 		//If in room I control, make path from spawns to relevant exit, otherwise from current
 		//position to the relevant exit.
 		if(currentRoom.controller != null && currentRoom.controller.owner != null && 
 			currentRoom.controller.owner.username == 'RaskVann')
 		{
+			var tempCPU = Game.getUsedCpu();
+			var routeMessage = (unit.name + ' scout route in spawn: ' + currentRoom + ', stop: ' + exit + ', id: ' + sourceId + ' route creation.');
 			var pathMade = followFlagForward.createPathFromSpawn(exit, currentRoom, sourceId);
+			tempCPU = Game.getUsedCpu()-tempCPU;
 			if(pathMade)
 			{
-				popRoute();
+				console.log('SUCCESS: ' + routeMessage + ' took cpu: ' + tempCPU);
+				removeRouteLocation(routePos);
 				return(true);
 			}
 			else
 			{
+				console.log('FAIL: ' + routeMessage + ' took cpu: ' + tempCPU);
 				return(false);
 			}
 		}
 		else if(startPosition != null && exit != null)
 		{
-			//console.log(currentRoom + ', ' + startPosition + ', ' + exit + ', ' + sourceId);
-			var pathMade = followFlagForward.createDefinedPath(currentRoom, startPosition.findPathTo(exit, {maxOps: 4000}), sourceId, false);
+			var tempCPU = Game.getUsedCpu();
+			var routeMessage = (unit.name + ' scout route in room: ' + currentRoom + ', start: ' + startPosition + ', stop: ' + exit + ', id: ' + sourceId + ' capped: ' + cap + ' route creation.');
+			var pathMade = followFlagForward.createDefinedPath(currentRoom, startPosition.findPathTo(exit, {maxOps: 4000}), sourceId, cap);
+			tempCPU = Game.getUsedCpu()-tempCPU;
 			if(pathMade)
 			{
-				popRoute();
+				console.log('SUCCESS: ' + routeMessage + ' took cpu: ' + tempCPU);
+				removeRouteLocation(routePos);
 				return(true);
 			}
 			else
 			{
+				console.log('FAIL: ' + routeMessage + ' took cpu: ' + tempCPU);
 				return(false);
 			}
 		}
@@ -680,26 +714,62 @@
 	return(null);
  }
  
- function getRoute()
+ function removeRouteLocation(routeLocation)
+ {
+	if(Memory.scoutRoute != null && Memory.scoutRoute.length != null && routeLocation != null)
+	{
+		for(var x = routeLocation; x < Memory.scoutRoute.length; x++)
+		{
+			if(x+1 < Memory.scoutRoute.length)
+			{
+				console.log('Route[' + x + ']: ' + Memory.scoutRoute[x] + ' replaced by route[' + x+1 + ']: ' + Memory.scoutRoute[x+1]);
+				Memory.scoutRoute[x] = Memory.scoutRoute[x+1];
+			}
+			else
+			{
+				console.log('End of list, deleting last entry[' + x + ']: ' + Memory.scoutRoute[x] + ' and updating length from ' + Memory.scoutRoute.length);
+				delete Memory.scoutRoute[--Memory.scoutRoute.length];
+			}
+		}
+		return(true);
+	}
+	return(false);
+ }
+ 
+ //returns location of route that matches the room we send in
+ function getRouteFromRoom(findRoomName)
  {
 	if(Memory.scoutRoute != null && Memory.scoutRoute.length != null)
 	{
-		return(Memory.scoutRoute[Memory.scoutRoute.length]);
+		for(var x = 0; x < Memory.scoutRoute.length; x++)
+		{
+			console.log('Trying to find roomName: ' + findRoomName + ' in pos[' + x + ']: ' + Memory.scoutRoute[x].startPos.roomName);
+			if(Memory.scoutRoute[x].startPos != null && Memory.scoutRoute[x].startPos.roomName == findRoomName)
+			{
+				return(x);	//Retrieve with Memory.scoutRoute[x]
+			}
+			else if(Memory.scoutRoute[x].startPos == null || Memory.scoutRoute[x] == "test")
+			{
+				console.log('Searching through stored route found bad information[' + x + ']: ' + Memory.scoutRoute[x]);
+				//removeRouteLocation(x);
+			}
+		}
 	}
 	return(null);
  }
  
- //Remove the last added object from the list, returns that object from the list
- function popRoute()
+ function getRoutePos(pos)
  {
-	var tempStoreRoute = getRoute();
-	if(Memory.scoutRoute != null && Memory.scoutRoute.length-1 >= 0)
+	if(Memory.scoutRoute != null && Memory.scoutRoute.length != null && 
+		pos != null && pos < Memory.scoutRoute.length)
 	{
-		delete Memory.scoutRoute[--Memory.scoutRoute.length];
+		return(Memory.scoutRoute[pos]);
 	}
-	return(tempStoreRoute);
+	return(null);
  }
  
+ //Checks Memory.scoutRoute to see if it has information to use or not. Used to spawn scouting routes after the
+ //scouts have found and stored routes.
  function isScoutRouteEmpty()
  {
 	if(Memory.scoutRoute == null || (Memory.scoutRoute.length != null && Memory.scoutRoute.length <= 0))
@@ -718,13 +788,14 @@
 	Memory.scoutRoute[Memory.scoutRoute.length++] = route;
  }
  
- function storeRoute(unit, id)
+ function storeRoute(unit, id, capRoute)
  {
 	var routeToExit = Game.map.findExit(unit.room.name, id);
 	var startPosition = new RoomPosition(unit.memory.startPos.x, unit.memory.startPos.y, unit.memory.startPos.roomName);
 	var exit = startPosition.findClosestByRange(routeToExit);
 	
-	var route = [ { routeStart: startPosition, routeEnd: exit, usingSourceId: id } ];
+	var route = [ routeStart: startPosition, routeEnd: exit, usingSourceId: id, cap: capRoute ];
+	//[ { routeStart: startPosition, routeEnd: exit, usingSourceId: id, cap: capRoute } ];
 	
 	if(Memory.scoutRoute == null)
 	{
@@ -917,33 +988,26 @@
 					//First this unit creates a path to sources[x] in currentRoom, then we go to the previousRoom and get a unit
 					//there that creates a path going to the current exit/path in the previous room. We keep going to previous rooms
 					//and create paths to this new place for as long as there is a new previousRoom 
-					var nextSourceId = createPathToExit(unit, currentRoom, newExit);
-					storeRoute(unit, newExit);
+					//var nextSourceId = createPathToExit(unit, currentRoom, newExit);
+					storeRoute(unit, newExit, false);
 					unit.memory.usingSourceId = newExit;
 					delete unit.memory.direction;	//Attach self to new route
 					
 					if(unit.memory.previousRoom != null)
 					{
-						for(var nextScout = scoutFromRoomName(unit.memory.previousRoom); nextSourceId != null && nextScout != null; nextScout = scoutFromRoomName(nextScout.memory.previousRoom))
+						for(var nextScout = scoutFromRoomName(unit.memory.previousRoom); nextScout != null; nextScout = scoutFromRoomName(nextScout.memory.previousRoom))
 						{
-							console.log(unit.name + ' creating path in room ' + unit.room.name + ' createPath returned ' + nextSourceId + '. ' + nextScout + ' now creating ' + newExit + ' in ' + nextScout.room);
+							console.log(unit.name + ' creating path in room ' + unit.room.name + '. ' + nextScout + ' now creating ' + newExit + ' in ' + nextScout.room);
 							//TO DO: Should be able to append information or place new flags onto all places in this room where 
 							//		nextScout.memory.usingSourceId is found on flags since a route was previously laid out.
-							nextSourceId = createPathToExit(nextScout, nextScout.room, newExit);
-							storeRoute(nextScout, newExit);
-							//nextScout.memory.usingSourceId = newExit;
-							//Shouldn't need delete direction since this should be the same route as what was origionally followed
+							//nextSourceId = createPathToExit(nextScout, nextScout.room, newExit);
+							storeRoute(nextScout, newExit, false);
 						}
-						console.log(unit.name + ' creating path in room ' + unit.room.name + ' createPath returned ' + nextSourceId);
+						console.log(unit.name + ' creating path in room ' + unit.room.name);
 					}
 					else
 					{
 						console.log(unit.name + ' was going to create a new path but no found previousRoom. If ' + unit.room.name + ' is home? then fine');
-					}
-					
-					if(nextSourceId == null)
-					{
-						console.log(unit.name + ' returned null when creating createPathToExit(), there is potential an incomplete path was formed in or closer to ' + unit.room.name);
 					}
 					
 					//TO DO: New code for 'we are creating paths'?
@@ -964,11 +1028,6 @@
 		useSpawn.memory.requestScout = 1;
 	}
 	
-	if(isScoutRouteEmpty() == false)
-	{
-		createPreviousExit(unit);
-	}
-
 	//This unit shouldn't be created until the spawner has the chance to set everything it needs in the core room. This is for every other room the scout visits.
 	//Create harvesters and gatherers needed for this room if it hasn't done so already. This only happens once on first entering the room for the first time.
 	//if(currentRoom.controller != null && isScoutsReady(useSpawn) && Game.cpuLimit >= 500)
@@ -1008,9 +1067,9 @@
 				{
 					//console.log(unit.name + ' trying to create path to source ' + sources[x].id + ' and add units to spawners list');
 					
-					followFlagForward.createDefinedPath(currentRoom, pathToSource, sources[x].id, true);
-					storeRoute(unit, sources[x].id);
-					followFlagForward.updatePathLength(sources[x].id, pathLength);
+					//followFlagForward.createDefinedPath(currentRoom, pathToSource, sources[x].id, true);
+					storeRoute(unit, sources[x].id, true);
+					//followFlagForward.updatePathLength(sources[x].id, pathLength);
 
 					addHarvestId(useSpawn, sources[x].id);
 					addNeedHarvest(useSpawn, 1);
@@ -1026,24 +1085,19 @@
 					//and create paths to this new place for as long as there is a new previousRoom 
 					if(unit.memory.previousRoom != null)
 					{
-						var nextSourceId = 1;
+						//var nextSourceId = 1;
 						//WARNING: There is a danger this is cyclical if a previousRoom points to a room we've already created a path in
 						//TO DO: Validate first by going through the path, ensuring the last one points at controller.owner.name = 'RaskVann'
 						//and isn't endless (end after a few dozen checks)
-						for(var nextScout = scoutFromRoomName(unit.memory.previousRoom); nextSourceId != null && nextScout != null; nextScout = scoutFromRoomName(nextScout.memory.previousRoom))
+						for(var nextScout = scoutFromRoomName(unit.memory.previousRoom); nextScout != null; nextScout = scoutFromRoomName(nextScout.memory.previousRoom))
 						{
 							//TO DO: Should be able to append information or place new flags onto all places in this room where 
 							//		nextScout.memory.usingSourceId is found on flags since a route was previously laid out.
-							console.log(unit.name + ' creating path in room ' + unit.room.name + ' createPath returned ' + nextSourceId + '. ' + nextScout + ' now creating ' + newExit + ' in ' + nextScout.room);
-							nextSourceId = createPathToExit(nextScout, nextScout.room, sources[x].id);
-							storeRoute(nextScout, sources[x].id);
+							console.log(unit.name + ' creating path in room ' + unit.room.name + '. ' + nextScout + ' now creating ' + newExit + ' in ' + nextScout.room);
+							//nextSourceId = createPathToExit(nextScout, nextScout.room, sources[x].id);
+							storeRoute(nextScout, sources[x].id, false);
 						}
-						console.log(unit.name + ' creating path in room ' + unit.room.name + ' createPath returned ' + nextSourceId);
-						
-						if(nextSourceId == null)
-						{
-							console.log(unit.name + ' returned null when creating createPathToExit(), there is potential an incomplete path was formed in or closer to ' + unit.room.name);
-						}
+						console.log(unit.name + ' creating path in room ' + unit.room.name);
 					}
 					else
 					{
@@ -1376,6 +1430,13 @@ module.exports.scout = function(unit, scoutsSeen, previousScoutState)
 	{
 		var pastState = scout(unit, scoutsSeen, previousScoutState);
 		trackScoutReadiness(unit, pastState);
+		
+		//Spawn a route if this unit is in a room we have a pending route to be created (and it doesn't already exist)
+		if(isScoutRouteEmpty() == false)
+		{
+			createPreviousExit(unit);
+		}
+		
 		return(pastState);
 	}
 	return(null);
