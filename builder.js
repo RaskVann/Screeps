@@ -296,50 +296,85 @@
  //energy faster while building roads along routes we're frequenting.
  function buildRoad(unit)
  {
-	var findStructure = unit.pos.lookFor('structure');
-	var foundRoad = -1;
 	var workComponents = unit.getActiveBodyparts(WORK);
-	for(var x = 0; findStructure != null && x < findStructure.length; x++)
+	if(workComponents > 0)
 	{
-		//Go through all structures at current builder's spot, if they have less hits then what the builder
-		//would repair, repair the structure
-		if(findStructure[x].hits < (findStructure[x].hitsMax - (workComponents*100)) &&
-			unit.carry.energy >= workComponents)
+		var findStructure = unit.pos.lookFor('structure');
+		var foundRoad = -1;
+		var lowCpuUsage = (Game.getUsedCpu() < 5);
+		for(var x = 0; findStructure != null && x < findStructure.length; x++)
 		{
-			unit.repair(findStructure[x]);
-			return(true);
+			//Go through all structures at current builder's spot, if they have less hits then what the builder
+			//would repair, repair the structure
+			if(findStructure[x].hits < (findStructure[x].hitsMax - (workComponents*100)) &&
+				unit.carry.energy >= workComponents)
+			{
+				unit.repair(findStructure[x]);
+				return(true);
+			}
+			
+			if(findStructure[x].structureType == STRUCTURE_ROAD)
+			{
+				foundRoad = x;	//Keeps track of the last found road at this position, used to build roads at a spot if it's found
+				break;
+			}
+		}
+		//If we found a road on this spot and we don't need to repair it, we have extra time to try to repair anything nearby
+		//Also don't do this unless we're really low on cpuUsage as this is a convienance feature, not needed.
+		if(foundRoad >= 0 && unit.carry.energy > workComponents && lowCpuUsage)
+		{
+			var repairInRange = unit.pos.findInRange(FIND_STRUCTURES, 3);
+			for(var z in repairInRange)
+			{
+				if(repairInRange[z] != null && 
+					repairInRange[z].hits < (repairInRange[z].hitsMax - (workComponents*100)) &&
+					unit.repair(repairInRange[z]) == 0)
+				{
+					return(true);
+				}
+			}
+		}
+	 
+		var findConstruction = unit.pos.lookFor('constructionSite');
+		if(findConstruction != null)
+		{
+			if(unit.carry.energy > 0 && findConstruction[0] != null &&
+				unit.build(findConstruction[0]) == 0)
+			{
+				return(true);
+			}
+			else if(findConstruction[0] != null)
+			{
+				console.log(unit.name + ' failed building road? ' + findConstruction[0] + ' in room ' + unit.room.name + ' with energy ' + unit.carry.energy);
+				return(false);
+			}
+		}
+		//If we found a road on this spot and we don't need to repair or build it, we have extra time to try to build anything nearby
+		//Also don't do this unless we're really low on cpuUsage as this is a convienance feature, not needed.
+		else if(foundRoad >= 0 && unit.carry.energy > workComponents && lowCpuUsage)
+		{
+			var constructionInRange = unit.pos.findInRange(FIND_MY_CONSTRUCTION_SITES, 3);
+			for(var y in constructionInRange)
+			{
+				if(constructionInRange[y] != null && unit.build(constructionInRange[y]) == 0)
+				{
+					return(true);
+				}
+				else if(constructionInRange[y] != null)
+				{
+					console.log(unit.name + ' failed construction? ' + constructionInRange[y] + ' in room ' + unit.room.name + ' with energy ' + unit.carry.energy);
+					return(false);
+				}
+			}
 		}
 		
-		if(findStructure[x].structureType == STRUCTURE_ROAD)
+		//We searched through all structures at this spot, no road was found, so build one.
+		if(foundRoad < 0)
 		{
-			foundRoad = x;	//Keeps track of the last found road at this position, used to build roads at a spot if it's found
-			break;
-		}
-	}
-	//TO DO: Look within range (3) for repairable objects, repair 1 if found.
- 
-	var findConstruction = unit.pos.lookFor('constructionSite');
-	if(findConstruction != null)
-	{
-		if(unit.carry.energy > 0 && findConstruction[0] != null &&
-			unit.build(findConstruction[0]) == 0)
-		{
-			return(true);
-		}
-		else if(findConstruction[0] != null)
-		{
-			console.log(unit.name + ' failed building road? ' + findConstruction[0] + ' in room ' + unit.room.name + ' with energy ' + unit.carry.energy);
-			return(false);
-		}
-		//TO DO: Look within range (3) for buildable objects, build 1 if found.
-	}
-	
-	//We searched through all structures at this spot, no road was found, so build one.
-	if(foundRoad < 0)
-	{
-		if(unit.pos.createConstructionSite(STRUCTURE_ROAD) == 0)
-		{
-			return(true);
+			if(unit.pos.createConstructionSite(STRUCTURE_ROAD) == 0)
+			{
+				return(true);
+			}
 		}
 	}
 	return(false);

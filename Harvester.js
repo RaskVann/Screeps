@@ -609,40 +609,76 @@
  function findRoadOrCreate(unit)
  {
 	var workComponents = unit.getActiveBodyparts(WORK);
-	var findStructure = unit.pos.lookFor('structure');
-	for(var x = 0; findStructure != null && x < findStructure.length; x++)
+	if(workComponents > 0)
 	{
-		if(findStructure[x].structureType == STRUCTURE_ROAD)
+		var findStructure = unit.pos.lookFor('structure');
+		var foundRoad = -1;
+		var lowCpuUsage = (Game.getUsedCpu() < 5);
+		for(var x = 0; findStructure != null && x < findStructure.length; x++)
 		{
-			//Go through all structures at current builder's spot, if they have less hits then what the builder
-			//would repair, repair the structure
-			if(workComponents > 0 && 
-				findStructure[x].hits < (findStructure[x].hitsMax - (workComponents*100)) &&
-				unit.carry.energy >= workComponents)
+			if(findStructure[x].structureType == STRUCTURE_ROAD)
 			{
-				unit.repair(findStructure[x]);
+				//Go through all structures at current builder's spot, if they have less hits then what the builder
+				//would repair, repair the structure
+				if(workComponents > 0 && 
+					findStructure[x].hits < (findStructure[x].hitsMax - (workComponents*100)) &&
+					unit.carry.energy >= workComponents)
+				{
+					unit.repair(findStructure[x]);
+					return(true);
+				}
+				foundRoad = x;
 			}
+		}
+		//If we found a road on this spot and we don't need to repair it, we have extra time to try to repair roads nearby
+		//Also don't do this unless we're really low on cpuUsage as this is a convienance feature, not needed.
+		if(foundRoad >= 0 && unit.carry.energy > workComponents && lowCpuUsage)
+		{
+			var repairInRange = unit.pos.findInRange(FIND_STRUCTURES, 3);
+			for(var z in repairInRange)
+			{
+				if(repairInRange[z] != null && repairInRange[z].structureType == STRUCTURE_ROAD &&
+					repairInRange[z].hits < (repairInRange[z].hitsMax - (workComponents*100)) && 
+					unit.repair(repairInRange[z]) == 0)
+				{
+					return(true);
+				}
+			}
+		}
+
+		var findConstruction = unit.pos.lookFor('constructionSite');
+		for(var y = 0; findConstruction != null && y < findConstruction.length; y++)
+		{
+			if(findConstruction[y].structureType == STRUCTURE_ROAD)
+			{
+				if(unit.carry.energy > 0 && workComponents > 0)
+				{
+					unit.build(findConstruction[y]);
+				}
+				return(true);	//Road is already being built, ignore
+			}
+		}
+		//If we found a road on this spot and we don't need to repair or build it, we have extra time to try to build any roads nearby
+		//Also don't do this unless we're really low on cpuUsage as this is a convienance feature, not needed.
+		if(foundRoad >= 0 && unit.carry.energy > workComponents && lowCpuUsage)
+		{
+			var constructionInRange = unit.pos.findInRange(FIND_MY_CONSTRUCTION_SITES, 3);
+			for(var w in constructionInRange)
+			{
+				if(constructionInRange[w] != null && 
+					constructionInRange[w].structureType == STRUCTURE_ROAD &&
+					unit.build(constructionInRange[w]) == 0)
+				{
+					return(true);
+				}
+			}
+		}
+
+		//We searched through all structures at this spot, no road was found, so build one.
+		if(unit.pos.createConstructionSite(STRUCTURE_ROAD) == 0)
+		{
 			return(true);
 		}
-	}
-
-	var findConstruction = unit.pos.lookFor('constructionSite');
-	for(var y = 0; findConstruction != null && y < findConstruction.length; y++)
-	{
-		if(findConstruction[y].structureType == STRUCTURE_ROAD)
-		{
-			if(unit.carry.energy > 0 && workComponents > 0)
-			{
-				unit.build(findConstruction[y]);
-			}
-			return(true);	//Road is already being built, ignore
-		}
-	}
-
-	//We searched through all structures at this spot, no road was found, so build one.
-	if(unit.pos.createConstructionSite(STRUCTURE_ROAD) == 0)
-	{
-		return(true);
 	}
 	return(false);
  }

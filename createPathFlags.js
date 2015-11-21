@@ -301,7 +301,7 @@
  //otherwise returns end of the list (won't go through the subsequent function)
  function clampStartPos(currentRoom, currentPath)
  {
-	for(var x = 0; currentPath != null && x < ((currentPath.length)-1); x++)
+	for(var x = 0; currentRoom != null && currentPath != null && x < ((currentPath.length)-1); x++)
 	{
 		if(currentPath[x] != null)
 		{
@@ -405,6 +405,7 @@
  //		If profit isn't over threshold (25%?) don't bother, since there will be inefficiencies I'm not going to compute for.
  function createPathToFlags(currentRoom, currentPath, currentSourceId, capEnd)
  {
+ console.log(currentPath.length);
 	if(currentPath == null || currentSourceId == null || currentPath.length == 0)
 	{
 		console.log('Path: ' + currentPath + ' or source ' + currentSourceId + ' is null, abandon creating path');
@@ -605,7 +606,7 @@
 	}
 	else
 	{
-		console.log('TO DO: multiple energy spawns were found in adjoining room, create flag at spawn with \nusingDestinationId: ' + spawnId +
+		console.log('TO DO: multiple energy spawns were found in adjoining room, create flag at spawn with \nusingDestinationId: ' + pathId +
 					' to use the same path that will diverge in the next room.');
 	}
 	return(false);

@@ -29,7 +29,7 @@
 					  { cost: 800, body: [CARRY, MOVE, CARRY, MOVE, CARRY, MOVE, CARRY, MOVE, CARRY, MOVE, CARRY, MOVE, CARRY, MOVE, CARRY, MOVE] },
 					  { cost: 1000, body: [CARRY, MOVE, CARRY, MOVE, CARRY, MOVE, CARRY, MOVE, CARRY, MOVE, CARRY, MOVE, CARRY, MOVE, CARRY, MOVE, CARRY, MOVE, CARRY, MOVE] }, 
 					  { cost: 1200, body: [CARRY, MOVE, CARRY, MOVE, CARRY, MOVE, CARRY, MOVE, CARRY, MOVE, CARRY, MOVE, CARRY, MOVE, CARRY, MOVE, CARRY, MOVE, CARRY, MOVE, CARRY, MOVE, CARRY, MOVE] } ];
- var gatherRoadBody = [ { cost: 300, body: [WORK, CARRY, CARRY, MOVE, MOVE] },
+ var gatherRoadBody = [ { cost: 300, body: [CARRY, CARRY, CARRY, CARRY, MOVE, MOVE] },
                       { cost: 500, body: [WORK, CARRY, CARRY, CARRY, CARRY, CARRY, MOVE, MOVE, MOVE] },
                       { cost: 800, body: [WORK, CARRY, CARRY, CARRY, CARRY, CARRY, CARRY, CARRY, CARRY, CARRY, MOVE, MOVE, MOVE, MOVE, MOVE] },
 					  { cost: 1250, body: [WORK, CARRY, CARRY, CARRY, CARRY, CARRY, CARRY, CARRY, CARRY, CARRY, CARRY, CARRY, CARRY, CARRY, CARRY, CARRY, MOVE, MOVE, MOVE, MOVE, MOVE, MOVE, MOVE, MOVE] } ];
@@ -1002,7 +1002,6 @@
     }
     
     //If found attackers (this requires attack units, since they hold the code that watches)
-    //TO DO: change this to only happen once, in the room or spawner for example
     //replace anything that might be going on by creating a 'defend' unit, no name, attack body
     if(spawner.room.memory.requestDefender > 0)
     {
@@ -1130,13 +1129,19 @@
 		{
 			if(Game.creeps[units].name == name)
 			{
-				//console.log('next unit: ' + name + ' is still alive for ' + Game.creeps[units].ticksToLive + ' but we are at full power, so suiciding this unit ');
-				//Game.creeps[units].suicide();		//Disabling for now, trying to force only high level units to spawn
-				//Skip over unit
-				console.log('next unit: ' + name + ' is still alive for ' + Game.creeps[units].ticksToLive + ' but we are at full power, skipping over.');
-				extractNextName(spawner);
-				extractNextRespawnTime(spawner);
-				addRespawnEnd(spawner, body, name);
+				if(body != null && body.length != null && 
+					Game.creeps[units].hitsMax < body.length*100)
+				{
+					console.log('next unit: ' + name + ' is still alive for ' + Game.creeps[units].ticksToLive + ' but found upgraded replacement');
+					Game.creeps[units].suicide();		//Disabling for now, trying to force only high level units to spawn
+				}
+				else
+				{	//Skip over unit
+					console.log('next unit: ' + name + ' is still alive for ' + Game.creeps[units].ticksToLive + ' but we are at full power, skipping over.');
+					extractNextName(spawner);
+					extractNextRespawnTime(spawner);
+					addRespawnEnd(spawner, body, name);
+				}
 				break;
 			}
 		}
@@ -1178,6 +1183,109 @@
 	}
  }
  
+ //Spawns a dead unit from the respawn queue with the role and sourceId provided (at spawner provided)
+ function respawnPreexisting(spawner, role, sourceId)
+ {
+	var replaceWithName = nextDeadRoleName(spawner, role, sourceId);	//Gets next available respawnable unit matching this role and id
+	var returnRole = findRoleWithinName(replaceWithName);	//Usually interchangable with role above, but just to be safe
+	var returnBody = retrieveBody(returnRole, spawner);		//Gets body to match this role, given how much available energy we have.
+	if(replaceWithName != null && returnRole != null && returnBody != null)
+	{
+		var creation = spawner.canCreateCreep(returnBody, replaceWithName);
+		if(creation == 0)
+		{
+			var badSpawn = spawner.createCreep(returnBody, replaceWithName);
+			//TO DO: Update respawn list, move unit we're spawning here to end.
+			console.log('Spawn: ' + replaceWithName + ' to replace ' + unit.name + ' dieing in ' + unit.ticksToLive + ' ticks. Found ' + (countActiveGather-unit.getActiveBodyparts(CARRY))*50 + ' gather of needed ' + respawnThreshold);
+			return(true);
+		}
+		else
+		{
+			//Can't create creep for some reason, usually not enough energy
+			console.log('Trying to respawn replacement unit failed. Code: ' + creation);
+		}
+	}
+	else
+	{
+		console.log('Trying to respawn replacement unit failed. Could not find name: ' + replaceWithName + ' role: ' + returnRole + ' or body: ' + returnBody);
+	}
+	return(false);
+ }
+ 
+ //Every once in a while the spawner(s) will be busy when they need to replace a unit and so a role will be empty at a source
+ //'Empty' meaning there will be either 0 gatherers or 0 harvesters at that particular source. We will go through all the rooms
+ //we have access to and check all the sources at each, cycling through all alive units for potential matching workers and gathers
+ //As long as we have one of each we meet the bare minimum requirements, otherwise we try to spawn what's missing from the respawn list.
+ //If the respawn list doesn't have a gather or worker with a matching energy source id, this will fail.
+ function respawnEmptyRolesAtSources(spawner)
+ {
+	//If the spawner exists, isn't spawning and we haven't used a lot of cpu this frame. This is a conveniance (optional) function
+	if(spawner != null && spawner.spawning == null && Game.getUsedCpu() < 10)
+	{
+		for(var eachRoom in Game.Rooms)
+		{
+			var worker;
+			var gather;
+			var roomSources = Game.Rooms[eachRoom].find(FIND_SOURCES);
+			for(var eachSource in roomSources)
+			{
+				worker = 0;
+				gather = 0;
+				var currentSourceId = roomSources[eachSource].id;
+				for(var eachCreep in Game.creeps)
+				{
+					var roleWithinName = findRoleWithinName(Game.creeps[eachCreep].name);
+					if(roleWithinName == 'worker' &&
+						Game.creeps[eachCreep].memory.usingSourceId == currentSourceId)
+					{
+						worker++;
+					}
+					else if(roleWithinName == 'gather' &&
+						Game.creeps[eachCreep].memory.usingSourceId == currentSourceId)
+					{
+						gather++;
+					}
+					
+					if(worker > 0 && gather > 0)
+					{
+						break;	//Success, move to next source
+					}
+				}
+				
+				if(worker <= 0)
+				{
+					//No workers at this source, found a missed creep.
+					var replacementSuccess = respawnPreexisting(spawner, "worker", currentSourceId);
+					if(replacementSuccess == false)
+					{
+						console.log('Source[' + currentSourceId + '] has 0 workers, success of spawn: ' + replacementSuccess + ' no respawnable unit or energy?');
+					} 
+					else 
+					{
+						console.log('Source[' + currentSourceId + '] has 0 workers, creating missed worker');
+					}
+					return(replacementSuccess);
+				}
+				else if(gather <= 0)
+				{
+					//No gathers at this source, found a missed creep.
+					var replacementSuccess = respawnPreexisting(spawner, "gather", currentSourceId);
+					if(replacementSuccess == false)
+					{
+						console.log('Source[' + currentSourceId + '] has 0 gatherers, success of spawn: ' + replacementSuccess + ' no respawnable unit or energy?');
+					} 
+					else 
+					{
+						console.log('Source[' + currentSourceId + '] has 0 gatherers, creating missed gather');
+					}
+					return(replacementSuccess);
+				}
+			}
+		}
+	}
+	return(false);
+ }
+ 
  module.exports = function(spawner, harvestersSeen, gatherersSeen, buildersSeen, attackersSeen, scoutsSeen)
  {
 	spawner.memory.scoutsAlive = scoutsSeen;
@@ -1188,6 +1296,8 @@
 		if(quickestToDieRespawn(spawner) == false)
 		{
 			//If it fails to find something to replace a unit.
+			//Check if there are any previous units we now need since quickestToDie couldn't get to it while a spawn was occuring
+			respawnEmptyRolesAtSources(spawner);
 		}
 		spawnNextInQueue(spawner, harvestersSeen, gatherersSeen, buildersSeen, attackersSeen, scoutsSeen);
 	}
