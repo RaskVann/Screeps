@@ -580,20 +580,30 @@
         {
             return(null);
         }
-        
-        return(unit.room.lookForAt('creep', posX, posY));
+        //Only search if in bounds, not valid when on boundary
+		if(posX >= 0 && posX <= 49 && posY >= 0 && posY <= 49)
+		{
+			return(unit.room.lookForAt('creep', posX, posY));
+		}
     }
+	return(null);
  }
  
  //If unit we're passing in is full of energy, and we've found a unit with no energy, try to transfer to them
  function transferAround(unit)
  {
-	for(var x = unit.pos.x+1; unit.carry.energy == unit.carryCapacity && x >= unit.pos.x-1; x--)
+	var xMax = Math.min(49,unit.pos.x+1);
+	var xMin = Math.max(0, unit.pos.x-1);
+	var yMax = Math.min(49,unit.pos.y+1);
+	var yMin = Math.max(0, unit.pos.y-1);
+	for(var x = xMax; unit.carry.energy > unit.carryCapacity*.01 && x >= xMin; x--)
 	{
-		for(var y = unit.pos.y+1; y >= unit.pos.y-1; y--)
+		for(var y = yMax; y >= yMin; y--)
 		{
 			var unitAt = unit.room.lookForAt('creep', x, y);
-			if(unitAt != null && unitAt[0] != null && unitAt[0].carry.energy == 0)
+			if(unitAt != null && unitAt[0] != null && 
+				unitAt[0].memory != null && 
+				unitAt[0].memory.role == 'builder')
 			{
 				if(unit.transferEnergy(unitAt[0]) == 0)
 					return(true);

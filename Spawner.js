@@ -514,7 +514,12 @@
 		{
 			var countActiveGather = countGatherAtSource(nextName);
 			var pathLength = 5;
-			if(Memory.creeps[nextName] != null && Memory.creeps[nextName].pathLength != null)
+			if(Memory.creeps[nextName].pathLength != null)
+			{
+				pathLength = Memory.creeps[nextName].pathLength;
+			}
+			
+			if(Memory.creeps[nextName] != null && pathLength != null)
 			{
 				pathLength = Memory.creeps[nextName].pathLength;
 				var respawnThreshold = (pathLength*2*10);

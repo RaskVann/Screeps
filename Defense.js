@@ -165,14 +165,18 @@
 
  function getHarvestId(spawn)
  {
-	if(spawn.memory.harvestId0 == null)
+	if(spawn != null)
 	{
-		spawn.memory.harvestId0 = -1;
-		spawn.memory.harvestId1 = -1;
-		spawn.memory.harvestId2 = -1;
-		spawn.memory.harvestId3 = -1;
+		if(spawn.memory.harvestId0 == null)
+		{
+			spawn.memory.harvestId0 = -1;
+			spawn.memory.harvestId1 = -1;
+			spawn.memory.harvestId2 = -1;
+			spawn.memory.harvestId3 = -1;
+		}
+		return(spawn.memory.harvestId0);
 	}
-	return(spawn.memory.harvestId0);
+	return(null);
  }
 
  //Returns the most recently added harvestId, if none are found in the list returns null
@@ -805,7 +809,7 @@
 	
 	if(useSpawn == null)
 	{
-		console.log(unit.name + ' did not find a spawn to use in ' + unit.room.name);
+		console.log(unit.name + ' did not find a spawn to use in ' + unit.room.name + ' or id: ' + unit.memory.spawnID);
 	}
 	else if(useSpawn.memory == null)
 	{
@@ -958,7 +962,20 @@
  //Assumes: route = [ { routeStart: startPosition, routeEnd: exit, usingSourceId: id } ];
  function addRoute(route)
  {
-	Memory.scoutRoute[Memory.scoutRoute.length++] = route;
+	if(Memory.scoutRoute == null)
+	{
+		Memory.scoutRoute = ['test'];
+		Memory.scoutRoute[0] = route;
+		Memory.scoutRoute.length = 1;
+	}
+	else
+	{
+		if(Memory.scoutRoute != null && Memory.scoutRoute.length == null)
+		{
+			//Memory.scoutRoute.length = 1;
+		}
+		Memory.scoutRoute[Memory.scoutRoute.length++] = route;
+	}
  }
  
  function storeRoute(unit, id, capRoute, useId)
@@ -1006,15 +1023,6 @@
 	}
 	
 	var route = [ { routeStart: startPosition, routeEnd: exit, usingSourceId: id, cap: capRoute } ];
-	
-	if(Memory.scoutRoute == null)
-	{
-		Memory.scoutRoute = ["test", "test"];
-	}
-	if(Memory.scoutRoute.length == null)
-	{
-		Memory.scoutRoute.length = 0;
-	}
 
 	addRoute(route);
 	return(true);
@@ -1032,13 +1040,13 @@
 		var directionTowards;
         if(unit.memory.direction == TOP)
         {
-            posY++;
+            posY--;
 			directionTowards = BOTTOM;
         }
         else if(unit.memory.direction == TOP_RIGHT)
         {
             posX++;
-            posY++;
+            posY--;
 			directionTowards = BOTTOM_LEFT;
         }
         else if(unit.memory.direction == RIGHT)
@@ -1049,18 +1057,18 @@
         else if(unit.memory.direction == BOTTOM_RIGHT)
         {
             posX++;
-            posY--;
+            posY++;
 			directionTowards = TOP_LEFT;
         }
         else if(unit.memory.direction == BOTTOM)
         {
-            posY--;
+            posY++;
 			directionTowards = TOP;
         }
         else if(unit.memory.direction == BOTTOM_LEFT)
         {
             posX--;
-            posY--;
+            posY++;
 			directionTowards = TOP_RIGHT;
         }
         else if(unit.memory.direction == LEFT)
@@ -1071,14 +1079,14 @@
         else if(unit.memory.direction == TOP_LEFT)
         {
             posX--;
-            posY++;
+            posY--;
 			directionTowards = BOTTOM_RIGHT;
         }
         else
         {
             return(null);
         }
-        
+
 		if(scout.pos.x == posX && scout.pos.y == posY)
 		{
 			scout.move(directionTowards);
@@ -1490,10 +1498,11 @@
 		//As long as the startPos exists check if scout is in the way of other unit movements. Since this is stalling pathing for other units
 		if(unit.memory.startPos != null)
 		{
+			var rangePosition = new RoomPosition(unit.memory.startPos.x, unit.memory.startPos.y, unit.memory.startPos.roomName);
 			var searchWithinRange = 1;
 			//If the unit is sitting on the startPos, look for another unit that is trying to move
 			//and scout is in the way of that move, if so move towards that unit to let it past
-			if(unit.pos.getRangeTo(unit.memory.startPos) <= searchWithinRange)
+			if(unit.pos.getRangeTo(rangePosition) <= searchWithinRange)
 			{
 				var friendlies = unit.pos.findInRange(FIND_MY_CREEPS, 1);
 				for(var adjacent in friendlies)
@@ -1503,6 +1512,7 @@
 					//passage.
 					if(creepDirectionTowards(friendlies[adjacent], unit) == true)
 					{
+						console.log(unit.name + ' moving towards: ' + friendlies[adjacent].name);
 						break;
 					}
 				}
@@ -1511,6 +1521,7 @@
 			else if(unit.pos.getRangeTo(unit.memory.startPos) > searchWithinRange)
 			{
 				//We've moved away from the startPos. Return to this location
+				console.log(unit.name + ' moving from: ' + unit.pos + ' to ' + unit.memory.startPos);
 				unit.moveTo(unit.memory.startPos);
 			}
 		}

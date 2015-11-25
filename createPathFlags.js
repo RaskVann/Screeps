@@ -501,9 +501,9 @@
 							if(onEdgeOfMap(currentPath[position]))
 							{
 								console.log('When creating path, first flag at edge of map reports posX: ' + currentPath[position].x + ', posY: ' + currentPath[position].y);
-								var forward = edgeOfMapDirection(currentPath[position], previousDirection, true);
-								var backward = edgeOfMapDirection(currentPath[position], previousDirection, false);
-								Memory.flags[createdFlag] = {direction: forward, returnDirection : backwards, usingDestinationId: currentSourceId, pathLength: currentPath.length};
+								//var inside = edgeOfMapDirection(currentPath[position], previousDirection, true);
+								var outside = edgeOfMapDirection(currentPath[position], previousDirection, false);
+								Memory.flags[createdFlag] = {direction: previousDirection, returnDirection: outside, usingDestinationId: currentSourceId, pathLength: currentPath.length};
 							}
 							else
 							{
@@ -528,11 +528,13 @@
 						
 						if(previousDirection != null && currentSourceId != null && currentPath != null && backwards != null)
 						{
-							if(onEdgeOfMap(currentPath[position]) && position+1 == end)
+							//If at the edge of the map, point to the edge of the map when at the end of the path
+							//we ignore this if we're capping the path and simply returning where we came
+							if(onEdgeOfMap(currentPath[position]) && capEnd == false && position+1 == end)
 							{
-								var forward = edgeOfMapDirection(currentPath[position], previousDirection, false);
-								var backward = edgeOfMapDirection(currentPath[position], previousDirection, true);
-								Memory.flags[createdFlag] = {direction: forward, returnDirection : backwards, usingDestinationId: currentSourceId, pathLength: currentPath.length};
+								var outside = edgeOfMapDirection(currentPath[position], previousDirection, false);
+								//var inside = edgeOfMapDirection(currentPath[position], previousDirection, true);
+								Memory.flags[createdFlag] = {direction: outside, returnDirection: backwards, usingDestinationId: currentSourceId, pathLength: currentPath.length};
 							}
 							else
 							{
