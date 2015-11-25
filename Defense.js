@@ -277,9 +277,11 @@
 	var spawner = getSpawnId(unit);
 	var sourceId = getHarvestId(spawner);	//TO DO: Convert to store and pull from unit.room, not spawn.room
 	var source = Game.getObjectById(sourceId);
+	var length;
 	var role;
 	var name;
 	var num = 0;
+	
 	//TO DO: Convert to store and pull from unit.room, not spawn.room
 	if(source != null && source.room != null && 
 		harvestEmpty(spawner) == false)
@@ -299,6 +301,16 @@
 			console.log(unit.name + ' has not found any needed new units in ' + unit.room.name);
 			return(false);
 		}
+		
+		//The length this unit needs to travel should exceed this number by some amount, but this is a good ballpark
+		if(unit.memory.pathLength != null)
+		{
+			length = unit.memory.pathLength;
+		}
+		else
+		{
+			length = 25;
+		}
 	}
 	else
 	{
@@ -306,13 +318,13 @@
 	}
 	
 	if( spawner != null && 
-		role != null && name != null &&
+		role != null && name != null && length != null &&
 		Memory.creeps[name] == null && 
 		(sourceId != -1 && sourceId != 0) )
 	{
 		console.log(unit.name + ' just added ' + name + ' to room: ' + unit.room.name + ' to end of respawn list.');
 		
-		Memory.creeps[name] = {'role': role, 'usingSourceId': sourceId, 'spawnID': unit.memory.spawnID};
+		Memory.creeps[name] = {'role': role, 'usingSourceId': sourceId, 'spawnID': unit.memory.spawnID, 'pathLength': length};
 		spawner.memory.respawnName += (name+",");
 		
 		if(role == 'worker')
@@ -339,21 +351,13 @@
  function getRoomForExit(unit, value)
  {
 	var roomExits = Game.map.describeExits(unit.room.name);
-	if(roomExits != null && roomExits[value] != null)
+	var count = 0;
+	for(var x in roomExits)
 	{
-		//console.log('retrieving exit: ' + roomExits[value]);
-		return(roomExits[value]);
-	}
-	else
-	{
-		var count = 0;
-		for(var x in roomExits)
+		if(roomExits[x] != null && count++ == value)
 		{
-			if(roomExits[x] != null && count++ == value)
-			{
-				//console.log('retrieving exit: ' + roomExits[x]);
-				return(roomExits[x]);
-			}
+			//console.log('retrieving exit: ' + roomExits[x]);
+			return(roomExits[x]);
 		}
 	}
 	return(null);
@@ -612,7 +616,11 @@
 	//TODO:	10 threat enemy attacking body < 10, grows during watch
 	//TODO:	11 threat enemy attacking body < 20, grows during watch
 	//TODO:	12 threat enemy attacking body >= 20, grows during watch
-	var targetCreep = currentRoom.find(FIND_HOSTILE_CREEPS);
+	var targetCreep = currentRoom.find(FIND_HOSTILE_CREEPS, {
+		filter: function(object) {
+			return(object.getActiveBodyparts(ATTACK) > 0 || object.getActiveBodyparts(RANGED_ATTACK) > 0 || object.getActiveBodyparts(HEAL) > 0);
+		}
+	});
 	if(targetCreep != null && targetCreep.length > 0)
 	{
 		var totalHostileBody = 0;
@@ -1360,11 +1368,11 @@
 					//followFlagForward.updatePathLength(sources[x].id, pathLength);
 
 					addHarvestId(useSpawn, sources[x].id);
-					addNeedHarvest(useSpawn, 1);
+					addNeedHarvest(useSpawn, 2);	//Only need 1, but add another in memory so we can have one spawn when the other is dieing
 					//Alternative Gatherer per Harvester= ABSOLUTE(ROUND_UP((HarvestRate*(DistanceToNode*2))/CapacityPerGatherer))
 					//A quirk of gatherer capacity with CARRY,MOVE pattern is energy cost/2 is equivalent to their carry capacity
 					var gatherAmount = Math.abs(Math.ceil(10.0*2.0*pathLength/(useSpawn.room.energyCapacityAvailable*.5)));
-					addNeedGather(useSpawn, gatherAmount);
+					addNeedGather(useSpawn, gatherAmount+1);	//Only need gatherAmount but add another in memory so we can have one spawn when the other is dieing
 					
 					//console.log(unit.name + ' success, added harvester for: ' + sources[x].id + ' and gatherer(s): ' + gatherAmount + ' to pending list for creation in spawn ' + useSpawn);
 					
@@ -1587,7 +1595,11 @@
    
     if(unit.getActiveBodyparts(RANGED_ATTACK) > 0)
 	{
-		var rangedTargets = unit.pos.findInRange(FIND_HOSTILE_CREEPS, 3);
+		var rangedTargets = unit.pos.findInRange(FIND_HOSTILE_CREEPS, 3, {
+			filter: function(object) {
+				return(object.getActiveBodyparts(ATTACK) > 0 || object.getActiveBodyparts(RANGED_ATTACK) > 0 || object.getActiveBodyparts(HEAL) > 0);
+			}
+		});
 		if(rangedTargets.length > 0)	//Report getting close to a offensive unit (I potentially attacked it) every hour.
 		{
 			//if(unit.room.mode != 'MODE_SIMULATION')
@@ -1601,9 +1613,14 @@
 			}
 		}
 	}
-	else if(unit.getActiveBodyparts(ATTACK) > 0)
+	
+	if(unit.getActiveBodyparts(ATTACK) > 0)
 	{
-		var targetCreep = unit.pos.findClosestByRange(FIND_HOSTILE_CREEPS);
+		var targetCreep = unit.pos.findClosestByRange(FIND_HOSTILE_CREEPS, {
+			filter: function(object) {
+				return(object.getActiveBodyparts(ATTACK) > 0 || object.getActiveBodyparts(RANGED_ATTACK) > 0 || object.getActiveBodyparts(HEAL) > 0);
+			}
+		});
 		if(targetCreep)
 		{
 			unit.room.memory.requestDefender = 1;
@@ -1671,6 +1688,43 @@
 			{
 				unit.moveTo(Game.flags.Guard);
 				return('travel');
+			}
+		}
+	}
+	else if(unit.getActiveBodyparts(HEAL) > 0)
+	{
+		var healComponents = unit.getActiveBodyparts(HEAL);
+		var healedUnits = unit.room.find(FIND_MY_CREEPS, {
+			filter: function(object) {
+				return(object.hits < object.hitsMax);
+				}
+		});
+		
+		//TO DO: Change to store most damaged unit first and heal that first, do we take effectiveness into account?
+		//Go through all hurt units and heal them if completely effective (healing wouldn't be wasted). Move closer 
+		//to one of these units if these conditions are satisfied and not within range 1
+		for(var heal in healedUnits)
+		{
+			var checkUnit = healedUnits[heal];
+			if(checkUnit.hits <= checkUnit.hitsMax-(4*healComponents))
+			{
+				var rangeUnit = unit.pos.getRangeTo(checkUnit);
+				//12 Heal per component
+				if(rangeUnit <= 1 && checkUnit.hits <= checkUnit.hitsMax-(12*healComponents))
+				{
+					unit.heal(checkUnit);
+				}
+				//4 Heal per component
+				else if(rangeUnit <= 3 && checkUnit.hits <= checkUnit.hitsMax-(4*healComponents))
+				{
+					unit.moveTo(checkUnit);
+					unit.rangedHeal(checkUnit);
+				}
+				else
+				{
+					unit.moveTo(checkUnit);
+				}
+				break;
 			}
 		}
 	}

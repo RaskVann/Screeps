@@ -1236,11 +1236,11 @@
 	//If the spawner exists, isn't spawning and we haven't used a lot of cpu this frame. This is a conveniance (optional) function
 	if(spawner != null && spawner.spawning == null && Game.getUsedCpu() < 30)
 	{
-		for(var eachRoom in Game.Rooms)
+		for(var eachRoom in Game.rooms)
 		{
 			var worker;
 			var gather;
-			var roomSources = Game.Rooms[eachRoom].find(FIND_SOURCES);
+			var roomSources = Game.rooms[eachRoom].find(FIND_SOURCES);
 			for(var eachSource in roomSources)
 			{
 				worker = 0;

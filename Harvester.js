@@ -783,7 +783,7 @@
 				findRoadOrCreate(unit);
 				var cpu = Game.getUsedCpu();
 				//unit.moveTo(transferTarget);
-				unit.moveByPath(unit.pos.findPathTo(transferTarget), {maxOps: 100, ignoreCreeps: true});
+				unit.moveByPath(unit.pos.findPathTo(transferTarget), {maxOps: 100, ignoreCreeps: false});
 				cpu = Game.getUsedCpu()-cpu;
 				//console.log(unit.name + ' moving to capacitor costs: ' + cpu);
 			}

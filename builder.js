@@ -77,7 +77,6 @@
  {
     if(unit.carry.energy == 0)
 	{
-	
 		var useSavedSpawn = findSpawn(unit);
 		//TO DO: When carryCapacity is greater then what the spawn holds, this won't work.
 		//As long as spawn exists, and it has energy for the builder, let him approach
@@ -87,14 +86,20 @@
 		{
 			unit.memory.usingSourceId = null;	//Reset, ready for new source
 		}
-	    else if(useSavedSpawn != null)// && useSavedSpawn.energy >= unit.carryCapacity)
+	    else if(unit.memory.usingSourceId != null)
 		{
-			//unit.moveTo(useSavedSpawn);
 			followFlagForward(unit, unit.carry.energy > 0);
+		}
+		else if(unit.memory.usingSourceId == null &&
+				useSavedSpawn != null && useSavedSpawn.energy > 0 &&
+				Math.abs(unit.pos.getRangeTo(useSavedSpawn.pos)) <= 1)
+		{
+			useSavedSpawn.transferEnergy(unit);
+			console.log(unit.name + ' emptied usingSourceId but builder still has no energy, ERROR. Attempting to transfer any amount of energy from spawn.');
 		}
 		else
 		{
-			console.log(unit.name + ' returning builder has no spawn: ' + useSavedSpawn);
+			console.log(unit.name + ' returning builder has no sourceId: ' + useSavedSpawn);
 		    //return(true);
 		}
 		
