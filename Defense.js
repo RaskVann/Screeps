@@ -53,6 +53,50 @@
 	}
 	return(null);
  }
+ 
+ function nextNeedHarvest(spawn)
+ {
+	//If we still have valid units to spawn, give the currentID, otherwise push list closer to top.
+	if(spawn == null)
+	{
+		return(null);
+	}
+	else if(spawn.memory.needGather0 > 0 || spawn.memory.needHarvest0 > 0)
+	{
+		var updateHarvest = spawn.memory.needHarvest0--;
+		updateHarvestGatherList(spawn);
+		return(updateHarvest);
+	}
+	else
+	{
+		updateHarvestGatherList(spawn);
+		return(spawn.memory.needHarvest0);
+	}
+ }
+ 
+ //Push all three parts of the list closer to the top to be retrieved, no more gatherers
+ //or harvesters were found.
+ function updateHarvestGatherList(spawn)
+ {
+	var resetValue = -1;
+	if(spawn != null && spawn.memory.needGather0 <= 0 && spawn.memory.needHarvest0 <= 0)
+	{
+		spawn.memory.needHarvest0 = spawn.memory.needHarvest1;
+		spawn.memory.needHarvest1 = spawn.memory.needHarvest2;
+		spawn.memory.needHarvest2 = spawn.memory.needHarvest3;
+		spawn.memory.needHarvest3 = resetValue;
+		
+		spawn.memory.needGather0 = spawn.memory.needGather1;
+		spawn.memory.needGather1 = spawn.memory.needGather2;
+		spawn.memory.needGather2 = spawn.memory.needGather3;
+		spawn.memory.needGather3 = resetValue;
+		
+		spawn.memory.harvestId0 = spawn.memory.harvestId1;
+		spawn.memory.harvestId1 = spawn.memory.harvestId2;
+		spawn.memory.harvestId2 = spawn.memory.harvestId3;
+		spawn.memory.harvestId3 = resetValue;
+	}
+ }
 
  function getNeedGather(spawn)
  {
@@ -97,6 +141,26 @@
 		return(spawn.memory.needGather3);
 	}
 	return(null);
+ }
+ 
+ function nextNeedGather(spawn)
+ {
+	//If we still have valid units to spawn, give the currentID, otherwise push list closer to top.
+	if(spawn == null)
+	{
+		return(null);
+	}
+	else if(spawn.memory.needGather0 > 0 || spawn.memory.needHarvest0 > 0)
+	{
+		var updateHarvest = spawn.memory.needGather0--;
+		updateHarvestGatherList(spawn);
+		return(updateHarvest);
+	}
+	else
+	{
+		updateHarvestGatherList(spawn);
+		return(spawn.memory.needGather0);
+	}
  }
 
  function getHarvestId(spawn)
@@ -163,9 +227,108 @@
 	{
 		return(spawn.memory.needHarvest0 <= 0 && spawn.memory.needGather0 <= 0);
 	}
-	else	//otherwise it hasn't been populated, and is empty. Allow scouts to populate the list
+	else if(spawn == null)
+	{
+		console.log('Can not retrieve. harvest list is empty, given ' + spawn + ' which is null');
+		return(null);
+	}
+	else 	//otherwise it hasn't been populated, and is empty. Allow scouts to populate the list
 	{
 		return(true);
+	}
+ }
+ 
+ function findNextUnusedName(role, roomName)
+ {
+	var num = 0;
+	var nextName = role + num + roomName;
+	var count = 0;
+	var countMax = 50;
+	
+	while(Memory.creeps[nextName] != null && count < countMax)
+	{
+		num++;
+		nextName = role + num + roomName;
+		count++;
+	}
+	
+	if(count >= countMax)
+	{
+		console.log('Trying to find name for ' + role + ' in ' + roomName + ' failed, max attempts reached.');
+		return(null);
+	}
+	else
+	{
+		return(nextName);
+	}
+ }
+ 
+ //Note: Until this switches to store everything within the room that is relevant, any scout
+ //		will happily create any available worker/gather as long as any unit is in the source room.
+ //Takes unit that is within a room that needs units (currently workers and gatherers).
+ //If these units haven't been created yet it stores the needed information in memory for creation
+ //and adds the unit to the end of the respawn list of the spawner that created this unit
+ function createMemoryNew(unit)
+ {
+	var spawner = getSpawnId(unit);
+	var sourceId = getHarvestId(spawner);	//TO DO: Convert to store and pull from unit.room, not spawn.room
+	var source = Game.getObjectById(sourceId);
+	var role;
+	var name;
+	var num = 0;
+	//TO DO: Convert to store and pull from unit.room, not spawn.room
+	if(source != null && source.room != null && 
+		harvestEmpty(spawner) == false)
+	{
+		if(getNeedHarvest(spawner) > 0)
+		{
+			role = 'worker';
+			name = findNextUnusedName(role, source.room.name);
+		}
+		else if(getNeedGather(spawner) > 0)
+		{
+			role = 'gather';
+			name = findNextUnusedName(role, source.room.name);
+		}
+		else
+		{
+			console.log(unit.name + ' has not found any needed new units in ' + unit.room.name);
+			return(false);
+		}
+	}
+	else
+	{
+		return(false);
+	}
+	
+	if( spawner != null && 
+		role != null && name != null &&
+		Memory.creeps[name] == null && 
+		(sourceId != -1 && sourceId != 0) )
+	{
+		console.log(unit.name + ' just added ' + name + ' to room: ' + unit.room.name + ' to end of respawn list.');
+		
+		Memory.creeps[name] = {'role': role, 'usingSourceId': sourceId, 'spawnID': unit.memory.spawnID};
+		spawner.memory.respawnName += (name+",");
+		
+		if(role == 'worker')
+		{
+			nextNeedHarvest(spawner);	//This need is filled, decrease or remove
+		}
+		else if(role == 'gather')
+		{
+			nextNeedGather(spawner);	//This need is filled, decrease or remove
+		}
+		else
+		{
+			console.log('not handling role: ' + role + ' in creation of memory of unit, check createMemoryNew(unit)');
+		}
+		return(true);
+	}
+	else
+	{
+		console.log(unit.name + ' missing spawn: ' + spawner + ' role: ' + role + ' new name: ' + name + ' id: ' + sourceId + ' or memory already exists: ' + Memory.creeps[name] + ' disabling creation of unit');
+		return(false);
 	}
  }
 
@@ -336,7 +499,7 @@
 			currentRoom.controller.owner.username == 'RaskVann')
 		{
 			var tempCPU = Game.getUsedCpu();
-			var routeMessage = (unit.name + ' scout route in spawn: ' + currentRoom + ', stop: ' + exit + ', id: ' + sourceId + ' route creation.');
+			var routeMessage = (unit.name + ', pos: ' + unit.pos + ', spawn: ' + currentRoom + ', stop: ' + exit + ', id: ' + sourceId + ' route creation.');
 			var pathMade = followFlagForward.createPathFromSpawn(exit, currentRoom, sourceId);
 			tempCPU = Game.getUsedCpu()-tempCPU;
 			if(pathMade)
@@ -354,9 +517,9 @@
 		else if(startPosition != null && exit != null && startPosition != exit)
 		{
 			var tempCPU = Game.getUsedCpu();
-			var routeMessage = (unit.name + ' scout route in room: ' + currentRoom + ', start: ' + startPosition + ', stop: ' + exit + ', id: ' + sourceId + ' capped: ' + cap + ' route creation.');
-			var newPath = startPosition.findPathTo(exit, {maxOps: 4000});
-			if(newPath != null)
+			var routeMessage = (unit.name + ', pos: ' + unit.pos + ', room: ' + currentRoom + ', start: ' + startPosition + ', stop: ' + exit + ', id: ' + sourceId + ' capped: ' + cap + ' route creation.');
+			var newPath = startPosition.findPathTo(exit, {maxOps: 4000, ignoreCreeps: true});
+			if(newPath != null && newPath.length > 0)
 			{
 				var pathMade = followFlagForward.createDefinedPath(currentRoom, newPath, sourceId, cap);
 				tempCPU = Game.getUsedCpu()-tempCPU;
@@ -374,6 +537,7 @@
 			}
 			else
 			{
+				console.log(unit.name + ' path is ' + newPath + ' or length ' + newPath.length + ' Message: ' + routeMessage);
 				return(false);
 			}
 		}
@@ -411,7 +575,7 @@
 		else if(startPosition != null && exit != null)
 		{
 			//console.log(currentRoom + ', ' + startPosition + ', ' + exit + ', ' + newExit);
-			if(followFlagForward.createDefinedPath(currentRoom, startPosition.findPathTo(exit, {maxOps: 2000}), newExit, false))
+			if(followFlagForward.createDefinedPath(currentRoom, startPosition.findPathTo(exit, {maxOps: 2000, ignoreCreeps: true}), newExit, false))
 			{
 				return(newExit);
 			}
@@ -800,6 +964,10 @@
  function storeRoute(unit, id, capRoute, useId)
  {
 	var exit;
+	if(unit == null || unit.memory.startPos == null)
+	{
+		return(false);
+	}
 	var startPosition = new RoomPosition(unit.memory.startPos.x, unit.memory.startPos.y, unit.memory.startPos.roomName);
 	var routeToExit;
 	if(useId == true)
@@ -850,6 +1018,74 @@
 
 	addRoute(route);
 	return(true);
+ }
+ 
+ //Checks the direction of unit to see if it's moving towards the scout. If the scout is in the way
+ //it is sent a move command to move towards the unit so they can move through one another and return true
+ //otherwise nothing happens and returns false.
+ function creepDirectionTowards(unit, scout)
+ {
+    if(unit != null && unit.memory.direction != null && scout != null)
+    {
+        var posX = unit.pos.x;
+        var posY = unit.pos.y;
+		var directionTowards;
+        if(unit.memory.direction == TOP)
+        {
+            posY++;
+			directionTowards = BOTTOM;
+        }
+        else if(unit.memory.direction == TOP_RIGHT)
+        {
+            posX++;
+            posY++;
+			directionTowards = BOTTOM_LEFT;
+        }
+        else if(unit.memory.direction == RIGHT)
+        {
+            posX++;
+			directionTowards = LEFT;
+        }
+        else if(unit.memory.direction == BOTTOM_RIGHT)
+        {
+            posX++;
+            posY--;
+			directionTowards = TOP_LEFT;
+        }
+        else if(unit.memory.direction == BOTTOM)
+        {
+            posY--;
+			directionTowards = TOP;
+        }
+        else if(unit.memory.direction == BOTTOM_LEFT)
+        {
+            posX--;
+            posY--;
+			directionTowards = TOP_RIGHT;
+        }
+        else if(unit.memory.direction == LEFT)
+        {
+            posX--;
+			directionTowards = RIGHT;
+        }
+        else if(unit.memory.direction == TOP_LEFT)
+        {
+            posX--;
+            posY++;
+			directionTowards = BOTTOM_RIGHT;
+        }
+        else
+        {
+            return(null);
+        }
+        
+		if(scout.pos.x == posX && scout.pos.y == posY)
+		{
+			scout.move(directionTowards);
+			return(true);
+		}
+    }
+	return(false);
  }
 
  function scout(unit, scoutsSeen, previousScoutState)
@@ -1101,7 +1337,7 @@
 					continue;
 				}
 				var startPosition = new RoomPosition(unit.memory.startPos.x, unit.memory.startPos.y, unit.memory.startPos.roomName);
-				var pathToSource = startPosition.findPathTo(sources[x], {maxOps: 2000});
+				var pathToSource = startPosition.findPathTo(sources[x], {maxOps: 2000, ignoreCreeps: true});
 				pathLength = pathToSource.length + unit.memory.distanceMoved;
 				console.log(unit.name + ' has recorded distance: ' + unit.memory.distanceMoved + ' and distance to next source: ' + pathToSource.length);
 				//Around length 160-180 we hit twice as much profit as the cost to extract that node, cut off sending harvesters at this point.
@@ -1249,8 +1485,36 @@
 		//console.log(unit.name + ' moving at scoutAlive: ' + useSpawn.memory.scoutsAlive + ' room moved: ' + unit.memory.roomsMoved + ' above ' + scoutsSeen);
 		return('travel');
 	}
-	else
-	{	//Wait for signal to proceed
+	else	//Wait for permission to move
+	{	
+		//As long as the startPos exists check if scout is in the way of other unit movements. Since this is stalling pathing for other units
+		if(unit.memory.startPos != null)
+		{
+			var searchWithinRange = 1;
+			//If the unit is sitting on the startPos, look for another unit that is trying to move
+			//and scout is in the way of that move, if so move towards that unit to let it past
+			if(unit.pos.getRangeTo(unit.memory.startPos) <= searchWithinRange)
+			{
+				var friendlies = unit.pos.findInRange(FIND_MY_CREEPS, 1);
+				for(var adjacent in friendlies)
+				{
+					//Go through all the creeps surrounding the scout and see if they are trying to move
+					//through the scout, if so the scout will move in the opposite direction to allow them
+					//passage.
+					if(creepDirectionTowards(friendlies[adjacent], unit) == true)
+					{
+						break;
+					}
+				}
+			}
+			//Otherwise scout is away from startPos, move towards startPos
+			else if(unit.pos.getRangeTo(unit.memory.startPos) > searchWithinRange)
+			{
+				//We've moved away from the startPos. Return to this location
+				unit.moveTo(unit.memory.startPos);
+			}
+		}
+		//Wait for signal to proceed
 		//console.log(unit.name + ' harvestEmpty: ' + (useSpawn != null && harvestEmpty(useSpawn)) + ' same room: ' + (unit.memory.roomName != null && unit.memory.roomName == unit.room.name) + 
 		//			' move to next room: ' + (useSpawn != null && useSpawn.memory.scoutsAlive != null && unit.memory.roomsMoved != null && useSpawn.memory.scoutsAlive-unit.memory.roomsMoved > scoutsSeen+1));
 		return('ready');
@@ -1474,6 +1738,12 @@ module.exports.scout = function(unit, scoutsSeen, previousScoutState)
 	{
 		var pastState = scout(unit, scoutsSeen, previousScoutState);
 		trackScoutReadiness(unit, pastState);
+		
+		//If we have plenty of cpu time left, create memory for units to go to this room
+		if(Game.getUsedCpu() < 10)
+		{
+			createMemoryNew(unit);
+		}
 		
 		//Spawn a route if this unit is in a room we have a pending route to be created (and it doesn't already exist)
 		if(isScoutRouteEmpty() == false)

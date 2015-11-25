@@ -301,7 +301,7 @@
 	{
 		var findStructure = unit.pos.lookFor('structure');
 		var foundRoad = -1;
-		var lowCpuUsage = (Game.getUsedCpu() < 5);
+		var lowCpuUsage = (Game.getUsedCpu() < 10);
 		for(var x = 0; findStructure != null && x < findStructure.length; x++)
 		{
 			//Go through all structures at current builder's spot, if they have less hits then what the builder

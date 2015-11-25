@@ -33,6 +33,17 @@
 		
 		removeFlags();
     }
+	else
+	{
+		//Scouts running delete creep.memory leave empty memory locations, this cleans up
+		for(var y in Memory.creeps)
+		{
+			if(Memory.creeps[y] == null)
+			{
+				delete Memory.creeps[y];
+			}
+		}
+	}
  }
  
  function removeFlags()

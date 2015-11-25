@@ -120,6 +120,37 @@
 	}
 	return(null);
  }
+ 
+ //When a unit at the edge of a map doesn't have enough fatigue to make it through it
+ //will attempt to move when on the wrong side of the map, constantly fatiguing itself
+ //without going anywhere, this disables movement if the direction won't go anywhere
+ //to combat this useless movement.
+ function disableMovementEdgeOfMap(unitPos, direction)
+ {
+	var lowEdge = 0;
+	var highEdge = 49;
+	//If ON edge of map, transition imminent
+	if(unitPos.x == lowEdge || unitPos.y == lowEdge || unitPos.x == highEdge || unitPos.y == highEdge)
+	{
+		if(unitPos.x == lowEdge && (direction == LEFT || direction == TOP_LEFT || direction == BOTTOM_LEFT))
+		{
+			return(true);
+		}
+		else if(unitPos.y == lowEdge && (direction == TOP || direction == TOP_LEFT || direction == TOP_RIGHT))
+		{
+			return(true);
+		}
+		else if(unitPos.x == highEdge && (direction == RIGHT || direction == TOP_RIGHT || direction == BOTTOM_RIGHT))
+		{
+			return(true);
+		}
+		else if(unitPos.y == highEdge && (direction == BOTTOM || direction == BOTTOM_LEFT || direction == BOTTOM_RIGHT))
+		{
+			return(true);
+		}
+	}
+	return(false);
+ }
 
  function followPathToFlags(unit, forward)
  {
@@ -157,8 +188,11 @@
 				copyPathLength(unit, foundFlag);
 			}
 		}
+		if(disableMovementEdgeOfMap(unit.pos, unit.memory.direction) == false)
+		{
+			unit.move(unit.memory.direction);
+		}
 		//console.log(unit.name + ' dir: ' + unit.memory.direction);
-		unit.move(unit.memory.direction);
 		return(true);
 	}
 	//Can't find/follow the flags, go to the beginning of one we need and failing
@@ -220,12 +254,12 @@
 		//If unit is in the same room as the source, which is the same room as the spawn, path from spawn
 		if(sourcePos != null && unit.room.name == sourcePos.room.name && spawnFrom != null && spawnFrom.room.name == sourcePos.room.name)
 		{
-			newPath = spawnFrom.pos.findPathTo(sourcePos.pos.x, sourcePos.pos.y, {maxOps: 2000});
+			newPath = spawnFrom.pos.findPathTo(sourcePos.pos.x, sourcePos.pos.y, {maxOps: 2000, ignoreCreeps: true});
 			//console.log(spawnFrom.name + ', ' + newPath.length + ', ' + sourcePos);
 		}
 		else if(sourcePos != null && unit.room.name == sourcePos.room.name)	//Otherwise go from the current units position to the destination
 		{
-			newPath = unit.pos.findPathTo(sourcePos.pos.x, sourcePos.pos.y, {maxOps: 2000});
+			newPath = unit.pos.findPathTo(sourcePos.pos.x, sourcePos.pos.y, {maxOps: 2000, ignoreCreeps: true});
 		}
 		else
 		{
@@ -405,7 +439,6 @@
  //		If profit isn't over threshold (25%?) don't bother, since there will be inefficiencies I'm not going to compute for.
  function createPathToFlags(currentRoom, currentPath, currentSourceId, capEnd)
  {
- console.log(currentPath.length);
 	if(currentPath == null || currentSourceId == null || currentPath.length == 0)
 	{
 		console.log('Path: ' + currentPath + ' or source ' + currentSourceId + ' is null, abandon creating path');
@@ -467,6 +500,7 @@
 						{
 							if(onEdgeOfMap(currentPath[position]))
 							{
+								console.log('When creating path, first flag at edge of map reports posX: ' + currentPath[position].x ', posY: ' + currentPath[position].y);
 								var forward = edgeOfMapDirection(currentPath[position], previousDirection, true);
 								var backward = edgeOfMapDirection(currentPath[position], previousDirection, false);
 								Memory.flags[createdFlag] = {direction: forward, returnDirection : backwards, usingDestinationId: currentSourceId, pathLength: currentPath.length};
@@ -575,7 +609,7 @@
     		for(var i = 0; sources != null && i < sources.length; i++)
     		{
     			
-				(inRoom, findFlag.pos.findPathTo(sources[i].pos.x, sources[i].pos.y, {maxOps: 2000}), sources[i].id, true);
+				(inRoom, findFlag.pos.findPathTo(sources[i].pos.x, sources[i].pos.y, {maxOps: 2000, ignoreCreeps: true}), sources[i].id, true);
     			console.log('creating path in room-' + inRoom.name + ' to go to energy source with id: ' + sources[i].id);
     			pathSpawnToExit(Game.flags.toRoom, sources[i].id);	//Trigger the flag in the spawn room to path here
     			unit.memory.usingSourceId = sources[i].id;
@@ -600,7 +634,7 @@
 		for(var i = 0; selectSpawn != null && i < selectSpawn.length; i++)
 		{
 			console.log('creating path in room-' + exitPos.roomName + ' to go to exit source with id: ' + pathId);
-			return(createPathToFlags(currentRoom, selectSpawn[i].pos.findPathTo(exitPos.x, exitPos.y, {maxOps: 4000}), pathId, false));
+			return(createPathToFlags(currentRoom, selectSpawn[i].pos.findPathTo(exitPos.x, exitPos.y, {maxOps: 4000, ignoreCreeps: true}), pathId, false));
 		}
 		//exitPos.remove();
 	}
@@ -616,19 +650,6 @@
  //uses flags 'betweenStart' and 'betweenEnd', works by running pathToEnergy to get the start and end rooms complete.
  //Then take the returned id, plug it into the function below and place the 2 flags in the same 'between' room.
  //This will run this function, create the path, and delete the flags when complete
- //TO DO: Find a way to loop through several of this function and pathToEnergy to fully automate the process. The problem is
- //		without a unit of mine in the room where these flags are, the room returns as null and so the function can't be used.
- //TO DO: Change flag routes and unit following logic to handle a list of Ids instead of one for scouting logic below.
- //TO DO: Create a scout unit that pairs with these functions and finds rooms I don't have stored in memory and creates energy
- //		source routes and paths to each exit (exit paths should hold the current room, room it goes to and room it comes from).
- //		Would need a way of asking for new harvesters and gatherers specifically for each energy source. Once find a new
- //		undiscovered spawn create route and retain the id(s). Retrace steps to spawn and update routes to that room with the
- //		ids retained. When get to the spawn, update the route going from the spawn to that room with that id. Clear the memory
- //		ids which should trigger finding a new room again. Need a way of determining 'to far' state of rooms
- //		so the scout doesn't take the same route over and over. If can reference a remote room before going there it should be
- //		able to determine if it's been explored or not since explored rooms will have memory assigned.
- //TO DOx2: Create routes only if controller isn't occupied by me, or unoccupied, mark these rooms since they'll have players
- //		in them. Scouts should avoid
  //TO DOx3: Scan uncontrolled rooms every 1500 ticks for enemies and send patrols to these rooms, have requests grow
  //		over time, so that every 1500 ticks that a enemy is found, request goes up by 1, if not, request goes down. The requests
  //		go in order so if squad is big enough it overflows into the next request.
@@ -642,7 +663,7 @@
 		startFlag.room != null && startFlag.room == endFlag.room)
 	{
 		var inRoom = startFlag.room;
-		createPathToFlags(inRoom, startFlag.pos.findPathTo(endFlag.pos.x, endFlag.pos.y, {maxOps: 2000}), spawnId, false);
+		createPathToFlags(inRoom, startFlag.pos.findPathTo(endFlag.pos.x, endFlag.pos.y, {maxOps: 2000, ignoreCreeps: true}), spawnId, false);
     	console.log('creating path in room-' + inRoom.name + ' to go to energy source with id: ' + spawnId);
 		
 		startFlag.remove();

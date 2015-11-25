@@ -393,11 +393,11 @@
 	//take care of it with 300/unit gets you 50 units. I'll hope 25 is conservative. With the above
 	//formula the max distance you can pull off at 150 capacity units going over only
 	//plains is 187.5 distance or 3.75 rooms worth. I'll gain a little less then half with that.
-	if((spawner.room.memory.needGatherers != null && spawner.room.memory.needGatherers > 0) || getNeedGather(spawner) > 0)
+	if((spawner.room.memory.needGatherers != null && spawner.room.memory.needGatherers > 0))// || getNeedGather(spawner) > 0
 	{
 		return('gather');
 	}
-	else if((harvesters < spawner.room.memory.harvesterMax) || getNeedHarvest(spawner) > 0)
+	else if((harvesters < spawner.room.memory.harvesterMax))// || getNeedHarvest(spawner) > 0
 	{
 		return('worker');
 	}
@@ -874,8 +874,8 @@
 	//If you're a builder and there isn't enough gatherers and harvesters already, skip over
 	//ignore the gatherer/harvester limit if we are at the energy cap.
 	else if(role == 'builder' && 
-			(Math.min(harvestersSeen*2, gatherersSeen*2) <= buildersSeen+1 && 
-			spawner.room.energyAvailable < spawner.room.energyCapacityAvailable))
+			(Math.min(harvestersSeen*2, gatherersSeen*2) <= buildersSeen+1))// && 
+			//spawner.room.energyAvailable < spawner.room.energyCapacityAvailable))
 			
 	{
 		extractNextName(spawner);
@@ -1036,7 +1036,8 @@
 		//Have body and name, no role, should only be true for respawning units taking over for dead units
 		if(role == null)
 		{
-			role = findDeadUnitRole(spawner, name);
+			//role = findDeadUnitRole(spawner, name);
+			role = findRoleWithinName(name);
 			extractNextName(spawner);
 			extractNextRespawnTime(spawner);
 			//If is a attack or build unit, check if we have at least as many harvesters/gatherers as the amount 
@@ -1056,13 +1057,14 @@
 		{
 			badSpawn = spawner.createCreep(body, {'role' : role});
 		}
+		//TO DO: Remove when ensure scout writing to memory works.
 		//If creating a worker or gatherer for another room, place sourceId in the unit on spawn
-		else if((role == 'worker' || role == 'gather') && 
-				(getNeedGather(spawner) > 0 || getNeedHarvest(spawner) > 0))
-		{
-			//badSpawn = spawner.createCreep(body, name, [ {'role': role, 'usingSourceId': getHarvestId(spawner)} ]);	//stores in array
-			badSpawn = spawner.createCreep(body, name, {'role': role, 'usingSourceId': getHarvestId(spawner)});
-		}
+		//else if((role == 'worker' || role == 'gather') && 
+		//		(getNeedGather(spawner) > 0 || getNeedHarvest(spawner) > 0))
+		//{
+			//console.log(spawner.name + ' is not handling spawning of different rooms directly.');
+			//badSpawn = spawner.createCreep(body, name, {'role': role, 'usingSourceId': getHarvestId(spawner)});
+		//}
 		//Have body, name and role, should be true for all new units, requested through memory
 		else
 		{
@@ -1080,14 +1082,21 @@
 						//gatherer, remove the amount of needed gatherers
 						spawner.room.memory.needGatherers--;
 					}
-					else if(getNeedGather(spawner) > 0)
-					{
-						nextNeedGather(spawner);
-					}
+					//else if(getNeedGather(spawner) > 0)
+					//{//TO DO: Remove when ensure scout writing to memory works.
+					//	nextNeedGather(spawner);
+					//}
 				}
-				else if(role == 'worker' && getNeedHarvest(spawner) > 0)
+				else if(role == 'worker')
 				{
-					nextNeedHarvest(spawner);
+					if(spawner.room.memory.currentHarvestSpot < spawner.room.memory.harvesterMax)
+					{
+						spawner.room.memory.currentHarvestSpot++;
+					}
+					//else if(getNeedHarvest(spawner) > 0)
+					//{//TO DO: Remove when ensure scout writing to memory works.
+					//	nextNeedHarvest(spawner);
+					//}
 				}
 				else if(role == 'builder')
 				{
@@ -1220,7 +1229,7 @@
  function respawnEmptyRolesAtSources(spawner)
  {
 	//If the spawner exists, isn't spawning and we haven't used a lot of cpu this frame. This is a conveniance (optional) function
-	if(spawner != null && spawner.spawning == null && Game.getUsedCpu() < 10)
+	if(spawner != null && spawner.spawning == null && Game.getUsedCpu() < 30)
 	{
 		for(var eachRoom in Game.Rooms)
 		{

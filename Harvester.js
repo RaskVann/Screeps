@@ -337,7 +337,7 @@
     {
         if(positionEnd != null)
         {
-            unit.memory.pathTo = positionStart.findPathTo(positionEnd.x, positionEnd.y, {maxOps: 2000});
+            unit.memory.pathTo = positionStart.findPathTo(positionEnd.x, positionEnd.y, {maxOps: 2000, ignoreCreeps: true});
             return(unit.moveTo(unit.memory.pathTo[0].x, unit.memory.pathTo[0].y));
         }
     }
@@ -385,7 +385,7 @@
     {
         if(positionEnd != null && positionStart != null)
         {
-            unit.memory.pathFrom = positionStart.findPathTo(positionEnd.x, positionEnd.y, {maxOps: 2000});
+            unit.memory.pathFrom = positionStart.findPathTo(positionEnd.x, positionEnd.y, {maxOps: 2000, ignoreCreeps: true});
             return(unit.moveTo(unit.memory.pathFrom[0].x, unit.memory.pathFrom[0].y));
         }
     }
@@ -773,7 +773,7 @@
 				findRoadOrCreate(unit);
 				var cpu = Game.getUsedCpu();
 				//unit.moveTo(transferTarget);
-				unit.moveByPath(unit.pos.findPathTo(transferTarget), {maxOps: 100});
+				unit.moveByPath(unit.pos.findPathTo(transferTarget), {maxOps: 100, ignoreCreeps: true});
 				cpu = Game.getUsedCpu()-cpu;
 				//console.log(unit.name + ' moving to capacitor costs: ' + cpu);
 			}
@@ -781,7 +781,8 @@
         else if(transferEnergyReturn == ERR_NOT_IN_RANGE)
         {
 			findRoadOrCreate(unit);
-    	    followFlagForward(unit, unit.carry.energy < unit.carryCapacity);
+			//As long as half full, move to store energy back at base.
+			followFlagForward(unit, unit.carry.energy <= unit.carryCapacity*.5);
     	    //When we move there is a chance someone is ahead of us that is blocking our path. unit.move doesn't detect
     	    //this however we can use the stored direction to check the position it's trying to move and if they're is a
     	    //unit that direction, transfer the energy if possible. This will hopefully fill the requirement of the unit
@@ -789,8 +790,9 @@
     	    //more energy
 			if(unit.carry.energy == unit.carryCapacity)
 			{
-				var unitOnPath = null;//creepAtDirection(unit);
-				if(unitOnPath != null && unitOnPath[0] != null && unitOnPath[0].carry.energy <= 0)
+				var unitOnPath = creepAtDirection(unit);
+				if(unitOnPath != null && unitOnPath[0] != null && 
+					unitOnPath[0].memory.role == 'builder' && unitOnPath[0].carry.energy <= 0)
 				{	//If transfer fails, attempt to transfer to all possible units in range
 					if(unit.transferEnergy(unitOnPath[0] < 0))
 					{
