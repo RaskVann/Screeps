@@ -500,7 +500,7 @@
 						{
 							if(onEdgeOfMap(currentPath[position]))
 							{
-								console.log('When creating path, first flag at edge of map reports posX: ' + currentPath[position].x ', posY: ' + currentPath[position].y);
+								console.log('When creating path, first flag at edge of map reports posX: ' + currentPath[position].x + ', posY: ' + currentPath[position].y);
 								var forward = edgeOfMapDirection(currentPath[position], previousDirection, true);
 								var backward = edgeOfMapDirection(currentPath[position], previousDirection, false);
 								Memory.flags[createdFlag] = {direction: forward, returnDirection : backwards, usingDestinationId: currentSourceId, pathLength: currentPath.length};
