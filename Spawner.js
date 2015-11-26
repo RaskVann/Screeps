@@ -1146,7 +1146,7 @@
 				if(body != null && body.length != null && 
 					Game.creeps[units].hitsMax < body.length*100)
 				{
-					console.log('next unit: ' + name + ' is still alive for ' + Game.creeps[units].ticksToLive + ' but found upgraded replacement');
+					console.log('next unit: ' + name + ' is still alive for ' + Game.creeps[units].ticksToLive + ' but found upgrade (' + Game.creeps[units].hitsMax + '/' + (body.length*100) + ')');
 					Game.creeps[units].suicide();		//Disabling for now, trying to force only high level units to spawn
 				}
 				else
@@ -1210,7 +1210,7 @@
 		{
 			var badSpawn = spawner.createCreep(returnBody, replaceWithName);
 			//TO DO: Update respawn list, move unit we're spawning here to end.
-			console.log('Spawn: ' + replaceWithName + ' to replace ' + unit.name + ' dieing in ' + unit.ticksToLive + ' ticks. Found ' + (countActiveGather-unit.getActiveBodyparts(CARRY))*50 + ' gather of needed ' + respawnThreshold);
+			//console.log('Spawn: ' + replaceWithName);
 			return(true);
 		}
 		else
@@ -1221,7 +1221,7 @@
 	}
 	else
 	{
-		console.log('Trying to respawn replacement unit failed. Could not find name: ' + replaceWithName + ' role: ' + returnRole + ' or body: ' + returnBody);
+		//console.log('Trying to respawn replacement unit failed. Could not find name: ' + replaceWithName + ' role: ' + returnRole + ' or body: ' + returnBody);
 	}
 	return(false);
  }
@@ -1272,13 +1272,13 @@
 					var replacementSuccess = respawnPreexisting(spawner, "worker", currentSourceId);
 					if(replacementSuccess == false)
 					{
-						console.log('Source[' + currentSourceId + '] has 0 workers, success of spawn: ' + replacementSuccess + ' no respawnable unit or energy?');
+						//console.log('Source[' + currentSourceId + '] has 0 workers, success of spawn: ' + replacementSuccess + ' no respawnable unit or energy?');
 					} 
 					else 
 					{
-						console.log('Source[' + currentSourceId + '] has 0 workers, creating missed worker');
+						//console.log('Source[' + currentSourceId + '] has 0 workers, creating missed worker');
+						return(replacementSuccess);
 					}
-					return(replacementSuccess);
 				}
 				else if(gather <= 0)
 				{
@@ -1286,13 +1286,13 @@
 					var replacementSuccess = respawnPreexisting(spawner, "gather", currentSourceId);
 					if(replacementSuccess == false)
 					{
-						console.log('Source[' + currentSourceId + '] has 0 gatherers, success of spawn: ' + replacementSuccess + ' no respawnable unit or energy?');
+						//console.log('Source[' + currentSourceId + '] has 0 gatherers, success of spawn: ' + replacementSuccess + ' no respawnable unit or energy?');
 					} 
 					else 
 					{
-						console.log('Source[' + currentSourceId + '] has 0 gatherers, creating missed gather');
+						//console.log('Source[' + currentSourceId + '] has 0 gatherers, creating missed gather');
+						return(replacementSuccess);
 					}
-					return(replacementSuccess);
 				}
 			}
 		}

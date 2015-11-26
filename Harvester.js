@@ -801,7 +801,7 @@
 			if(unit.carry.energy == unit.carryCapacity)
 			{
 				var unitOnPath = creepAtDirection(unit);
-				if(unitOnPath != null && unitOnPath[0] != null && 
+				if(unitOnPath != null && unitOnPath[0] != null && unitOnPath[0].memory != null &&
 					unitOnPath[0].memory.role == 'builder' && unitOnPath[0].carry.energy <= 0)
 				{	//If transfer fails, attempt to transfer to all possible units in range
 					if(unit.transferEnergy(unitOnPath[0] < 0))

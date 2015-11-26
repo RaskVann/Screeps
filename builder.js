@@ -91,15 +91,16 @@
 			followFlagForward(unit, unit.carry.energy > 0);
 		}
 		else if(unit.memory.usingSourceId == null &&
-				useSavedSpawn != null && useSavedSpawn.energy > 0 &&
+				useSavedSpawn != null && 
+				//useSavedSpawn.energyCapacityAvailable >= 300 && 
+				useSavedSpawn.energy > 0 &&
 				Math.abs(unit.pos.getRangeTo(useSavedSpawn.pos)) <= 1)
 		{
-			useSavedSpawn.transferEnergy(unit);
-			console.log(unit.name + ' emptied usingSourceId but builder still has no energy, ERROR. Attempting to transfer any amount of energy from spawn.');
+			useSavedSpawn.transferEnergy(unit);	//We don't always have 300 energy in the spawn, take if needed
 		}
-		else
+		else if(useSavedSpawn.energy > 0)	//Don't report if we have nothing to pull from
 		{
-			console.log(unit.name + ' returning builder has no sourceId: ' + useSavedSpawn);
+			console.log(unit.name + ' returning builder has sourceId: ' + unit.memory.usingSourceId + ' and spawn: ' + useSavedSpawn + ' range: ' + unit.pos.getRangeTo(useSavedSpawn.pos) + ' energy: ' + useSavedSpawn.energy);
 		    //return(true);
 		}
 		

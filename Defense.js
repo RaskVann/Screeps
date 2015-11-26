@@ -1503,10 +1503,14 @@
 	}
 	else	//Wait for permission to move
 	{	
-		//As long as the startPos exists check if scout is in the way of other unit movements. Since this is stalling pathing for other units
+		var rangePosition;
 		if(unit.memory.startPos != null)
 		{
-			var rangePosition = new RoomPosition(unit.memory.startPos.x, unit.memory.startPos.y, unit.memory.startPos.roomName);
+			rangePosition = new RoomPosition(unit.memory.startPos.x, unit.memory.startPos.y, unit.memory.startPos.roomName);
+		}
+		//As long as the startPos exists check if scout is in the way of other unit movements. Since this is stalling pathing for other units
+		if(rangePosition != null)
+		{
 			var searchWithinRange = 1;
 			//If the unit is sitting on the startPos, look for another unit that is trying to move
 			//and scout is in the way of that move, if so move towards that unit to let it past
@@ -1526,11 +1530,11 @@
 				}
 			}
 			//Otherwise scout is away from startPos, move towards startPos
-			else if(unit.pos.getRangeTo(unit.memory.startPos) > searchWithinRange)
+			else if(rangePosition != null && unit.pos.getRangeTo(rangePosition) > searchWithinRange)
 			{
 				//We've moved away from the startPos. Return to this location
-				console.log(unit.name + ' moving from: ' + unit.pos + ' to ' + unit.memory.startPos);
-				unit.moveTo(unit.memory.startPos);
+				//console.log(unit.name + ' moving from: ' + unit.pos + ' to ' + rangePosition);
+				unit.moveTo(rangePosition);
 			}
 		}
 		//Wait for signal to proceed
