@@ -778,21 +778,34 @@
 					break;
 				}
 			}
-			if(transferTarget != null)
-			{
-				findRoadOrCreate(unit);
+			findRoadOrCreate(unit);
+			if(transferTarget != null && returnResources.room.energyAvailable < returnResources.room.energyCapacityAvailable)
+			{	//As long as there is a target to go to and the room isn't full of energy, move to the target
 				var cpu = Game.getUsedCpu();
 				//unit.moveTo(transferTarget);
 				unit.moveByPath(unit.pos.findPathTo(transferTarget), {maxOps: 100, ignoreCreeps: false});
 				cpu = Game.getUsedCpu()-cpu;
 				//console.log(unit.name + ' moving to capacitor costs: ' + cpu);
 			}
+			else if(returnResources.room.energyAvailable >= returnResources.room.energyCapacityAvailable)
+			{	//If room is full, send back to retrieve what energy they can, until full.
+				followFlagForward(unit, unit.carry.energy < unit.carryCapacity);
+			}
         }
         else if(transferEnergyReturn == ERR_NOT_IN_RANGE)
         {
 			findRoadOrCreate(unit);
 			//As long as half full, move to store energy back at base.
-			followFlagForward(unit, unit.carry.energy <= unit.carryCapacity*.5);
+			if(returnResources.room != null)
+			{
+				//If room is full, send back to retrieve what energy they can.
+				followFlagForward(unit, unit.carry.energy <= unit.carryCapacity*.5 || 
+								returnResources.room.energyAvailable >= returnResources.room.energyCapacityAvailable);
+			}
+			else
+			{
+				followFlagForward(unit, unit.carry.energy <= unit.carryCapacity*.5);
+			}
     	    //When we move there is a chance someone is ahead of us that is blocking our path. unit.move doesn't detect
     	    //this however we can use the stored direction to check the position it's trying to move and if they're is a
     	    //unit that direction, transfer the energy if possible. This will hopefully fill the requirement of the unit

@@ -43,6 +43,13 @@
 				delete Memory.creeps[y];
 			}
 		}
+		for(var i in Memory.flags)
+		{
+			if(Memory.flags[i] == null || Memory.flags[i].length == 0)
+			{
+				delete Memory.flags[i];
+			}
+		}
 	}
  }
  
@@ -232,8 +239,11 @@
 		Memory.spawns[y].maxScouts = 1;
 	}
 	
-	delete Memory.scoutRoute.length;
-	delete Memory.scoutRoute;
+	if(Memory.scoutRoute != null)
+	{
+		delete Memory.scoutRoute.length;
+		delete Memory.scoutRoute;
+	}
  }
  
  module.exports = function()

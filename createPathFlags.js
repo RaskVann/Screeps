@@ -82,8 +82,11 @@
 		{
 			for(var currentFlag in flagsInRoom)
 			{
+				//Go through all flags in this room, find one that matches destinationId with
+				//units sourceId, also skip over these flags if there is already a creep on it.
 				if(flagsInRoom[currentFlag].memory.usingDestinationId != null &&
-					flagsInRoom[currentFlag].memory.usingDestinationId == findSourceId)
+					flagsInRoom[currentFlag].memory.usingDestinationId == findSourceId &&
+					flagsInRoom[currentFlag].pos.lookFor('creep').length == 0)
 				{
 					//console.log(unit.name + ' found flag ' + flagsInRoom[currentFlag]);
 					return(flagsInRoom[currentFlag]);
@@ -242,6 +245,7 @@
     }
 	
 	var newPath;
+	var startPos;
 	if(unit.memory.pathTo != null)
 	{
 		newPath = unit.memory.pathTo;
@@ -254,12 +258,14 @@
 		//If unit is in the same room as the source, which is the same room as the spawn, path from spawn
 		if(sourcePos != null && unit.room.name == sourcePos.room.name && spawnFrom != null && spawnFrom.room.name == sourcePos.room.name)
 		{
-			newPath = spawnFrom.pos.findPathTo(sourcePos.pos.x, sourcePos.pos.y, {maxOps: 2000, ignoreCreeps: true});
+			startPos = spawnFrom.pos;
+			newPath = startPos.findPathTo(sourcePos.pos.x, sourcePos.pos.y, {maxOps: 2000, ignoreCreeps: true});
 			//console.log(spawnFrom.name + ', ' + newPath.length + ', ' + sourcePos);
 		}
 		else if(sourcePos != null && unit.room.name == sourcePos.room.name)	//Otherwise go from the current units position to the destination
 		{
-			newPath = unit.pos.findPathTo(sourcePos.pos.x, sourcePos.pos.y, {maxOps: 2000, ignoreCreeps: true});
+			startPos = unit.pos;
+			newPath = startPos.findPathTo(sourcePos.pos.x, sourcePos.pos.y, {maxOps: 2000, ignoreCreeps: true});
 		}
 		else
 		{
@@ -274,7 +280,7 @@
 		return(false);
 	}
 	//If can't find a valid flag to go to, create one to match the SourceId
-	return(createPathToFlags(unit.room, newPath, unit.memory.usingSourceId, true));
+	return(createPathToFlags(unit.room, newPath, unit.memory.usingSourceId, true, startPos));
  }
 
  //Has problems related to TODO in createPathFlags()
@@ -330,33 +336,48 @@
 		}
     }
  }
+ 
+ function clearPosition(startPos)
+ {
+	startPos = new RoomPosition(startPos.x, startPos.y, startPos.roomName);
+	var structure = startPos.lookFor('structure');
+	//Only allow structures that can be moved through
+	if(structure.length && (structure[0].structureType == STRUCTURE_RAMPART || structure[0].structureType == STRUCTURE_ROAD))
+	{	//Assuming structures don't stack other then roads and ramparts which both can be moved though
+		return(startPos);
+	}
+	else if(structure.length)
+	{
+		console.log(startPos + ' checking position clear, found ' + structure[0].structureType + ' that is not road or rampart');
+		return(null);
+	}
+	var terrain = startPos.lookFor('terrain');
+	if(terrain == 'plain' || terrain == 'swamp')
+	{
+		return(startPos);
+	}
+	return(null);
+ }
 
- //When recieving a path checks if the 'start' of the path is valid, if not returns the first point that can be moved through,
+ //When receiving a path checks if the 'start' of the path is valid, if not returns the first point that can be moved through,
  //otherwise returns end of the list (won't go through the subsequent function)
  function clampStartPos(currentRoom, currentPath)
  {
-	for(var x = 0; currentRoom != null && currentPath != null && x < ((currentPath.length)-1); x++)
+	for(var x = 0; currentRoom != null && currentPath != null && x <= ((currentPath.length)-1); x++)
 	{
 		if(currentPath[x] != null)
 		{
     		var roomPos = currentRoom.getPositionAt(currentPath[x].x, currentPath[x].y);
-			var structure = roomPos.lookFor('structure');
-			var terrain = roomPos.lookFor('terrain');
-			//Only allow structures that can be moved through
-			if(structure.length && (structure[0].structureType == STRUCTURE_RAMPART || structure[0].structureType == STRUCTURE_ROAD))
-			{	//Assuming structures don't stack other then roads and ramparts which both can be moved though
-				return(x);
-			}
-			if(terrain == 'plain' || terrain == 'swamp')
+			if(clearPosition(roomPos) != null)
 			{
 				return(x);
 			}
 		}
 	}
-	return(currentPath.length-2);
+	return(currentPath.length-1);
  }
 
- //When recieving a path checks if the 'end' of the path is valid, if not returns the furthest point that can be moved through,
+ //When receiving a path checks if the 'end' of the path is valid, if not returns the furthest point that can be moved through,
  //otherwise returns start of the list (won't go through the subsequent function)
  function clampEndPos(currentRoom, currentPath)
  {
@@ -365,14 +386,7 @@
 		if(currentPath[x] != null)
 		{
 		    var roomPos = currentRoom.getPositionAt(currentPath[x].x, currentPath[x].y);
-			var structure = roomPos.lookFor('structure');
-			var terrain = roomPos.lookFor('terrain');
-			//Only allow structures that can be moved through
-			if(structure.length && (structure[0].structureType == STRUCTURE_RAMPART || structure[0].structureType == STRUCTURE_ROAD))
-			{	//Assuming structures don't stack other then roads and ramparts which both can be moved though
-				return(x);
-			}
-			if(terrain == 'plain' || terrain == 'swamp')
+			if(clearPosition(roomPos) != null)
 			{
 				return(x);
 			}
@@ -437,7 +451,7 @@
  //TO DOx2: Profit of route: Possible Repeats = Math.floor(1500/(TotalLength*2)), Repeat*CarryCapacity=Profit, Must 1HarvestCost+1GatererCost < Profit.
  //		If that succeeds can do algorithm in Harvester.js to determine how many gatherers can fit and can check that inflated cost vs profit.
  //		If profit isn't over threshold (25%?) don't bother, since there will be inefficiencies I'm not going to compute for.
- function createPathToFlags(currentRoom, currentPath, currentSourceId, capEnd)
+ function createPathToFlags(currentRoom, currentPath, currentSourceId, capEnd, startPos)
  {
 	if(currentPath == null || currentSourceId == null || currentPath.length == 0)
 	{
@@ -451,11 +465,12 @@
 	    spawnFrom.memory.currentFlags = 0;
 	}
 	var backwards;
+	startPos = clearPosition(startPos);
 	//We remove any starting or ending locations that we can't move through, the remaining locations recieve flags where appropriate
 	var start = clampStartPos(currentRoom, currentPath);
 	var end = clampEndPos(currentRoom, currentPath);
 	var flagCreationSuccess = false;
-	
+	//console.log('start: ' + start + ' end: ' + end + ', length: ' + currentPath.length + ', ' + currentPath[0].x + '/' + currentPath[0].y);
     for(var position = start; position < end; position++)
 	{
         if(currentPath != null && currentPath[position+1] != null && currentPath[position] != null &&
@@ -498,15 +513,15 @@
 					{
 						if(previousDirection != null && currentSourceId != null && currentPath != null)
 						{
-							if(onEdgeOfMap(currentPath[position]))
-							{
-								console.log('When creating path, first flag at edge of map reports posX: ' + currentPath[position].x + ', posY: ' + currentPath[position].y);
-								//var inside = edgeOfMapDirection(currentPath[position], previousDirection, true);
-								var outside = edgeOfMapDirection(currentPath[position], previousDirection, false);
-								Memory.flags[createdFlag] = {direction: previousDirection, returnDirection: outside, usingDestinationId: currentSourceId, pathLength: currentPath.length};
+							if(startPos != null)
+							{	//When returning, Point to the first flag, if it was passed in the function
+								var newPos = new RoomPosition(startPos.x, startPos.y, currentRoom.name);
+								var pathPos = new RoomPosition(currentPath[position].x, currentPath[position].y, currentRoom.name);
+								var returnDir = pathPos.getDirectionTo(newPos);
+								Memory.flags[createdFlag] = {direction: previousDirection, returnDirection: returnDir, usingDestinationId: currentSourceId, pathLength: currentPath.length};
 							}
 							else
-							{
+							{	//Otherwise just point to the next flag
 								Memory.flags[createdFlag] = {direction: previousDirection, usingDestinationId: currentSourceId, pathLength: currentPath.length};
 							}
 						}
@@ -551,13 +566,46 @@
         }
         else
         {
-            console.log('error in flag creation code.');
+            console.log('error in flag creation code. currentPath: ' + currentPath + ' [' + start + '] ' + currentPath[start] + ' /' + currentPath[start+1]);
         }
     }
 	
     if(currentRoom != null && currentPath != null && currentSourceId != null && capEnd)
 	{
 		capPathEnd(currentRoom, currentPath, currentSourceId, end);
+	}
+	//If a path was created we want to add in the position the unit started on as part of the path. We pass in startPos
+	//for this, direct it to the first flag in the path and allow it to continue. This is one way unless we're at the
+	//edge of the map in which case it returns towards the nearby room
+	if(currentRoom != null && startPos != null && flagCreationSuccess == true)
+	{
+		flagName = 'dir' + spawnFrom.memory.currentFlags++;
+		var createdFlag = currentRoom.createFlag(startPos.x, startPos.y, flagName, COLOR_BLUE);
+		if(createdFlag < 0)
+		{
+			console.log('error creating start flag: ' + createdFlag);
+		}
+		else
+		{
+			var newPos = new RoomPosition(startPos.x, startPos.y, currentRoom.name);
+			var pathPos = new RoomPosition(currentPath[start].x, currentPath[start].y, currentRoom.name);
+			previousDirection = newPos.getDirectionTo(pathPos);
+			if(onEdgeOfMap(newPos))
+			{
+				console.log('When creating path, first flag at edge of map reports posX: ' + newPos.x + ', posY: ' + newPos.y);
+				//var inside = edgeOfMapDirection(newPos, previousDirection, true);
+				var outside = edgeOfMapDirection(newPos, previousDirection, false);
+				Memory.flags[createdFlag] = {direction: previousDirection, returnDirection: outside, usingDestinationId: currentSourceId, pathLength: currentPath.length};
+			}
+			else
+			{
+				Memory.flags[createdFlag] = {direction: previousDirection, usingDestinationId: currentSourceId, pathLength: currentPath.length};
+			}
+		}
+	}
+	else if(flagCreationSuccess == true)
+	{
+		console.log('creation path; start flag missing startPos: ' + startPos + ' or room: ' + currentRoom);
 	}
 	return(flagCreationSuccess);
  }
@@ -636,7 +684,7 @@
 		for(var i = 0; selectSpawn != null && i < selectSpawn.length; i++)
 		{
 			console.log('creating path in room-' + exitPos.roomName + ' to go to exit source with id: ' + pathId);
-			return(createPathToFlags(currentRoom, selectSpawn[i].pos.findPathTo(exitPos.x, exitPos.y, {maxOps: 4000, ignoreCreeps: true}), pathId, false));
+			return(createPathToFlags(currentRoom, selectSpawn[i].pos.findPathTo(exitPos.x, exitPos.y, {maxOps: 4000, ignoreCreeps: true}), pathId, false, selectSpawn[i].pos));
 		}
 		//exitPos.remove();
 	}
@@ -665,7 +713,7 @@
 		startFlag.room != null && startFlag.room == endFlag.room)
 	{
 		var inRoom = startFlag.room;
-		createPathToFlags(inRoom, startFlag.pos.findPathTo(endFlag.pos.x, endFlag.pos.y, {maxOps: 2000, ignoreCreeps: true}), spawnId, false);
+		createPathToFlags(inRoom, startFlag.pos.findPathTo(endFlag.pos.x, endFlag.pos.y, {maxOps: 2000, ignoreCreeps: true}), spawnId, false, startFlag.pos);
     	console.log('creating path in room-' + inRoom.name + ' to go to energy source with id: ' + spawnId);
 		
 		startFlag.remove();
@@ -727,9 +775,9 @@
  //adding the last flag as a 'return only' flag, useful when going to energy spawns but not
  //when traveling between rooms since the path will continue beyond the room the path is being
  //generated in
- module.exports.createDefinedPath = function(inRoom, path, spawnId, capEnd)
+ module.exports.createDefinedPath = function(inRoom, path, spawnId, capEnd, startPos)
  {
-	return(createPathToFlags(inRoom, path, spawnId, capEnd));
+	return(createPathToFlags(inRoom, path, spawnId, capEnd, startPos));
  }
 
  module.exports.findFlag = function(unit, findSourceId)

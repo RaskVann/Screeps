@@ -488,6 +488,18 @@
 			unit.suicide();
 			return('death');
 		}
+		else if(unit.spawning == true)
+		{
+			//Unit was upgraded or died before it's end of life, clean up for re-assignment.
+			if(unit.memory.usingSourceId != null)
+			{
+				delete unit.memory.usingSourceId;
+			}
+			if(unit.memory.direction != null)
+			{
+				delete unit.memory.direction;
+			}
+		}
 		
 		if(unit.memory.usingSourceId != null && unit.carry.energy > 0)
 		{
