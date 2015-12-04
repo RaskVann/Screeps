@@ -78,11 +78,12 @@
     if(unit.carry.energy == 0)
 	{
 		var useSavedSpawn = findSpawn(unit);
+
 		//TO DO: When carryCapacity is greater then what the spawn holds, this won't work.
 		//As long as spawn exists, and it has energy for the builder, let him approach
 		//otherwise he crowds the spawn and stops drop-off.
 		if(useSavedSpawn != null && Math.abs(unit.pos.getRangeTo(useSavedSpawn.pos)) <= 1 && 
-			useSavedSpawn.energy >= unit.carryCapacity && useSavedSpawn.transferEnergy(unit, unit.carryCapacity) == 0)
+			useSavedSpawn.energy >= unit.carryCapacity && useSavedSpawn.transferEnergy(unit, unit.carryCapacity - unit.carry.energy) == 0)
 		{
 			unit.memory.usingSourceId = null;	//Reset, ready for new source
 		}
@@ -102,6 +103,28 @@
 		{
 			console.log(unit.name + ' returning builder has sourceId: ' + unit.memory.usingSourceId + ' and spawn: ' + useSavedSpawn + ' range: ' + unit.pos.getRangeTo(useSavedSpawn.pos) + ' energy: ' + useSavedSpawn.energy);
 		    //return(true);
+		}
+		
+		//If it's possible for links to be in this room, look for them within reach
+		//If found, try to pull energy from them so builder can continue work.
+		//This is at the bottom so if anything is attempted before this, the builder takes from the link first
+		if(unit.room.controller != null &&
+			unit.room.controller.owner != null &&
+			unit.room.controller.owner.username == 'RaskVann' &&
+			unit.room.controller.level >= 5)	//Links are available
+		{
+			var findLinks = unit.pos.findInRange(FIND_MY_STRUCTURES, 1, {
+				filter: { structureType: STRUCTURE_LINK }
+			});
+
+			if(findLinks.length)
+			{
+				for(var i in findLinks)
+				{
+					if(findLinks[i].transferEnergy(unit) == 0)
+						break;
+				}
+			}
 		}
 		
 		//While we're returning check for nearby energy and pick it up if found
@@ -157,7 +180,12 @@
  {
 	if(construction == null)
 	{
-		construction = unit.pos.findClosestByRange(FIND_CONSTRUCTION_SITES);
+		//Find closest building site that isn't a road. Roads will take care of themselves
+		construction = unit.pos.findClosestByRange(FIND_CONSTRUCTION_SITES, {
+			filter: function(object) {
+				return(object.structureType != STRUCTURE_ROAD);
+			}
+		});
 		//console.log(unit.name + ' finding construction site');
 	}
 	if(construction != null)
@@ -214,9 +242,8 @@
 	    for(var disrepair in repairTargets)
 		{
 			currentDamageRatio = (repairTargets[disrepair].hits/repairTargets[disrepair].hitsMax);
-			//Ignore anything above 75% health, ignore anything that isn't more damaged then previous found repairTarget
-            if(currentDamageRatio < .75 && currentDamageRatio < lowestDamageRatio)// &&
-			    //skip-- == 0)
+			//Ignore anything above ratio% health, ignore anything that isn't more damaged then previous found repairTarget
+            if(currentDamageRatio < unit.room.memory.buildRatio && currentDamageRatio < lowestDamageRatio)
 			{
 				//newSourceId(unit, repairTargets[disrepair].id);
 				
@@ -257,7 +284,11 @@
         //Find walls with X% health or lower, if you find something else farther down, do that instead.
 		if(findWall == null)
 		{
-			findWall = unit.room.find(FIND_STRUCTURES); //no extensions, finds walls
+			findWall = unit.room.find(FIND_STRUCTURES, {
+				filter: function(object) {
+					return(object.hits < object.hitsMax && object.structureType == STRUCTURE_WALLS);
+				}
+			}); //finds walls and roads with FIND_STRUCTURES, everything else with FIND_MY_STRUCTURES
 			//console.log(unit.name + ' finding structures.');
 		}
 		var skip = builderNumber-upgradeStart;
@@ -265,8 +296,8 @@
 		{
 			currentDamageRatio = (findWall[wall].hits/findWall[wall].hitsMax);
 			//This will typically trigger on walls, simply because they take so long to reach the limit
-			//Ignore structures with higher then 75% health and anything that isn't more damaged then what we've already found to repair
-			if(currentDamageRatio < .75 && currentDamageRatio < lowestDamageRatio)// && skip-- == 0)
+			//Ignore structures with higher then ratio% health and anything that isn't more damaged then what we've already found to repair
+			if(currentDamageRatio < unit.room.memory.buildRatio && currentDamageRatio < lowestDamageRatio)
 			{
 				//newSourceId(unit, findWall[wall].id);
 				
@@ -307,7 +338,7 @@
 	{
 		var findStructure = unit.pos.lookFor('structure');
 		var foundRoad = -1;
-		var lowCpuUsage = (Game.getUsedCpu() < 10);
+		var lowCpuUsage = (Game.getUsedCpu() < 20);
 		for(var x = 0; findStructure != null && x < findStructure.length; x++)
 		{
 			//Go through all structures at current builder's spot, if they have less hits then what the builder
@@ -516,6 +547,12 @@
 		else	//unit.memory.SourceId == null && unit.carry.energy > 0
 		{
 			var foundJob;
+			
+			if(unit.room.memory.buildRatio == null)
+			{
+				unit.room.memory.buildRatio = .01;
+			}
+			
 			foundJob = upgradeController(unit, builderNumber);
 			if(foundJob)
 			{
@@ -525,7 +562,11 @@
 		   
 			if(repairTargets == null)
 			{
-				repairTargets = unit.room.find(FIND_MY_STRUCTURES); //no walls, extensions and ramparts
+				repairTargets = unit.room.find(FIND_MY_STRUCTURES, {
+					filter: function(object) {
+						return(object.hits < object.hitsMax);
+					}
+				}); //no walls or roads
 				//console.log(unit.name + ' finding my structures');
 			}
 			
@@ -549,7 +590,16 @@
 				//console.log(unit.name + ', build source: ' + unit.memory.usingSourceId);
 				return(true);
 			}
-			console.log('unit: ' + unit.name + ' no available contruction, repair or upgrade.');
+			
+			if(unit.room.memory.buildRatio < 1)
+			{
+				unit.room.memory.buildRatio += .01;
+				console.log('unit: ' + unit.name + ' in ' + unit.room.name + ' no available contruction, repair or upgrade. Upping Ratio to ' + (unit.room.memory.buildRatio*100) + '%');
+			}
+			else
+			{
+				console.log('unit: ' + unit.name + ' in ' + unit.room.name + ' no available contruction, repair or upgrade. Ratio is full at ' + (unit.room.memory.buildRatio*100) + '%');
+			}
 		}
 	}
 	return(false);	//Either not a builder, or didn't find a job for the builder

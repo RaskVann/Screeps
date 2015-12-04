@@ -460,7 +460,7 @@
 				break;	//End condition, reached end of attempts, stop trying
 			}
 		}
-		console.log(unit.name + ' trying to find exit. weird place ' + unit.room.name);
+
 		if(roomNotFound)
 		{
 			return(newExit);	//This exit wasn't found in the list of rooms, use this one
@@ -512,7 +512,7 @@
 	
 	//We have more then enough time, and there is a unit in the 
 	//room we need access to, to create the path in flags
-	if(Game.cpuLimit >= 500 && Game.getUsedCpu() < 10 &&
+	if(Game.cpuLimit >= 500 && Game.getUsedCpu() < 20 &&
 		route != null && unit != null &&
 		route.routeStart.roomName == unit.room.name)
 	{
@@ -851,18 +851,22 @@
  
  function getPreviousRoom(unit)
  {
-	if(unit.memory.roomName != null && unit.room.name != unit.memory.roomName && unit.memory.roomName != 'changeRouteFromDeadEnd')
+	if(unit.memory.roomName != null && unit.room.name != unit.memory.roomName && 
+		unit.memory.roomName != 'changeRouteFromDeadEnd')
 	{
 		//If we enter in the function while roomName hasn't updated then memory.roomName is the previousRoom
 		return(unit.memory.roomName);
 	}
-	else if(unit.memory.previousRoom != null && unit.room.name == unit.memory.roomName && unit.memory.previousRoom != 'changeRouteFromDeadEnd')
+	else if(unit.memory.previousRoom != null && unit.room.name == unit.memory.roomName && 
+			unit.memory.previousRoom != unit.room.name && unit.memory.previousRoom != 'changeRouteFromDeadEnd')
 	{
 		//Otherwise the previousValue is updated and we can use it.
 		return(unit.memory.previousRoom);
 	}
-	else if(unit.memory.previousRoom != null && unit.memory.roomName == 'changeRouteFromDeadEnd' && 
-		unit.memory.usingSourceId == 'changeRouteFromDeadEnd' && unit.memory.previousRoom != 'changeRouteFromDeadEnd')
+	else if(unit.memory.previousRoom != null && unit.memory.previousRoom != unit.room.name &&
+		unit.memory.roomName == 'changeRouteFromDeadEnd' && 
+		unit.memory.usingSourceId == 'changeRouteFromDeadEnd' && 
+		unit.memory.previousRoom != 'changeRouteFromDeadEnd')
 	{
 		//Assumes previous room was updated properly, but we blew away the roomName for this so either change how this is defined
 		//or this will work
@@ -1025,6 +1029,7 @@
 		return(false);
 	}
 	var startPosition = new RoomPosition(unit.memory.startPos.x, unit.memory.startPos.y, unit.memory.startPos.roomName);
+	
 	var routeToExit;
 	if(useId == true)
 	{
@@ -1048,6 +1053,20 @@
 			console.log(unit.name + ' scout ran out of exits to assign for route (storeRoute())');
 			exit = null;
 		}
+	}
+	
+	//If starting position and exit position match the last entered value
+	if(Memory.scoutRoute != null && Memory.scoutRoute.length != null && 
+		Memory.scoutRoute[Memory.scoutRoute.length-1] != null &&
+		(//Memory.scoutRoute[Memory.scoutRoute.length-1][0].routeStart.x == startPosition.x &&
+		//Memory.scoutRoute[Memory.scoutRoute.length-1][0].routeStart.y == startPosition.y &&
+		//Memory.scoutRoute[Memory.scoutRoute.length-1][0].routeStart.roomName == startPosition.roomName &&
+		Memory.scoutRoute[Memory.scoutRoute.length-1][0].routeEnd.x == exit.x &&
+		Memory.scoutRoute[Memory.scoutRoute.length-1][0].routeEnd.y == exit.y &&
+		Memory.scoutRoute[Memory.scoutRoute.length-1][0].routeEnd.roomName == exit.roomName))
+	{
+		//Already entered this into storage, reject another entry.
+		return(false);
 	}
 	
 	if(startPosition != null && exit != null && startPosition.x == exit.x && startPosition.y == exit.y)
@@ -1344,14 +1363,17 @@
 					//console.log(unit.name + ' creating another scout, creating path to ' + newExit);
 					//Get another scout on the field. We'll be moving to the next room and we'll need another
 					//scout to take up the former location so we can pass new paths to it.
-					useSpawn.memory.requestScout = 1;
-					updateDistanceMoved(unit);
 					
 					//First this unit creates a path to sources[x] in currentRoom, then we go to the previousRoom and get a unit
 					//there that creates a path going to the current exit/path in the previous room. We keep going to previous rooms
 					//and create paths to this new place for as long as there is a new previousRoom 
 					//var nextSourceId = createPathToExit(unit, currentRoom, newExit);
-					storeRoute(unit, newExit, false, true);
+					if(storeRoute(unit, newExit, false, true) == true)
+					{
+						useSpawn.memory.requestScout = 1;
+						updateDistanceMoved(unit);
+					}
+					
 					unit.memory.usingSourceId = newExit;
 					delete unit.memory.direction;	//Attach self to new route
 					
@@ -1394,7 +1416,7 @@
 	if(scoutInit + searchRoom + newRoom > 15)
 	{
 		//console.log(unit.name + ' scoutInit: ' + scoutInit + 'searchRooms: ' + searchRoom + ' newRoom: ' + newRoom);
-		Game.notify(unit.name + ' scoutInit: ' + scoutInit + 'searchRooms: ' + searchRoom + ' newRoom: ' + newRoom, 60);
+		Game.notify(unit.name + ' scoutInit: ' + scoutInit + 'searchRooms: ' + searchRoom + ' newRoom: ' + newRoom, 240);
 	}
 	
 	//This unit shouldn't be created until the spawner has the chance to set everything it needs in the core room. This is for every other room the scout visits.
@@ -1566,7 +1588,7 @@
 	if(scoutInit + searchRoom + newRoom + newSource > 15)
 	{
 		//console.log(unit.name + ' scoutInit: ' + scoutInit + ' searchRoom: ' + searchRoom +  ' newRoom: ' + newRoom + ' newSource: ' + newSource);
-		Game.notify(unit.name + ' scoutInit: ' + scoutInit + ' searchRoom: ' + searchRoom +  ' newRoom: ' + newRoom + ' newSource: ' + newSource, 60);
+		Game.notify(unit.name + ' scoutInit: ' + scoutInit + ' searchRoom: ' + searchRoom +  ' newRoom: ' + newRoom + ' newSource: ' + newSource, 240);
 	}
 	
 	//If at edge of map, move until off of edge, 
@@ -1585,7 +1607,7 @@
 		if(scoutInit + searchRoom + newRoom + newSource + move > 15)
 		{
 			//console.log(unit.name + ' scoutInit: ' + scoutInit + ' searchRoom: ' + searchRoom +  ' newRoom: ' + newRoom + ' newSource: ' + newSource + ' FlagMove: ' + move);
-			Game.notify(unit.name + ' scoutInit: ' + scoutInit + ' searchRoom: ' + searchRoom +  ' newRoom: ' + newRoom + ' newSource: ' + newSource + ' FlagMove: ' + move, 60);
+			Game.notify(unit.name + ' scoutInit: ' + scoutInit + ' searchRoom: ' + searchRoom +  ' newRoom: ' + newRoom + ' newSource: ' + newSource + ' FlagMove: ' + move, 240);
 		}
 		return('travel');
 	}
@@ -1622,7 +1644,7 @@
 					//passage.
 					if(creepDirectionTowards(friendlies[adjacent], unit) == true)
 					{
-						console.log(unit.name + ' moving towards: ' + friendlies[adjacent].name);
+						//console.log(unit.name + ' moving towards: ' + friendlies[adjacent].name);
 						break;
 					}
 				}
@@ -1644,7 +1666,7 @@
 		if(scoutInit + searchRoom + newRoom + newSource + move > 15)
 		{
 			//console.log(unit.name + ' scoutInit: ' + scoutInit + ' searchRoom: ' + searchRoom +  ' newRoom: ' + newRoom + ' newSource: ' + newSource + ' moveBack: ' + move);
-			Game.notify(unit.name + ' scoutInit: ' + scoutInit + ' searchRoom: ' + searchRoom +  ' newRoom: ' + newRoom + ' newSource: ' + newSource + ' moveBack: ' + move, 60);
+			Game.notify(unit.name + ' scoutInit: ' + scoutInit + ' searchRoom: ' + searchRoom +  ' newRoom: ' + newRoom + ' newSource: ' + newSource + ' moveBack: ' + move, 240);
 		}
 		return('ready');
 	}
@@ -1713,7 +1735,7 @@
 		{
 			//if(unit.room.mode != 'MODE_SIMULATION')
 			//{
-				Game.notify('owner: ' + rangedTargets[0].owner.username + ', has ' + rangedTargets.length + 'creeps within range 3, has body length: ' + rangedTargets[0].body.length + ' in room ' + unit.room.name, 60);
+				Game.notify('owner: ' + rangedTargets[0].owner.username + ', has ' + rangedTargets.length + 'creeps within range 3, has body length: ' + rangedTargets[0].body.length + ' in room ' + unit.room.name, 240);
 			//}
 			if(unit.rangedAttack(rangedTargets[0]) == ERR_NOT_IN_RANGE)
 			{
@@ -1929,7 +1951,7 @@ module.exports.scout = function(unit, scoutsSeen, previousScoutState)
 		if(scoutTime + memoryTime + createExit > 15)
 		{
 			//console.log(unit.name + ' scout: ' + scoutTime + ' memory: ' + memoryTime + ' create: ' + createExit);
-			Game.notify(unit.name + ' scout: ' + scoutTime + ' memory: ' + memoryTime + ' create: ' + createExit, 60);
+			Game.notify(unit.name + ' scout: ' + scoutTime + ' memory: ' + memoryTime + ' create: ' + createExit, 240);
 		}
 		return(pastState);
 	}

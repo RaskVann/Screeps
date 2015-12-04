@@ -14,6 +14,7 @@ module.exports.loop = function()
 	
 	//Triggers a function every 'defaultWait' ticks.
 	var defaultWait = 20;
+	var defaultLongWait = 1000;
 	if(Memory.waitForTicks == null || Memory.waitForTicks-- <= 0)
 	{
 		cleanMemory();
@@ -24,6 +25,14 @@ module.exports.loop = function()
 		
 		//console.log('Is working every ' + defaultWait + ' ticks?');
 		Memory.waitForTicks = defaultWait;
+	}
+	else if(Memory.waitForLong == null || Memory.waitForLong-- <= 0)
+	{
+		harvester.link();	//Create links near spawners
+		//Create storage if doesn't exist, link next to storage
+		//Create extensions if doesn't exist
+		//TO DO: Walls / ramparts to secure exits
+		Memory.waitForLong = defaultLongWait;
 	}
 
     var buildersSeen = 0;
@@ -65,7 +74,10 @@ module.exports.loop = function()
 		
 		var calc = Game.getUsedCpu()-individualCPU;
 		if((calc > 10 && Game.cpuLimit < 400) || calc > 20)
+		{
 			console.log('Creep ' + creep.name + ' CPU: ' + calc);
+			Game.notify('Creep ' + creep.name + ' CPU: ' + calc, 240);
+		}
 		individualCPU = Game.getUsedCpu();
     }
 	var reportCreepCpuUsed = Game.getUsedCpu() - reportInitializeCpuUsed;
@@ -89,6 +101,7 @@ module.exports.loop = function()
 	}
 	else if(Game.cpuLimit < 200)
 	{
+	    Game.notify('LOW LIMIT: ' + Game.cpuLimit + ' Initialize: ' + reportInitializeCpuUsed + ', Creep: ' + reportCreepCpuUsed + ', Spawn: ' + reportSpawnCpuUsed + ', Report: ' + reportCPUCpuUsed, 240);
 		console.log('LOW LIMIT: ' + Game.cpuLimit + ' Initialize: ' + reportInitializeCpuUsed + ', Creep: ' + reportCreepCpuUsed + ', Spawn: ' + reportSpawnCpuUsed + ', Report: ' + reportCPUCpuUsed);
 	}
 }

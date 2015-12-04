@@ -493,21 +493,87 @@
     }
  }
  
+ //As long as a transfer to a link was successful, or it had an attempt to transfer to another link.
+ //Return true, otherwise return false so the linking harvester knows to try to search elsewhere.
+ function transferBetweenLinks(unit, findLinks)
+ {
+	//If harvester found links within range 1, transfer to them.
+	if(findLinks.length > 0)
+	{
+		for(var i in findLinks)
+		{
+			//If transfer is successful, or the link is already full, make the link
+			//look for other links to transfer energy to so we have room for subsequent transfers
+			var transferCode = unit.transferEnergy(findLinks[i]);
+			if(transferCode == 0 || transferCode == ERR_FULL)
+			{
+				var recievedEnergy = findLinks[i];
+				//Look to see if the link is filling up. If so, look for a link 
+				//with the lowest amount and send as much energy to it as possible
+				if(recievedEnergy.energy/recievedEnergy.energyCapacity > 0.9)
+				{
+					var links = unit.room.find(FIND_MY_STRUCTURES, { 
+						filter: { structureType: STRUCTURE_LINK } 
+					});
+					var lowestEnergy = recievedEnergy.energy;
+					for(var j in links)
+					{
+						if(links[j].energy < lowestEnergy)
+						{
+							//Send the first link that has less energy then this one energy
+							recievedEnergy.transferEnergy(links[j]);
+							break;
+						}
+					}
+				}
+				return(true);
+			}
+		}
+	}
+	return(false);
+ }
+ 
  function lazyHarvest(unit)
  {
     if(unit.memory.role == 'lazy')
     {
         var activeSource = retrieveSource(unit);
-
+		
 		//If we've capped out on energy, look around for a gather to drop off on and transfer
         if(unit.carry.energy == unit.carryCapacity)
         {
-            var neighbors = unit.pos.findInRange(FIND_MY_CREEPS, 1);
-			if(neighbors.length)
+			var neighbors;
+			//TO DO: Once we completely seperate gathers from spawning if harvesters have links we may
+			//want to change the below neighbors == null check into an else that way only 1 possible search
+			//around the harvester is done per tick. This is a great hybrid solution that uses both.
+			if(unit.room.controller != null &&
+				unit.room.controller.owner != null &&
+				unit.room.controller.owner.username == 'RaskVann' &&
+				unit.room.controller.level >= 5)	//Links are available
 			{
-				for(var i in neighbors)
+				var findLinks = unit.pos.findInRange(FIND_MY_STRUCTURES, 1, {
+					filter: { structureType: STRUCTURE_LINK }
+				});
+				
+				if(transferBetweenLinks(unit, findLinks) == true)
 				{
-					if(neighbors[i].memory.role == 'gather')
+					neighbors = findLinks;	//Disable transfer to gather, already sent to link, can't do 2+ at once
+				}
+			}
+			
+			//If we don't find any links, populate with any gathers in range
+			if(neighbors == null || neighbors.length <= 0)
+			{
+				neighbors = unit.pos.findInRange(FIND_MY_CREEPS, 1, {
+					function(object) {
+						return(object.memory != null && object.memory.role == 'gather');
+					}
+				});
+				
+				//Try to transfer to anything in range from lists populated above
+				if(neighbors.length)
+				{
+					for(var i in neighbors)
 					{
 						if(unit.transferEnergy(neighbors[i]) == 0)
 							break;
@@ -515,6 +581,16 @@
 				}
 			}
         }
+		else
+		{
+			//In preparation for having links by the harvesters, sooner or later we're going to drop energy
+			//on the ground which won't be picked up and syphoned into links once the gathers are gone. If the
+			//harvest has space, pickup energy that way every other tick we can pickup, move to link, etc.
+			var target = unit.pos.lookFor('energy');
+			if(target.length > 0)
+				unit.pickup(target[0]);
+		}
+		
 		//Harvest by finding based on ID if activeSource == null
 		if(activeSource == null)
 		{
@@ -891,6 +967,131 @@
 	}
 	return(thisRoom.memory.currentBuilders);
  }
+ 
+ //Tries to find a ideal location, 1-2 spaces away from anchor, not in the way of anything in use and add construction site for link
+ function constructLink(anchor)
+ {
+	var closeSpawn = anchor.pos.findClosestByRange(FIND_MY_SPAWNS);
+	var closestLocation;
+	var success;
+	for(var x = Math.max(0, anchor.pos.x-1); x <= Math.min(49, anchor.pos.x+1); x++)
+	{
+		for(var y = Math.max(0, anchor.pos.y-1); y <= Math.min(49, anchor.pos.y+1); y++)
+		{
+			var findTerrain = closeSpawn.room.lookForAt('terrain', x, y);
+			if(findTerrain.length > 0 && (findTerrain[0] == 'plain' || findTerrain[0] == 'swamp') &&
+				(closestLocation == null || closeSpawn.pos.getRangeTo(closestLocation) > closeSpawn.pos.getRangeTo(findTerrain)))
+				//closestLocation > closeSpawn.pos.getRangeTo(x, y))
+			{
+				closestLocation = findTerrain;
+				//closestLocation = closeSpawn.pos.getRangeTo(x, y);
+			}
+		}
+	}
+	
+	//Closest location should be where the builder/harvester is sitting at either upgrading the controller or
+	//harvesting a source. We want a link 1 away from this location. That isn't disruptive (isn't in a path,
+	//isn't in a wall
+	if(closestLocation != null)
+	{
+		for(var x = Math.max(0, closestLocation.pos.x-1); x <= Math.min(49, closestLocation.pos.x+1); x++)
+		{
+			for(var y = Math.max(0, closestLocation.pos.y-1); y <= Math.min(49, closestLocation.pos.y+1); y++)
+			{
+				if(x == closestLocation.pos.x && y == closestLocation.pos.y)
+				{
+					continue; //Skip over the location the harvester/builder should be sitting at that this link is for.
+				}
+				
+				var findTerrain = closeSpawn.room.lookForAt('terrain', x, y);
+				var findFlag = closeSpawn.room.lookForAt('flag', x, y);
+				var findCreep = closeSpawn.room.lookForAt('creep', x, y);
+				var findStructure = closeSpawn.room.lookForAt('structure', x, y);
+				var findConstruction = closeSpawn.room.lookForAt('constructionSite', x, y);
+				//Terrain should be movable (not constructable otherwise), if there is a flag, structure
+				//or creep this area is being used for something important (usually travel) and so this
+				//should only construct within 2 range of anchor in a buildable, unused spot.
+				if(findTerrain.length > 0 && (findTerrain[0] == 'plain' || findTerrain[0] == 'swamp') &&
+					findFlag.length == 0 && findCreep.length == 0 && findStructure.length == 0 && findConstruction.length == 0)
+				{
+					success = findTerrain[0].pos.createConstructionSite(STRUCTURE_LINK);
+					if(success == 0)
+					{
+						return(success);
+					}
+					else
+					{
+						//If fail construction for whatever reason, try again in another location.
+						console.log('Trying to construct link failed, trying another location.');
+					}
+				}
+			}
+		}
+	}
+	else
+	{
+		console.log('Unable to find closest location for link at ' + anchor);
+	}
+	return(success);	//Send back last attempted createConstructionSite error, if any was attempted
+ }
+ 
+module.exports.link = function()
+{
+	if(Game.getUsedCpu() < 5)
+	{
+		//Look through all the rooms we have access to
+		for(var eachRoom in Game.rooms)
+		{
+			var nextRoom = Game.rooms[eachRoom];
+			//If the room is mine and has access to links, look for applicable link locations
+			if(nextRoom.controller != null &&
+				nextRoom.controller.owner != null &&
+				nextRoom.controller.owner.username == 'RaskVann' &&
+				nextRoom.controller.level >= 5)
+			{
+				var sources = nextRoom.find(FIND_SOURCES);
+				//Make sure there is a link within 2 spaces of every source, and create one if there isn't.
+				for(var i in sources)
+				{
+					var allLinks = sources[i].pos.findInRange(FIND_MY_STRUCTURES, 2, {
+						filter: { structureType: STRUCTURE_LINK }
+					});
+					
+					if(allLinks.length <= 0)
+					{
+						var allConstructLinks = sources[i].pos.findInRange(FIND_MY_CONSTRUCTION_SITES, 2, {
+							filter: { structureType: STRUCTURE_LINK }
+						});
+						//No link within 2 spaces, create one.
+						if(allConstructLinks.length <= 0)
+						{
+							//Construct link, nothing exists.
+							//constructLink(sources[i]);
+						}
+					}
+				}
+				
+				//Look at the controller and make sure there is a link within 2 spaces of it
+				var controllerLink = nextRoom.controller.pos.findInRange(FIND_MY_STRUCTURES, 2, {
+					filter: { structureType: STRUCTURE_LINK }
+				});
+				
+				if(controllerLink.length <= 0)
+				{
+					var controllerConstructLinks = nextRoom.controller.pos.findInRange(FIND_MY_CONSTRUCTION_SITES, 2, {
+						filter: { structureType: STRUCTURE_LINK }
+					});
+					//No link within 2 spaces, create one.
+					if(controllerConstructLinks.length <= 0)
+					{
+						//Construct link, nothing exists.
+						//constructLink(nextRoom.controller);
+					}
+				}
+			}
+		}
+	}
+}
  
 module.exports.work = function(unit, harvestersSeen)
 {

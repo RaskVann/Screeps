@@ -210,6 +210,11 @@
 	{
 		clearEachExitInRoom(Game.rooms[z]);
 	}
+	for(var w in Memory.rooms)
+	{
+		console.log('checking if we can remove flags by cycling through memory, attempting ' + w + ' name reference for? ' + Memory.rooms[w]);
+		removeFlagsWithId(w);
+	}
 	
 	//Remove the creeps and associated memory of scouts
 	removeRole('scout');
