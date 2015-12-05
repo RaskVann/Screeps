@@ -286,7 +286,7 @@
 		{
 			findWall = unit.room.find(FIND_STRUCTURES, {
 				filter: function(object) {
-					return(object.hits < object.hitsMax && object.structureType == STRUCTURE_WALLS);
+					return(object.hits < object.hitsMax && object.structureType == STRUCTURE_WALL);
 				}
 			}); //finds walls and roads with FIND_STRUCTURES, everything else with FIND_MY_STRUCTURES
 			//console.log(unit.name + ' finding structures.');
@@ -503,6 +503,62 @@
 		}
 	}
 	return(false);
+ }
+ 
+ //Move energy around between storage, link 1 away from storage and spawn 1 away from link
+ module.exports.manageEnergy = function()
+ {
+	var manageEnergyInit = Game.getUsedCpu();
+	if(manageEnergyInit < 20)
+	{
+		for(var owned in Game.rooms)
+		{
+			//If I own this room (at 5, links are available, at 4 storage is available)
+			if(Game.rooms[owned].controller != null &&
+				Game.rooms[owned].controller.owner != null &&
+				Game.rooms[owned].controller.owner.username == 'RaskVann' &&
+				Game.rooms[owned].controller.level >= 5)
+			{
+				var findStorage = Game.rooms[owned].find(FIND_MY_STRUCTURES, {
+					filter: { structureType: STRUCTURE_STORAGE }
+				});
+				
+				if(findStorage.length > 0)
+				{
+					var findLinks = findStorage[0].findInRange(FIND_MY_STRUCTURES, 1, {
+						filter: { structureType: STRUCTURE_LINK }
+					});
+					
+					//findLinks[0] and findStorage[0] are paired to destribute energy
+					if(findLinks.length > 0 && findLinks[0].cooldown <= 0)
+					{
+						//Assuming the link is within 1 range of a spawn
+						var findSpawn = findLinks[0].findInRange(FIND_MY_SPAWNS, 1);
+						
+						//If the spawn is empty, fill it with the link
+						if(findSpawn.length > 0 && findSpawn[0].energy <= 0 && findLinks[0].energy > 0)
+						{
+							findLinks[0].transferEnergy(findSpawn[0]);
+						}
+						//If the link is empty, fill it with the storage
+						else if(findLinks[0].energy <= 0)
+						{
+							findStorage[0].transferEnergy(findLinks[0], findLinks[0].energyCapacity*.5);
+						}
+						//If the link is full, place half the energy storage
+						else if(findLinks[0].energy >= findLinks[0].energyCapacity)
+						{
+							findLinks[0].transferEnergy(findStorage[0], findLinks[0].energyCapacity*.5);
+						}
+					}
+				}
+			}
+		}
+		
+		var manageEnergyFinal = Game.getUsedCpu() - manageEnergyInit;
+		if(manageEnergyFinal > 1)
+			console.log('Manage Energy takes cpu: ' + manageEnergyFinal);
+	}
  }
 
  module.exports = function (unit, builderNumber)

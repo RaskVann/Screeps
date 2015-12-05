@@ -76,12 +76,14 @@ module.exports.loop = function()
 		if((calc > 10 && Game.cpuLimit < 400) || calc > 20)
 		{
 			console.log('Creep ' + creep.name + ' CPU: ' + calc);
-			Game.notify('Creep ' + creep.name + ' CPU: ' + calc, 240);
+			Game.notify('Creep ' + creep.name + ' CPU: ' + calc, 480);
 		}
 		individualCPU = Game.getUsedCpu();
     }
 	var reportCreepCpuUsed = Game.getUsedCpu() - reportInitializeCpuUsed;
 	//console.log('Creep logic CPU: ' + reportCreepCpuUsed);
+	
+	builder.manageEnergy();	//Move energy around between storage and spawn (through a link)
 
 	//TO DO: Adjust to only count unit types tied to the spawn we're sending in
     for(var spawners in Game.spawns)
@@ -101,7 +103,7 @@ module.exports.loop = function()
 	}
 	else if(Game.cpuLimit < 200)
 	{
-	    Game.notify('LOW LIMIT: ' + Game.cpuLimit + ' Initialize: ' + reportInitializeCpuUsed + ', Creep: ' + reportCreepCpuUsed + ', Spawn: ' + reportSpawnCpuUsed + ', Report: ' + reportCPUCpuUsed, 240);
+	    Game.notify('LOW LIMIT: ' + Game.cpuLimit + ' Initialize: ' + reportInitializeCpuUsed + ', Creep: ' + reportCreepCpuUsed + ', Spawn: ' + reportSpawnCpuUsed + ', Report: ' + reportCPUCpuUsed, 480);
 		console.log('LOW LIMIT: ' + Game.cpuLimit + ' Initialize: ' + reportInitializeCpuUsed + ', Creep: ' + reportCreepCpuUsed + ', Spawn: ' + reportSpawnCpuUsed + ', Report: ' + reportCPUCpuUsed);
 	}
 }

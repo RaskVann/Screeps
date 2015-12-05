@@ -620,6 +620,33 @@
 		}
 	}
  }
+ 
+ //SourceId is the sourceId of the path used to identify the group of flags in the path
+ //The path already has a length (length of the path found in the room, given at creation) but scouts hold the length it took to arrive to that room
+ //and since paths can go across multiple rooms its handy to have this length included, addLength has this previous length that needs included.
+ //The order of the paths creation can be unreliable and the path in the last room is the true length we actually want. We update this room only
+ //(stored in updateRoom) which is gauranteed to be correct, we'll need a subsequent call when all paths are done to update all of them to whatever
+ //the largest found value for that path is.
+ function addPathLength(sourceId, addLength, updateRoom)
+ {
+	//WARNING: updateRoom should validate in some way and only update flags in that room, as such the values we're updating
+	//here won't be accurate, but they'll be better then what currently exists
+	for(var y in Memory.flags)
+	{
+		//Since we want to specifically update the flags that were just created, they should have memory entries but not Game.flag entries
+		//Game.flag[y] and Memory.flag[y] should reference the same object, check this.
+		if(Game.flags[y] == null && Memory.flags[y].usingDestinationId == sourceId)
+		{
+			console.log('updating ' + Memory.flags[y] + ' in room ' + updateRoom.name + ' with additional length ' + addLength + ' (was ' + Memory.flags[y].pathLength + ')');
+			Memory.flags[y].pathLength += addLength;
+		}
+		else if(Memory.flags[y].usingDestinationId == sourceId)
+		{
+			console.log('Does ' + Memory.flags[y] + ' equal ' + Game.flags[y] + '? ' + y + ' hopefully references the same flag object and memory. NotEqual?' + updateRoom.name + ' and ' + Game.flags[y].room.name);
+			//console.log('Skipped updating ' + Memory.flags[y] + ' because exists in world ' + Game.flags[y] + ' was going to update path length');
+		}
+	}
+ }
 
  function createPathFromFlags(unit)
  {
@@ -797,4 +824,9 @@
  module.exports.updatePathLength = function(sourceId, newLength)
  {
 	updatePathLength(sourceId, newLength);
+ }
+ 
+ module.exports.addPathLength = function(sourceId, addLength, updateRoom)
+ {
+	addPathLength(sourceId, addLength, updateRoom);
  }

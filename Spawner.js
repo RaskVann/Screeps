@@ -533,7 +533,7 @@
 					//console.log(nextName + ' found ' + (countActiveGather*50) + ' capacity of needed ' + respawnThreshold + ' moving to end.');
 					extractNextName(spawner);
 					extractNextRespawnTime(spawner);
-					addRespawnEnd(spawner, returnBody, nextName);
+					addRespawnEnd(spawner, nextName);
 					return(null);
 				}
 			}
@@ -555,7 +555,7 @@
 				//console.log(nextName + ' found ' + (countActiveWork*2) + ' work of needed ' + respawnThreshold + ' moving to end.');
 				extractNextName(spawner);
 				extractNextRespawnTime(spawner);
-				addRespawnEnd(spawner, returnBody, nextName);
+				addRespawnEnd(spawner, nextName);
 				return(null);
 			}
 		}
@@ -667,6 +667,33 @@
 	//fixing this issue, this tick if returning true, we'll be looking at a different unit next tick)
     if(Game.time > getNextRespawnTime(spawner) || foundName == false)
     {
+		//Look at the unit we are trying to spawn here, if we can, look at the usingSourceId
+		//if it is a gatherer and try to find a link next to the source, if it finds one don't
+		//allow this unit to spawn since this source is covered and doesn't need gathers.
+		if(Memory.creeps[nextName] != null && Memory.creeps[nextName].role == 'gather' && 
+			Memory.creeps[nextName].usingSourceId != null)
+		{
+			var source = Game.getObjectById(Memory.creeps[nextName].usingSourceId);
+			
+			if(source != null)
+			{
+				//If there is a link, there isn't a need for a gatherer at this source, this disables 
+				//generation of gathers at sources where a link is found
+				var findLinks = source.pos.findInRange(FIND_MY_STRUCTURES, 2, {
+					filter: { structureType: STRUCTURE_LINK }
+				});
+				
+				if(findLinks.length > 0)
+				{
+					extractNextName(spawner);
+					extractNextRespawnTime(spawner);
+					addRespawnEnd(spawner, nextName);
+					return(null);
+				}
+			}
+		}
+		
+		//Otherwise we are doing the normal routine and spawning a unit that is dead
         return(nextName);
     }
     return(null);
@@ -824,16 +851,16 @@
  }
  
  //Adds the current name and time to the end of the respawnTime and respawnName
- function addRespawnEnd(spawner, body, name)
+ function addRespawnEnd(spawner, name)
  {
 	if(spawner.memory.respawnTime == null)
 	{
-		spawner.memory.respawnTime = calculateRespawnTime(spawner, body).toString()+",";
+		//spawner.memory.respawnTime = calculateRespawnTime(spawner, body).toString()+",";
 		spawner.memory.respawnName = name+",";
 	}
 	else
 	{
-		spawner.memory.respawnTime += calculateRespawnTime(spawner, body).toString()+",";
+		//spawner.memory.respawnTime += calculateRespawnTime(spawner, body).toString()+",";
 		spawner.memory.respawnName += name+",";
 	}
  }
@@ -853,6 +880,13 @@
 	{
 		role = findDeadUnitRole(spawner, name);
 	}
+	else if(body == null)
+	{
+		console.log(spawner.name + ' found null body. Skipping over: ' + name);
+		extractNextName(spawner);
+		extractNextRespawnTime(spawner);
+		addRespawnEnd(spawner, name);
+	}
 	
 	//Skip over gatherers if there are no workers present
 	//or
@@ -863,7 +897,7 @@
 	{
 		extractNextName(spawner);
 		extractNextRespawnTime(spawner);
-		addRespawnEnd(spawner, body, name);
+		addRespawnEnd(spawner, name);
 		//console.log('adding ' + name + ' to end of respawn list.');
 		return(true);
 	}
@@ -872,7 +906,7 @@
 	{
 		extractNextName(spawner);
 		extractNextRespawnTime(spawner);
-		addRespawnEnd(spawner, body, name);
+		addRespawnEnd(spawner, name);
 		//console.log('adding ' + name + ' to end of respawn list.');
 		return(true);
 	}
@@ -885,7 +919,7 @@
 	{
 		extractNextName(spawner);
 		extractNextRespawnTime(spawner);
-		addRespawnEnd(spawner, body, name);
+		addRespawnEnd(spawner, name);
 		//console.log('adding ' + name + ' to end of respawn list.');
 		return(true);
 	}
@@ -1126,7 +1160,7 @@
 		
 			if(role == 'worker' || role == 'gather' || role == 'builder' || role == 'attack')
 			{
-				addRespawnEnd(spawner, body, name);
+				addRespawnEnd(spawner, name);
 				//console.log("time: " + spawner.memory.respawnTime + ", role: " + spawner.memory.respawnName);
 			}
 		}
@@ -1154,7 +1188,7 @@
 					console.log('next unit: ' + name + ' is still alive for ' + Game.creeps[units].ticksToLive + ' but we are at full power, skipping over.');
 					extractNextName(spawner);
 					extractNextRespawnTime(spawner);
-					addRespawnEnd(spawner, body, name);
+					addRespawnEnd(spawner, name);
 				}
 				break;
 			}
@@ -1213,7 +1247,7 @@
 			//console.log('Spawn: ' + replaceWithName);
 			return(true);
 		}
-		else
+		else if(creation != ERR_NOT_ENOUGH_ENERGY)
 		{
 			//Can't create creep for some reason, usually not enough energy
 			console.log('Trying to respawn replacement unit failed. Code: ' + creation);
@@ -1243,6 +1277,12 @@
 			var roomSources = Game.rooms[eachRoom].find(FIND_SOURCES);
 			for(var eachSource in roomSources)
 			{
+				//If there is a link, there isn't a need for a gatherer at this source, this disables 
+				//generation of gathers at sources where a link is found
+				var findLinks = roomSources[eachSource].findInRange(FIND_MY_STRUCTURES, 1, {
+					filter: { structureType: STRUCTURE_LINK }
+				});
+				
 				worker = 0;
 				gather = 0;
 				var currentSourceId = roomSources[eachSource].id;
@@ -1280,7 +1320,8 @@
 						return(replacementSuccess);
 					}
 				}
-				else if(gather <= 0)
+				//If can't find a gatherer and there isn't a link to take care of this source, replace the unit.
+				else if(gather <= 0 && (findLinks == null || findLinks.length <= 0))
 				{
 					//No gathers at this source, found a missed creep.
 					var replacementSuccess = respawnPreexisting(spawner, "gather", currentSourceId);

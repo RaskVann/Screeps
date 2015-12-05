@@ -350,11 +350,7 @@
 
  function getRoomForExit(unit, value)
  {
-	var initCpu = Game.getUsedCpu();
 	var roomExits = Game.map.describeExits(unit.room.name);
-	var describeExits = Game.getUsedCpu() - initCpu;
-	if(describeExits > 5) 
-		console.log(unit.name + ' getRoomForExit() describeExits: ' + describeExits);
 		
 	var count = 0;
 	for(var x in roomExits)
@@ -365,9 +361,6 @@
 			return(roomExits[x]);
 		}
 	}
-	var searchRooms = Game.getUsedCpu() - initCpu - describeExits;
-	if(describeExits + searchRooms > 5)
-		console.log(unit.name + ' getRoomForExit() describeExits: ' + describeExits + ' searchRooms: ' + searchRooms);
 		
 	return(null);
  }
@@ -412,7 +405,6 @@
  {
 	if(currentRoom.memory.exitsVisited < currentRoom.memory.exitMax)
 	{
-		var nextRoomCpu = Game.getUsedCpu();
 		console.log(unit.name + ' findNextRoom() Init: ' + nextRoomCpu);
 			
 		//skip over all exits that go to all rooms we've previously visited
@@ -423,9 +415,6 @@
 		{
 			roomNotFound = true;
 			newExit = getRoomForExit(unit, currentRoom.memory.exitsVisited);
-			var foundNewExit = Game.getUsedCpu() - nextRoomCpu;
-			if(foundNewExit > 5)
-				console.log(unit.name + ' findNextRoom() foundNewExit: ' + foundNewExit);
 				
 			for(var rooms in roomList)
 			{
@@ -441,9 +430,6 @@
 					break;
 				}
 			}
-			var alreadyInRoom = Game.getUsedCpu() - nextRoomCpu - foundNewExit;
-			if(nextRoomCpu + foundNewExit > 5)
-				console.log(unit.name + ' findNextRoom() foundNewExit: ' + foundNewExit + ' alreadyInRoom: ' + alreadyInRoom);
 			
 			//TO DO: Check memory to see if this room is invalidated because we've already scouted here
 			if(roomNotFound)
@@ -535,6 +521,8 @@
 			if(pathMade)
 			{
 				console.log('SUCCESS: ' + routeMessage + ' took cpu: ' + tempCPU);
+				var length = Math.max(unit.memory.pathLength, unit.memory.distanceMoved);
+				followFlagForward.addPathLength(sourceId, length, unit.room);
 				removeRouteLocation(routePos);
 				return(true);
 			}
@@ -556,6 +544,8 @@
 				if(pathMade)
 				{
 					console.log('SUCCESS: ' + routeMessage + ' took cpu: ' + tempCPU);
+					var length = Math.max(unit.memory.pathLength, unit.memory.distanceMoved);
+					followFlagForward.addPathLength(sourceId, length, unit.room);
 					removeRouteLocation(routePos);
 					return(true);
 				}
@@ -1309,7 +1299,6 @@
 			if(scoutsSeen == 0)	//If lead scout, find a new room
 			{
 				newExit = findNextRoom(unit, currentRoom);
-				console.log(unit.name + ' in new room' + unit.room.name + ' with cpu: ' + Game.getUsedCpu());
 				if(newExit == null)	//All remaining rooms have been visited, end of this route
 				{
 					useSpawn.memory.requestScout = 1;	//Replace the unit with one from spawn
@@ -1321,9 +1310,6 @@
 			{
 				newExit = getRoomForExit(unit, currentRoom.memory.exitsVisited);
 			}
-			var newExitC = Game.getUsedCpu() - initialize - scoutInit - searchRoom - scoutNewRoomInit - updateRoom;
-			if(scoutNewRoomInit + updateRoom + newExitC > 2)
-				console.log(unit.name + ' scoutNewRoomInit: ' + scoutNewRoomInit + ' updateRoom: ' + updateRoom + ' newExit: ' + newExitC);
 			
 			//All following scouts should find a flag underneath to follow, TO DO: error if not
 			var foundFlag = followFlagForward.findFlag(unit, newExit)
@@ -1371,9 +1357,9 @@
 					if(storeRoute(unit, newExit, false, true) == true)
 					{
 						useSpawn.memory.requestScout = 1;
-						updateDistanceMoved(unit);
 					}
 					
+					updateDistanceMoved(unit);
 					unit.memory.usingSourceId = newExit;
 					delete unit.memory.direction;	//Attach self to new route
 					
@@ -1416,7 +1402,7 @@
 	if(scoutInit + searchRoom + newRoom > 15)
 	{
 		//console.log(unit.name + ' scoutInit: ' + scoutInit + 'searchRooms: ' + searchRoom + ' newRoom: ' + newRoom);
-		Game.notify(unit.name + ' scoutInit: ' + scoutInit + 'searchRooms: ' + searchRoom + ' newRoom: ' + newRoom, 240);
+		Game.notify(unit.name + ' scoutInit: ' + scoutInit + 'searchRooms: ' + searchRoom + ' newRoom: ' + newRoom, 480);
 	}
 	
 	//This unit shouldn't be created until the spawner has the chance to set everything it needs in the core room. This is for every other room the scout visits.
@@ -1588,7 +1574,7 @@
 	if(scoutInit + searchRoom + newRoom + newSource > 15)
 	{
 		//console.log(unit.name + ' scoutInit: ' + scoutInit + ' searchRoom: ' + searchRoom +  ' newRoom: ' + newRoom + ' newSource: ' + newSource);
-		Game.notify(unit.name + ' scoutInit: ' + scoutInit + ' searchRoom: ' + searchRoom +  ' newRoom: ' + newRoom + ' newSource: ' + newSource, 240);
+		Game.notify(unit.name + ' scoutInit: ' + scoutInit + ' searchRoom: ' + searchRoom +  ' newRoom: ' + newRoom + ' newSource: ' + newSource, 480);
 	}
 	
 	//If at edge of map, move until off of edge, 
@@ -1607,7 +1593,7 @@
 		if(scoutInit + searchRoom + newRoom + newSource + move > 15)
 		{
 			//console.log(unit.name + ' scoutInit: ' + scoutInit + ' searchRoom: ' + searchRoom +  ' newRoom: ' + newRoom + ' newSource: ' + newSource + ' FlagMove: ' + move);
-			Game.notify(unit.name + ' scoutInit: ' + scoutInit + ' searchRoom: ' + searchRoom +  ' newRoom: ' + newRoom + ' newSource: ' + newSource + ' FlagMove: ' + move, 240);
+			Game.notify(unit.name + ' scoutInit: ' + scoutInit + ' searchRoom: ' + searchRoom +  ' newRoom: ' + newRoom + ' newSource: ' + newSource + ' FlagMove: ' + move, 480);
 		}
 		return('travel');
 	}
@@ -1666,7 +1652,7 @@
 		if(scoutInit + searchRoom + newRoom + newSource + move > 15)
 		{
 			//console.log(unit.name + ' scoutInit: ' + scoutInit + ' searchRoom: ' + searchRoom +  ' newRoom: ' + newRoom + ' newSource: ' + newSource + ' moveBack: ' + move);
-			Game.notify(unit.name + ' scoutInit: ' + scoutInit + ' searchRoom: ' + searchRoom +  ' newRoom: ' + newRoom + ' newSource: ' + newSource + ' moveBack: ' + move, 240);
+			Game.notify(unit.name + ' scoutInit: ' + scoutInit + ' searchRoom: ' + searchRoom +  ' newRoom: ' + newRoom + ' newSource: ' + newSource + ' moveBack: ' + move, 480);
 		}
 		return('ready');
 	}
@@ -1735,7 +1721,7 @@
 		{
 			//if(unit.room.mode != 'MODE_SIMULATION')
 			//{
-				Game.notify('owner: ' + rangedTargets[0].owner.username + ', has ' + rangedTargets.length + 'creeps within range 3, has body length: ' + rangedTargets[0].body.length + ' in room ' + unit.room.name, 240);
+				Game.notify('owner: ' + rangedTargets[0].owner.username + ', has ' + rangedTargets.length + 'creeps within range 3, has body length: ' + rangedTargets[0].body.length + ' in room ' + unit.room.name, 480);
 			//}
 			if(unit.rangedAttack(rangedTargets[0]) == ERR_NOT_IN_RANGE)
 			{
@@ -1951,7 +1937,7 @@ module.exports.scout = function(unit, scoutsSeen, previousScoutState)
 		if(scoutTime + memoryTime + createExit > 15)
 		{
 			//console.log(unit.name + ' scout: ' + scoutTime + ' memory: ' + memoryTime + ' create: ' + createExit);
-			Game.notify(unit.name + ' scout: ' + scoutTime + ' memory: ' + memoryTime + ' create: ' + createExit, 240);
+			Game.notify(unit.name + ' scout: ' + scoutTime + ' memory: ' + memoryTime + ' create: ' + createExit, 480);
 		}
 		return(pastState);
 	}

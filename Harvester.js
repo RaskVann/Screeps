@@ -516,14 +516,20 @@
 						filter: { structureType: STRUCTURE_LINK } 
 					});
 					var lowestEnergy = recievedEnergy.energy;
+					var transferHere;
 					for(var j in links)
 					{
 						if(links[j].energy < lowestEnergy)
 						{
-							//Send the first link that has less energy then this one energy
-							recievedEnergy.transferEnergy(links[j]);
-							break;
+							//Send the link that has the least energy
+							transferHere = links[j];
+							lowestEnergy = links[j].energy;
 						}
+					}
+					
+					if(transferHere != null)
+					{
+						recievedEnergy.transferEnergy(transferHere);
 					}
 				}
 				return(true);
@@ -565,8 +571,8 @@
 			if(neighbors == null || neighbors.length <= 0)
 			{
 				neighbors = unit.pos.findInRange(FIND_MY_CREEPS, 1, {
-					function(object) {
-						return(object.memory != null && object.memory.role == 'gather');
+					filter: function(object) {
+						return(object.carry.energy < object.carryCapacity && object.memory != null && object.memory.role == 'gather');
 					}
 				});
 				
