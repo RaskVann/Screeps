@@ -519,7 +519,10 @@
 					var transferHere;
 					for(var j in links)
 					{
-						if(links[j].energy < lowestEnergy)
+						//Prepare to transfer here if it has the lowest yet found
+						//energy and it has at least 25% we can fill
+						if(links[j].energy < lowestEnergy && 
+							links[j].energy/links[j].energyCapacity < .75)
 						{
 							//Send the link that has the least energy
 							transferHere = links[j];
@@ -527,12 +530,26 @@
 						}
 					}
 					
-					if(transferHere != null)
+					if(transferHere != null && recievedEnergy.transferEnergy(transferHere) == 0)
 					{
-						recievedEnergy.transferEnergy(transferHere);
+						return(true);
 					}
 				}
-				return(true);
+				
+			}
+			
+			if(findLinks[i] != null)
+			{
+				var gathers = findLinks[i].pos.findInRange(FIND_MY_CREEPS, 1, { 
+					filter: function(object) {
+						return(object.carry.energy < object.carryCapacity && object.memory != null && object.memory.role == 'gather');
+					}
+				});
+				for(var store in gathers)
+				{
+					if(gathers[store] != null && findLinks[i].transferEnergy(gathers[store]) == 0)
+						return(true);
+				}
 			}
 		}
 	}
@@ -546,7 +563,7 @@
         var activeSource = retrieveSource(unit);
 		
 		//If we've capped out on energy, look around for a gather to drop off on and transfer
-        if(unit.carry.energy == unit.carryCapacity)
+        if(unit.carry.energy == unit.carryCapacity || unit.carryCapacity == 0)
         {
 			var neighbors;
 			//TO DO: Once we completely seperate gathers from spawning if harvesters have links we may

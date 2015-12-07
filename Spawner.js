@@ -7,7 +7,7 @@
  */
 
 // var workerBody = [WORK, WORK, CARRY, MOVE];
- var workerBody = [ { cost: 300, body: [WORK, WORK, MOVE, MOVE] },	//Movement needs to be 1 for units travelling between rooms, needs to have carry if first worker
+ var workerBody = [ { cost: 300, body: [WORK, WORK, CARRY, MOVE] },	//Movement needs to be 1 for units travelling between rooms, needs to have carry if first worker
 					  { cost: 350, body: [WORK, WORK, CARRY, MOVE, MOVE] },
                       { cost: 500, body: [WORK, WORK, WORK, CARRY, MOVE, MOVE, MOVE] },
                       { cost: 800, body: [WORK, WORK, WORK, WORK, WORK, CARRY, MOVE, MOVE, MOVE, MOVE, MOVE] } ];
@@ -448,7 +448,7 @@
  {
 	var foundName = findNameIsLiving(nextName);
 	
-    if(Game.time > getNextRespawnTime(spawner) || foundName == false)
+    if(foundName == false)
     //if(Game.time > getNextRespawnTime(spawner))
     {
 		var nextName = findDeadUnitName(spawner);
@@ -514,7 +514,7 @@
 		{
 			var countActiveGather = countGatherAtSource(nextName);
 			var pathLength = 5;
-			if(Memory.creeps[nextName].pathLength != null)
+			if(Memory.creeps[nextName] != null && Memory.creeps[nextName].pathLength != null)
 			{
 				pathLength = Memory.creeps[nextName].pathLength;
 			}
@@ -665,12 +665,12 @@
 	//If we're overdue for respawning the unit based on time or the unit is dead, respawn the unit
 	//If the unit is found to be unneeded don't bother to respawn this unit (skipRedudant is
 	//fixing this issue, this tick if returning true, we'll be looking at a different unit next tick)
-    if(Game.time > getNextRespawnTime(spawner) || foundName == false)
+    if(foundName == false)
     {
 		//Look at the unit we are trying to spawn here, if we can, look at the usingSourceId
 		//if it is a gatherer and try to find a link next to the source, if it finds one don't
 		//allow this unit to spawn since this source is covered and doesn't need gathers.
-		if(Memory.creeps[nextName] != null && Memory.creeps[nextName].role == 'gather' && 
+		/**if(Memory.creeps[nextName] != null && Memory.creeps[nextName].role == 'gather' && 
 			Memory.creeps[nextName].usingSourceId != null)
 		{
 			var source = Game.getObjectById(Memory.creeps[nextName].usingSourceId);
@@ -691,7 +691,7 @@
 					return(null);
 				}
 			}
-		}
+		}**/
 		
 		//Otherwise we are doing the normal routine and spawning a unit that is dead
         return(nextName);
@@ -882,7 +882,7 @@
 	}
 	else if(body == null)
 	{
-		console.log(spawner.name + ' found null body. Skipping over: ' + name);
+		//console.log(spawner.name + ' found null body. Skipping over: ' + name);
 		extractNextName(spawner);
 		extractNextRespawnTime(spawner);
 		addRespawnEnd(spawner, name);
@@ -1279,7 +1279,7 @@
 			{
 				//If there is a link, there isn't a need for a gatherer at this source, this disables 
 				//generation of gathers at sources where a link is found
-				var findLinks = roomSources[eachSource].findInRange(FIND_MY_STRUCTURES, 1, {
+				var findLinks = roomSources[eachSource].pos.findInRange(FIND_MY_STRUCTURES, 1, {
 					filter: { structureType: STRUCTURE_LINK }
 				});
 				

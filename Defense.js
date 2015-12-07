@@ -404,9 +404,7 @@
  function findNextRoom(unit, currentRoom)
  {
 	if(currentRoom.memory.exitsVisited < currentRoom.memory.exitMax)
-	{
-		console.log(unit.name + ' findNextRoom() Init: ' + nextRoomCpu);
-			
+	{	
 		//skip over all exits that go to all rooms we've previously visited
 		var roomList = Game.rooms;
 		var newExit;

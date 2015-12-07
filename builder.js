@@ -455,13 +455,13 @@
 			console.log(unit.name + ' can not upgrade controller, code: ' + errorController);
 		}
 	}
-	else if(Math.abs(unit.pos.getRangeTo(structure)) > 1 || unit.carry.energy == 0)	//check for energy should never be reached
+	else if(Math.abs(unit.pos.getRangeTo(structure)) > 3 || unit.carry.energy == 0)	//check for energy should never be reached
 	{
 		return(followFlagForward(unit, unit.carry.energy > 0));
 	}
 	else
 	{
-		
+		followFlagForward(unit, unit.carry.energy > 0);	//Keep it moving so units can move through it.
 		if(structure.hits < structure.hitsMax)
 		{
 			var repairCode = unit.repair(structure);
@@ -561,7 +561,7 @@
 	}
  }
 
- module.exports = function (unit, builderNumber)
+ module.exports.units = function (unit, builderNumber)
  {
     if(unit.memory.role == 'builder')
     {

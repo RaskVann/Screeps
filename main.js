@@ -58,7 +58,7 @@ module.exports.loop = function()
 		}
 		else if(creep.memory.role == 'builder') 
         {
-			builder(creep, buildersSeen);
+			builder.units(creep, buildersSeen);
     	    buildersSeen++;
         }
 		else if(creep.memory.role == 'attack' || creep.memory.role == 'defend')

@@ -8,6 +8,77 @@
 
  var spawnFrom;
  
+ //Checks the direction of unit to see if it's moving towards the scout. If the scout is in the way
+ //it is sent a move command to move towards the unit so they can move through one another and return true
+ //otherwise nothing happens and returns false.
+ function creepDirectionBlocked(unit)
+ {
+    if(unit != null && unit.memory.direction != null)
+    {
+        var posX = unit.pos.x;
+        var posY = unit.pos.y;
+        if(unit.memory.direction == TOP)
+        {
+            posY--;
+        }
+        else if(unit.memory.direction == TOP_RIGHT)
+        {
+            posX++;
+            posY--;
+        }
+        else if(unit.memory.direction == RIGHT)
+        {
+            posX++;
+        }
+        else if(unit.memory.direction == BOTTOM_RIGHT)
+        {
+            posX++;
+            posY++;
+        }
+        else if(unit.memory.direction == BOTTOM)
+        {
+            posY++;
+        }
+        else if(unit.memory.direction == BOTTOM_LEFT)
+        {
+            posX--;
+            posY++;
+        }
+        else if(unit.memory.direction == LEFT)
+        {
+            posX--;
+        }
+        else if(unit.memory.direction == TOP_LEFT)
+        {
+            posX--;
+            posY--;
+        }
+        else
+        {
+            return(false);
+        }
+		//Make sure we don't reference a pos out of bounds
+		posX = Math.max(0, posX);
+		posX = Math.min(49, posX);
+		posY = Math.max(0, posY);
+		posY = Math.min(49, posY);
+
+		var newPos = new RoomPosition(posX, posY, unit.room.name);
+		var nextMoveTerrain = newPos.lookFor('terrain');
+		if(nextMoveTerrain[0] == 'plain' || nextMoveTerrain[0] == 'swamp')
+		{
+			return(false);
+		}//Else if, check for structure, have to make sure this doesn't run into things on return paths
+		else
+		{
+			console.log(unit.name + ' blocked by ' + nextMoveTerrain[0] + ' removing direction to recalculate path');
+			delete unit.memory.direction;
+			return(true);
+		}
+    }
+	return(false);
+ }
+ 
  //TO DO: Use the spawn that this unit came from. This currently just sends back the first
  //spawn that is in the same room as the unit.
  function findSpawn(unit)
@@ -191,7 +262,9 @@
 				copyPathLength(unit, foundFlag);
 			}
 		}
-		if(disableMovementEdgeOfMap(unit.pos, unit.memory.direction) == false)
+		//Moves, unless running into walls or moving off screen
+		if(disableMovementEdgeOfMap(unit.pos, unit.memory.direction) == false &&
+			creepDirectionBlocked(unit) == false)
 		{
 			unit.move(unit.memory.direction);
 		}
@@ -302,11 +375,23 @@
  //If we're going to a new room we don't want the last flag being created to push the unit automatically
  //backwards but going to the source we do. If a gatherer is being used with this path this function is
  //run, otherwise this isn't used.
- function capPathEnd(currentRoom, currentPath, currentSourceId, endOfPath)
+ function capPathEnd(currentRoom, currentPath, currentSourceId, endOfPath, lastCreatedFlag)
  {
-	if(currentPath.length > 0 && spawnFrom.memory.currentFlags != null)
-    {
-		var backwards;
+	var backwards;
+	var endPathDirection = currentPath[endOfPath].direction;
+	if(endPathDirection > 4)
+	{
+		backwards = endPathDirection - 4;
+	}
+	else
+	{
+		backwards = endPathDirection + 4;
+	}
+ 
+	if(lastCreatedFlag < 0 && currentPath.length > 0 && spawnFrom.memory.currentFlags != null)
+	{
+		//If we got invalid lastCreatedFlag, do previous createFlag logic
+		console.log(currentRoom + ' capping path ' + currentSourceId + ' recieved bad lastCreatedFlag ' + lastCreatedFlag);
         var flagName = 'dir';
 		flagName += spawnFrom.memory.currentFlags++;
         var endFlag = currentRoom.createFlag(currentPath[endOfPath].x, currentPath[endOfPath].y, flagName, COLOR_BLUE);
@@ -316,23 +401,30 @@
     	}
 		else
 		{
-			var endPathDirection = currentPath[endOfPath].direction;
-			if(endPathDirection > 4)
-			{
-				backwards = endPathDirection - 4;
-			}
-			else
-			{
-				backwards = endPathDirection + 4;
-			}
 			if(backwards != null && currentSourceId != null)
 			{
+				//Memory.flags[lastCreatedFlag] = {direction: backwards, usingDestinationId: currentSourceId, pathLength: currentPath.length};
 				Memory.flags[endFlag] = {direction: backwards, usingDestinationId: currentSourceId, pathLength: currentPath.length};
 			}
 			else
 			{
 				console.log('flag capping found null: ' + backwards + ', ' + currentSourceId);
 			}
+		}
+	}
+	else if(currentPath.length > 0 && spawnFrom.memory.currentFlags != null)
+    {
+		//Instead of creating a new flag at the last spot, replace the last generated flag with 
+		//the 'return' memory. When capping at a source we need to turn around 2 spots away from
+		//the source since 1 away is where the harvester could sit.
+		if(backwards != null && currentSourceId != null)
+		{
+			Memory.flags[lastCreatedFlag] = {direction: backwards, usingDestinationId: currentSourceId, pathLength: currentPath.length};
+			//Memory.flags[endFlag] = {direction: backwards, usingDestinationId: currentSourceId, pathLength: currentPath.length};
+		}
+		else
+		{
+			console.log('flag capping found null: ' + backwards + ', ' + currentSourceId);
 		}
     }
  }
@@ -470,6 +562,7 @@
 	var start = clampStartPos(currentRoom, currentPath);
 	var end = clampEndPos(currentRoom, currentPath);
 	var flagCreationSuccess = false;
+	var createdFlag;
 	//console.log('start: ' + start + ' end: ' + end + ', length: ' + currentPath.length + ', ' + currentPath[0].x + '/' + currentPath[0].y);
     for(var position = start; position < end; position++)
 	{
@@ -500,7 +593,7 @@
         		    }
         		}
         		
-				var createdFlag = currentRoom.createFlag(currentPath[position].x, currentPath[position].y, flagName, COLOR_BLUE);
+				createdFlag = currentRoom.createFlag(currentPath[position].x, currentPath[position].y, flagName, COLOR_BLUE);
 				if(createdFlag < 0)
 				{
 				    console.log('error creating flag: ' + createdFlag);
@@ -572,7 +665,7 @@
 	
     if(currentRoom != null && currentPath != null && currentSourceId != null && capEnd)
 	{
-		capPathEnd(currentRoom, currentPath, currentSourceId, end);
+		capPathEnd(currentRoom, currentPath, currentSourceId, end, createdFlag);
 	}
 	//If a path was created we want to add in the position the unit started on as part of the path. We pass in startPos
 	//for this, direct it to the first flag in the path and allow it to continue. This is one way unless we're at the
