@@ -677,13 +677,17 @@
 			
 			if(source != null)
 			{
+				var storage = source.room.find(FIND_MY_STRUCTURES, {
+					filter: { structureType: STRUCTURE_STORAGE }
+				});
+				
 				//If there is a link, there isn't a need for a gatherer at this source, this disables 
 				//generation of gathers at sources where a link is found
 				var findLinks = source.pos.findInRange(FIND_MY_STRUCTURES, 2, {
 					filter: { structureType: STRUCTURE_LINK }
 				});
 				
-				if(findLinks.length > 0)
+				if(findLinks.length > 0 && storage.length > 0)
 				{
 					extractNextName(spawner);
 					extractNextRespawnTime(spawner);

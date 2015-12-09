@@ -510,7 +510,7 @@
 				var recievedEnergy = findLinks[i];
 				//Look to see if the link is filling up. If so, look for a link 
 				//with the lowest amount and send as much energy to it as possible
-				if(recievedEnergy.energy/recievedEnergy.energyCapacity > 0.9)
+				if(recievedEnergy.cooldown <= 0 && recievedEnergy.energy/recievedEnergy.energyCapacity > 0.9)
 				{
 					var links = unit.room.find(FIND_MY_STRUCTURES, { 
 						filter: { structureType: STRUCTURE_LINK } 
@@ -535,10 +535,9 @@
 						return(true);
 					}
 				}
-				
 			}
 			
-			if(findLinks[i] != null)
+			if(findLinks[i] != null && findLinks[i].cooldown <= 0)
 			{
 				var gathers = findLinks[i].pos.findInRange(FIND_MY_CREEPS, 1, { 
 					filter: function(object) {
@@ -792,6 +791,125 @@
 	return(false);
  }
  
+ //ReturnResources being the spawn the unit came from
+ function fillUpRoomWithEnergy(unit, returnResources)
+ {
+	var transferEnergyReturn = unit.transferEnergy(returnResources);
+	//If make it back to the drop off and its full go and fill up a extension instead, delete the direction so when it finishes
+	//the drop off it finds the start of the path again and resumes the path.
+	if(transferEnergyReturn == ERR_FULL || unit.memory.direction == null)
+	{
+		var transferExtension = unit.room.find(FIND_MY_STRUCTURES, {
+			filter: function(object) {
+				return(object.structureType == STRUCTURE_EXTENSION && object.energy < object.carryCapacity);
+			}
+		});
+		var transferTarget;
+		var transferRange = 999999;
+		for(var drained in transferExtension)
+		{
+			if(transferExtension[drained].energy != null && 
+				transferExtension[drained].energy < transferExtension[drained].energyCapacity)
+			{
+				var transfer = unit.transferEnergy(transferExtension[drained]);
+				if(transfer == ERR_NOT_IN_RANGE)
+				{
+					var tempRange = unit.pos.getRangeTo(transferExtension[drained]);
+					if(tempRange < transferRange)
+					{
+						transferRange = tempRange;
+						transferTarget = transferExtension[drained];
+						//console.log(unit.name + ' found new range: ' + transferRange + ' to ' + transferExtension[drained]);
+					}
+					
+					if(unit.memory.direction != null)
+					{
+						//If you find a extension that needs energy, move to it. This takes you off the route the gatherer
+						//was on, so delete the direction now so it will search for the beginning of the route afterwards.
+						delete unit.memory.direction;
+					}
+				}
+				else if(transfer == 0)
+				{
+					transferTarget = null;
+					break;
+				}
+			}
+			else if(transferExtension[drained].energy != null && 
+				transferExtension[drained].energy < transferExtension[drained].energyCapacity && 
+				Math.abs(unit.pos.getRangeTo(transferExtension[drained])) == 1 &&
+				unit.transferEnergy(transferExtension[drained]) == 0)
+			{	//Don't look for any more structures to transfer to, successfully filled one.
+				transferTarget = null;
+				break;
+			}
+		}
+		findRoadOrCreate(unit);
+		if(transferTarget != null && returnResources.room.energyAvailable < returnResources.room.energyCapacityAvailable)
+		{	//As long as there is a target to go to and the room isn't full of energy, move to the target
+			var cpu = Game.getUsedCpu();
+			//unit.moveTo(transferTarget);
+			unit.moveByPath(unit.pos.findPathTo(transferTarget), {maxOps: 100, ignoreCreeps: false});
+			cpu = Game.getUsedCpu()-cpu;
+			//console.log(unit.name + ' moving to capacitor costs: ' + cpu);
+		}
+		else if(returnResources.room.energyAvailable >= returnResources.room.energyCapacityAvailable)
+		{
+			var transferStorage = unit.room.find(FIND_MY_STRUCTURES, {
+				filter: function(object) {
+					return(object.structureType == STRUCTURE_STORAGE && object.energy < object.carryCapacity);
+				}
+			});
+			
+			if(transferStorage.length > 0)
+			{		//If we're in a room with a storage go over and transfer to the storage
+				unit.moveByPath(unit.pos.findPathTo(transferStorage[0]), {maxOps: 100, ignoreCreeps: false});
+				unit.transferEnergy(transferStorage[0]);
+			}
+			else	//If room is full and no storage found, send back to retrieve what energy they can, until full.
+			{
+				followFlagForward(unit, unit.carry.energy < unit.carryCapacity);
+			}
+		}
+	}
+	else if(transferEnergyReturn == ERR_NOT_IN_RANGE)
+	{
+		findRoadOrCreate(unit);
+		//As long as half full, move to store energy back at base.
+		if(returnResources.room != null)
+		{
+			//If room is full, send back to retrieve what energy they can.
+			followFlagForward(unit, unit.carry.energy <= unit.carryCapacity*.5 || 
+							returnResources.room.energyAvailable >= returnResources.room.energyCapacityAvailable);
+		}
+		else
+		{
+			followFlagForward(unit, unit.carry.energy <= unit.carryCapacity*.5);
+		}
+		//When we move there is a chance someone is ahead of us that is blocking our path. unit.move doesn't detect
+		//this however we can use the stored direction to check the position it's trying to move and if they're is a
+		//unit that direction, transfer the energy if possible. This will hopefully fill the requirement of the unit
+		//ahead of it and let it move along, otherwise the gatherer will be not full again and will go back to retreive
+		//more energy
+		if(unit.carry.energy == unit.carryCapacity)
+		{
+			var unitOnPath = creepAtDirection(unit);
+			if(unitOnPath != null && unitOnPath[0] != null && unitOnPath[0].memory != null &&
+				unitOnPath[0].memory.role == 'builder' && unitOnPath[0].carry.energy <= 0)
+			{	//If transfer fails, attempt to transfer to all possible units in range
+				if(unit.transferEnergy(unitOnPath[0] < 0))
+				{
+					//transferAround(unit);
+				}
+			}
+			else	//Was unable to transfer to path
+			{
+				//transferAround(unit);
+			}
+		}
+	}
+ }
+ 
  function gatherFrom(unit)
  {
     var returnResources = findSpawn(unit);
@@ -801,7 +919,6 @@
 	if(unit.carry.energy == 0 && returnResources != null)
     {
         var activeSource;
-		//TO DO: GoTo by finding based on ID if activeSource == null
 		if(unit.memory.usingSourceId != null)
 		{
 		    activeSource = Game.getObjectById(unit.memory.usingSourceId);
@@ -810,126 +927,74 @@
 		{
 			activeSource = retrieveSource(unit);
 		}
-		//Legacy code, creates a path that goes to creates pathTo which at the moment is more accurate then
-		//the path created in followFlagForward, this is used in followFlagForward which helps for gatherers
-		//made for the spawn room
-		//if(returnResources != null && unit.memory.currentGatherSpot != null && unit.memory.pathTo == null)
-		//{
-		//	saveAndPathToNew(unit, returnResources.pos, unit.memory.currentGatherSpot);
-		//}
-		//else
-		//{
-			findRoadOrCreate(unit);
-			followFlagForward(unit, unit.carry.energy < unit.carryCapacity);
-		//}
-		
-		if(returnResources != null)
-		{
-            //unit.transferEnergy(returnResources);	//Only here if unit.carry.energy == 0 changes back to < unit.carryCapacity
-		}
+
+		findRoadOrCreate(unit);
+		followFlagForward(unit, unit.carry.energy < unit.carryCapacity);
     }
     else if(returnResources != null)
     {
-        //unit.say(unit.carry.energy + "/" + unit.carryCapacity);
-        var transferEnergyReturn = unit.transferEnergy(returnResources);
-		//If make it back to the drop off and its full go and fill up a extension instead, delete the direction so when it finishes
-		//the drop off it finds the start of the path again and resumes the path.
-		if(transferEnergyReturn == ERR_FULL || unit.memory.direction == null)
-        {
-            var transferTargets = unit.room.find(FIND_MY_STRUCTURES);
-			var transferTarget;
-			var transferRange = 999999;
-			for(var drained in transferTargets)
-			{
-                if(transferTargets[drained].energy != null && 
-					transferTargets[drained].energy < transferTargets[drained].energyCapacity)
-    			{
-					var transfer = unit.transferEnergy(transferTargets[drained]);
-    				if(transfer == ERR_NOT_IN_RANGE)
-					{
-						var tempRange = unit.pos.getRangeTo(transferTargets[drained]);
-						if(tempRange < transferRange)
-						{
-							transferRange = tempRange;
-							transferTarget = transferTargets[drained];
-							//console.log(unit.name + ' found new range: ' + transferRange + ' to ' + transferTargets[drained]);
-						}
-						
-						if(unit.memory.direction != null)
-						{
-							//If you find a extension that needs energy, move to it. This takes you off the route the gatherer
-							//was on, so delete the direction now so it will search for the beginning of the route afterwards.
-							delete unit.memory.direction;
-						}
-    				}
-					else if(transfer == 0)
-					{
-						transferTarget = null;
-						break;
-					}
-    			}
-				else if(transferTargets[drained].energy != null && 
-					transferTargets[drained].energy < transferTargets[drained].energyCapacity && 
-					Math.abs(unit.pos.getRangeTo(transferTargets[drained])) == 1 &&
-					unit.transferEnergy(transferTargets[drained]) == 0)
-				{	//Don't look for any more structures to transfer to, successfully filled one.
-					transferTarget = null;
-					break;
-				}
-			}
-			findRoadOrCreate(unit);
-			if(transferTarget != null && returnResources.room.energyAvailable < returnResources.room.energyCapacityAvailable)
-			{	//As long as there is a target to go to and the room isn't full of energy, move to the target
-				var cpu = Game.getUsedCpu();
-				//unit.moveTo(transferTarget);
-				unit.moveByPath(unit.pos.findPathTo(transferTarget), {maxOps: 100, ignoreCreeps: false});
-				cpu = Game.getUsedCpu()-cpu;
-				//console.log(unit.name + ' moving to capacitor costs: ' + cpu);
-			}
-			else if(returnResources.room.energyAvailable >= returnResources.room.energyCapacityAvailable)
-			{	//If room is full, send back to retrieve what energy they can, until full.
-				followFlagForward(unit, unit.carry.energy < unit.carryCapacity);
-			}
-        }
-        else if(transferEnergyReturn == ERR_NOT_IN_RANGE)
-        {
-			findRoadOrCreate(unit);
-			//As long as half full, move to store energy back at base.
-			if(returnResources.room != null)
-			{
-				//If room is full, send back to retrieve what energy they can.
-				followFlagForward(unit, unit.carry.energy <= unit.carryCapacity*.5 || 
-								returnResources.room.energyAvailable >= returnResources.room.energyCapacityAvailable);
-			}
-			else
-			{
-				followFlagForward(unit, unit.carry.energy <= unit.carryCapacity*.5);
-			}
-    	    //When we move there is a chance someone is ahead of us that is blocking our path. unit.move doesn't detect
-    	    //this however we can use the stored direction to check the position it's trying to move and if they're is a
-    	    //unit that direction, transfer the energy if possible. This will hopefully fill the requirement of the unit
-    	    //ahead of it and let it move along, otherwise the gatherer will be not full again and will go back to retreive
-    	    //more energy
-			if(unit.carry.energy == unit.carryCapacity)
-			{
-				var unitOnPath = creepAtDirection(unit);
-				if(unitOnPath != null && unitOnPath[0] != null && unitOnPath[0].memory != null &&
-					unitOnPath[0].memory.role == 'builder' && unitOnPath[0].carry.energy <= 0)
-				{	//If transfer fails, attempt to transfer to all possible units in range
-					if(unit.transferEnergy(unitOnPath[0] < 0))
-					{
-						//transferAround(unit);
-					}
-				}
-				else	//Was unable to transfer to path
-				{
-					//transferAround(unit);
-				}
-			}
-        }
+        fillUpRoomWithEnergy(unit, returnResources);
     }
     
     if(unit.carry.energy < unit.carryCapacity)
+    {
+        var target = unit.pos.findInRange(FIND_DROPPED_ENERGY, 1);
+        if(target.length > 0)
+    	{
+            unit.pickup(target[0]);
+        }
+    }
+ }
+ 
+ function distribute(unit)
+ {
+	var returnResources = findSpawn(unit);
+
+	if(unit.carry.energy == 0)
+    {
+		var activeSource;
+		var continueGather = true;
+		//Look for dropped energy around the sources in this room, if it exists retrieve and bring back to spawn
+		if(unit.memory.usingSourceId != null)
+		{
+		    activeSource = Game.getObjectById(unit.memory.usingSourceId);
+			//Remove assignment of the source (stop going back and forth to here)
+			//if we can't find any energy here.
+			if(activeSource.pos.findInRange(FIND_DROPPED_ENERGY, 2).length <= 0)
+			{
+				if(unit.carry.energy <= 0)
+				{
+					unit.memory.usingSourceId = null;
+				}
+				else
+				{
+					continueGather = false;
+				}
+			}
+		}
+		else	//Look at each source for dropped energy, assign the unit there if find energy
+		{
+			var sources = unit.room.find(FIND_SOURCES);
+			for(var x in sources)
+			{
+				var droppedEnergy = sources[x].pos.findInRange(FIND_DROPPED_ENERGY, 2);
+				if(droppedEnergy.length > 0)
+				{
+					unit.memory.usingSourceId = sources[x].id;
+					break;
+				}
+			}
+		}
+		
+		findRoadOrCreate(unit);
+		followFlagForward(unit, unit.carry.energy < unit.carryCapacity && continueGather);
+	}
+	else if(returnResources != null)
+	{
+		fillUpRoomWithEnergy(unit, returnResources);
+	}
+	
+	if(unit.carry.energy < unit.carryCapacity)
     {
         var target = unit.pos.findInRange(FIND_DROPPED_ENERGY, 1);
         if(target.length > 0)
@@ -1145,6 +1210,14 @@ module.exports.gather = function(unit, gatherersSeen)
         //goto and sit, making continuous trips from their spawn 
         //location and this spot
     }
+}
+
+module.exports.distribute = function(unit, distributeSeen)
+{
+	if(unit.memory.role == 'distribute')
+	{
+		distribute(unit);
+	}
 }
  
 //module.exports = function(unit, harvestersSeen, gatherersSeen)

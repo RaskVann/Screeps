@@ -509,8 +509,8 @@
  module.exports.manageEnergy = function()
  {
 	var manageEnergyInit = Game.getUsedCpu();
-	if(manageEnergyInit < 20)
-	{
+	//if(manageEnergyInit < 20)
+	//{
 		for(var owned in Game.rooms)
 		{
 			//If I own this room (at 5, links are available, at 4 storage is available)
@@ -525,7 +525,7 @@
 				
 				if(findStorage.length > 0)
 				{
-					var findLinks = findStorage[0].findInRange(FIND_MY_STRUCTURES, 1, {
+					var findLinks = findStorage[0].pos.findInRange(FIND_MY_STRUCTURES, 1, {
 						filter: { structureType: STRUCTURE_LINK }
 					});
 					
@@ -533,7 +533,7 @@
 					if(findLinks.length > 0 && findLinks[0].cooldown <= 0)
 					{
 						//Assuming the link is within 1 range of a spawn
-						var findSpawn = findLinks[0].findInRange(FIND_MY_SPAWNS, 1);
+						var findSpawn = findLinks[0].pos.findInRange(FIND_MY_SPAWNS, 1);
 						
 						//If the spawn is empty, fill it with the link
 						if(findSpawn.length > 0 && findSpawn[0].energy <= 0 && findLinks[0].energy > 0)
@@ -545,8 +545,8 @@
 						{
 							findStorage[0].transferEnergy(findLinks[0], findLinks[0].energyCapacity*.5);
 						}
-						//If the link is full, place half the energy storage
-						else if(findLinks[0].energy >= findLinks[0].energyCapacity)
+						//If the link is full (90% or higher), place half the energy storage
+						else if(findLinks[0].energy >= findLinks[0].energyCapacity * .9)
 						{
 							findLinks[0].transferEnergy(findStorage[0], findLinks[0].energyCapacity*.5);
 						}
@@ -558,7 +558,7 @@
 		var manageEnergyFinal = Game.getUsedCpu() - manageEnergyInit;
 		if(manageEnergyFinal > 1)
 			console.log('Manage Energy takes cpu: ' + manageEnergyFinal);
-	}
+	//}
  }
 
  module.exports.units = function (unit, builderNumber)

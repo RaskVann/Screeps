@@ -1275,7 +1275,9 @@
 			}
 			else
 			{
-				//useSpawn.memory.requestScout = 1;	//Replace the unit with one from spawn
+				//If allowing exitsVisited to go beyond exitMax then scouts will hit a dead end when this is reached
+				//If so, Replace this unit with one from spawn
+				//useSpawn.memory.requestScout = 1;
 				//var report = removeScout(unit);
 				//return(report);
 			}
@@ -1683,6 +1685,74 @@
 	//console.log(unit.name + '[' + scoutsSeen + '] harvest: ' + harvestEmptyAndRoomUpdated + ' nextRoom: ' + nextRoomMove);
 	return(edgeOfMap || (harvestEmptyAndRoomUpdated && nextRoomMove));
  }
+ 
+ //Finds the closest enemy (if one exists) and returns him, calls reinforcements if found
+ function detectEnemyCreep(unit)
+ {
+	var targetCreep;
+	var reportRoom;
+	if(unit != null)
+	{
+		targetCreep = unit.pos.findClosestByRange(FIND_HOSTILE_CREEPS, {
+			filter: function(object) {
+				return(object.getActiveBodyparts(ATTACK) > 0 || object.getActiveBodyparts(RANGED_ATTACK) > 0 || object.getActiveBodyparts(HEAL) > 0);
+			}
+		});
+		reportRoom = unit.room;
+	}
+	else
+	{
+		//Look through all spawns for a enemy creep, report the last one found.
+		for(var x in Game.spawns)
+		{
+			var findEnemy = Game.spawns[x].room.find(FIND_HOSTILE_CREEPS, {
+				filter: function(object) {
+					return(object.getActiveBodyparts(ATTACK) > 0 || object.getActiveBodyparts(RANGED_ATTACK) > 0 || object.getActiveBodyparts(HEAL) > 0);
+				}
+			});
+			
+			if(findEnemy.length > 0)
+			{
+				targetCreep = findEnemy[0];
+				reportRoom = findEnemy[0].room;
+				reportRoom.memory.requestDefender = 1;
+			}
+			else
+			{
+				Game.spawns[x].room.memory.requestDefender = 0;
+			}
+		}
+	}
+	 
+	if(targetCreep != null && reportRoom != null)
+	{
+		reportRoom.memory.requestDefender = 1;
+
+		var rangedAttack = targetCreep.getActiveBodyparts(RANGED_ATTACK);
+		var attack = targetCreep.getActiveBodyparts(ATTACK);
+		if(rangedAttack > 0 || attack > 0)	//If this unit has offensive capabilities, report in 10 minutes
+		{
+			Game.notify('owner: ' + targetCreep.owner.username + ', has OFFENSIVE creep, has body length: ' + targetCreep.body.length + ' in room ' + unit.room.name, 10);
+			Game.notify('OFFENSIVE target has active MOVE: ' + targetCreep.getActiveBodyparts(MOVE) + ', WORK: ' + targetCreep.getActiveBodyparts(WORK) +
+						', CARRY: ' + targetCreep.getActiveBodyparts(CARRY) + ', ATTACK: ' + attack + ', RANGED_ATTACK: ' +
+						rangedAttack + ', HEAL: ' + targetCreep.getActiveBodyparts(HEAL) + ', TOUGH: ' +
+						targetCreep.getActiveBodyparts(TOUGH), 10);
+		}
+		else	//If this is a passive unit, report every 24 hours
+		{
+			Game.notify('owner: ' + targetCreep.owner.username + ', has passive creep, has body length: ' + targetCreep.body.length + ' in room ' + unit.room.name, 1440);
+			Game.notify('Passive target has active MOVE: ' + targetCreep.getActiveBodyparts(MOVE) + ', WORK: ' + targetCreep.getActiveBodyparts(WORK) +
+						', CARRY: ' + targetCreep.getActiveBodyparts(CARRY) + ', HEAL: ' + targetCreep.getActiveBodyparts(HEAL) + 
+						', TOUGH: ' + targetCreep.getActiveBodyparts(TOUGH), 1440);
+		}
+	}
+	else if(reportRoom != null)
+	{
+		reportRoom.memory.requestDefender = 0;
+	}
+	
+	return(targetCreep);
+ }
 
  function defendBase(unit)
  {
@@ -1731,34 +1801,10 @@
 	
 	if(unit.getActiveBodyparts(ATTACK) > 0)
 	{
-		var targetCreep = unit.pos.findClosestByRange(FIND_HOSTILE_CREEPS, {
-			filter: function(object) {
-				return(object.getActiveBodyparts(ATTACK) > 0 || object.getActiveBodyparts(RANGED_ATTACK) > 0 || object.getActiveBodyparts(HEAL) > 0);
-			}
-		});
-		if(targetCreep)
+		var targetCreep = detectEnemyCreep(unit);
+		
+		if(targetCreep != null)
 		{
-			unit.room.memory.requestDefender = 1;
-			//if(unit.room.mode != 'MODE_SIMULATION')
-			//{
-			var rangedAttack = targetCreep.getActiveBodyparts(RANGED_ATTACK);
-			var attack = targetCreep.getActiveBodyparts(ATTACK);
-			if(rangedAttack > 0 || attack > 0)	//If this unit has offensive capabilities, report in 10 minutes
-			{
-				Game.notify('owner: ' + targetCreep.owner.username + ', has OFFENSIVE creep, has body length: ' + targetCreep.body.length + ' in room ' + unit.room.name, 10);
-				Game.notify('OFFENSIVE target has active MOVE: ' + targetCreep.getActiveBodyparts(MOVE) + ', WORK: ' + targetCreep.getActiveBodyparts(WORK) +
-							', CARRY: ' + targetCreep.getActiveBodyparts(CARRY) + ', ATTACK: ' + attack + ', RANGED_ATTACK: ' +
-							rangedAttack + ', HEAL: ' + targetCreep.getActiveBodyparts(HEAL) + ', TOUGH: ' +
-							targetCreep.getActiveBodyparts(TOUGH), 10);
-			}
-			else	//If this is a passive unit, report every 24 hours
-			{
-				Game.notify('owner: ' + targetCreep.owner.username + ', has passive creep, has body length: ' + targetCreep.body.length + ' in room ' + unit.room.name, 1440);
-				Game.notify('Passive target has active MOVE: ' + targetCreep.getActiveBodyparts(MOVE) + ', WORK: ' + targetCreep.getActiveBodyparts(WORK) +
-							', CARRY: ' + targetCreep.getActiveBodyparts(CARRY) + ', HEAL: ' + targetCreep.getActiveBodyparts(HEAL) + 
-							', TOUGH: ' + targetCreep.getActiveBodyparts(TOUGH), 1440);
-			}
-			//}
 			if(unit.attack(targetCreep) == ERR_NOT_IN_RANGE)
 			{
 				unit.moveTo(targetCreep);
@@ -1767,7 +1813,6 @@
 		}
 		else
 		{
-			unit.room.memory.requestDefender = 0;
 			var targetSource = unit.room.find(FIND_HOSTILE_SPAWNS);
 			var targetStructure = unit.pos.findClosestByRange(FIND_HOSTILE_STRUCTURES);
 			//TO DO: check if have valid path, ignore if do not
@@ -1851,6 +1896,11 @@
 	}
 	return('attack');
  }
+ 
+module.exports.detectEnemyCreep = function()
+{
+	return(detectEnemyCreep(null));
+}
 
 module.exports.attack = function(unit, attackersSeen)
 {

@@ -23,7 +23,7 @@ module.exports.loop = function()
 		//cleanMemory.purgeRole('builder');
 		//cleanMemory.purgeScoutInfo();
 		
-		//console.log('Is working every ' + defaultWait + ' ticks?');
+		defense.detectEnemyCreep();
 		Memory.waitForTicks = defaultWait;
 	}
 	else if(Memory.waitForLong == null || Memory.waitForLong-- <= 0)
