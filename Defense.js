@@ -1574,7 +1574,7 @@
 	if(scoutInit + searchRoom + newRoom + newSource > 15)
 	{
 		//console.log(unit.name + ' scoutInit: ' + scoutInit + ' searchRoom: ' + searchRoom +  ' newRoom: ' + newRoom + ' newSource: ' + newSource);
-		Game.notify(unit.name + ' scoutInit: ' + scoutInit + ' searchRoom: ' + searchRoom +  ' newRoom: ' + newRoom + ' newSource: ' + newSource, 480);
+		//Game.notify(unit.name + ' scoutInit: ' + scoutInit + ' searchRoom: ' + searchRoom +  ' newRoom: ' + newRoom + ' newSource: ' + newSource, 480);
 	}
 	
 	//If at edge of map, move until off of edge, 
@@ -1593,7 +1593,7 @@
 		if(scoutInit + searchRoom + newRoom + newSource + move > 15)
 		{
 			//console.log(unit.name + ' scoutInit: ' + scoutInit + ' searchRoom: ' + searchRoom +  ' newRoom: ' + newRoom + ' newSource: ' + newSource + ' FlagMove: ' + move);
-			Game.notify(unit.name + ' scoutInit: ' + scoutInit + ' searchRoom: ' + searchRoom +  ' newRoom: ' + newRoom + ' newSource: ' + newSource + ' FlagMove: ' + move, 480);
+			//Game.notify(unit.name + ' scoutInit: ' + scoutInit + ' searchRoom: ' + searchRoom +  ' newRoom: ' + newRoom + ' newSource: ' + newSource + ' FlagMove: ' + move, 480);
 		}
 		return('travel');
 	}
@@ -1652,7 +1652,7 @@
 		if(scoutInit + searchRoom + newRoom + newSource + move > 15)
 		{
 			//console.log(unit.name + ' scoutInit: ' + scoutInit + ' searchRoom: ' + searchRoom +  ' newRoom: ' + newRoom + ' newSource: ' + newSource + ' moveBack: ' + move);
-			Game.notify(unit.name + ' scoutInit: ' + scoutInit + ' searchRoom: ' + searchRoom +  ' newRoom: ' + newRoom + ' newSource: ' + newSource + ' moveBack: ' + move, 480);
+			//Game.notify(unit.name + ' scoutInit: ' + scoutInit + ' searchRoom: ' + searchRoom +  ' newRoom: ' + newRoom + ' newSource: ' + newSource + ' moveBack: ' + move, 480);
 		}
 		return('ready');
 	}
@@ -1985,7 +1985,7 @@ module.exports.scout = function(unit, scoutsSeen, previousScoutState)
 		if(scoutTime + memoryTime + createExit > 15)
 		{
 			//console.log(unit.name + ' scout: ' + scoutTime + ' memory: ' + memoryTime + ' create: ' + createExit);
-			Game.notify(unit.name + ' scout: ' + scoutTime + ' memory: ' + memoryTime + ' create: ' + createExit, 480);
+			//Game.notify(unit.name + ' scout: ' + scoutTime + ' memory: ' + memoryTime + ' create: ' + createExit, 480);
 		}
 		return(pastState);
 	}
