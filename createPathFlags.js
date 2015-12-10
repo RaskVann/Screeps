@@ -71,7 +71,7 @@
 		}//Else if, check for structure, have to make sure this doesn't run into things on return paths
 		else
 		{
-			console.log(unit.name + ' blocked by ' + nextMoveTerrain[0] + ' removing direction to recalculate path');
+			console.log(unit.name + ' blocked by ' + nextMoveTerrain[0] + ' removing direction to recalculate path. Consider remove: ' + unit.memory.usingSourceId);
 			delete unit.memory.direction;
 			return(true);
 		}
@@ -419,8 +419,9 @@
 		//the source since 1 away is where the harvester could sit.
 		if(backwards != null && currentSourceId != null)
 		{
-			Memory.flags[lastCreatedFlag] = {direction: backwards, usingDestinationId: currentSourceId, pathLength: currentPath.length};
-			//Memory.flags[endFlag] = {direction: backwards, usingDestinationId: currentSourceId, pathLength: currentPath.length};
+			var previousReturn = Memory.flags[lastCreatedFlag].returnDirection;
+			Memory.flags[lastCreatedFlag] = {direction: previousReturn, usingDestinationId: currentSourceId, pathLength: currentPath.length};
+			//Memory.flags[endFlag] = {direction: previousReturn, usingDestinationId: currentSourceId, pathLength: currentPath.length};
 		}
 		else
 		{
@@ -440,7 +441,7 @@
 	}
 	else if(structure.length)
 	{
-		console.log(startPos + ' checking position clear, found ' + structure[0].structureType + ' that is not road or rampart');
+		console.log(startPos + ' checking position blocked, found ' + structure[0].structureType + ' that is not road or rampart');
 		return(null);
 	}
 	var terrain = startPos.lookFor('terrain');

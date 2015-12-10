@@ -182,7 +182,7 @@
 				}
 			}
 			var storageCpu = Game.getUsedCpu() - init;
-			console.log(unit.name + ' getting energy from storage or link takes cpu: ' + storageCpu);
+			//console.log(unit.name + ' getting energy from storage or link takes cpu: ' + storageCpu);
 		}
 		
 		//While we're returning check for nearby energy and pick it up if found

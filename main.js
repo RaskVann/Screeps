@@ -14,7 +14,7 @@ module.exports.loop = function()
 	
 	//Triggers a function every 'defaultWait' ticks.
 	var defaultWait = 20;
-	var defaultLongWait = 20;//1000
+	var defaultLongWait = 1000;
 	if(Memory.waitForTicks == null || Memory.waitForTicks-- <= 0)
 	{
 		cleanMemory();

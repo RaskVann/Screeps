@@ -1072,41 +1072,55 @@
  function constructOutOfWay(closestLocation, structure, closeSpawn)
  {
 	var success;
-	
-	for(var x = Math.max(0, closestLocation.pos.x-1); x <= Math.min(49, closestLocation.pos.x+1); x++)
+	var closeBuild;
+	if(closestLocation != null)
 	{
-		for(var y = Math.max(0, closestLocation.pos.y-1); y <= Math.min(49, closestLocation.pos.y+1); y++)
+		for(var x = Math.max(0, closestLocation.x-1); x <= Math.min(49, closestLocation.x+1); x++)
 		{
-			if(x == closestLocation.pos.x && y == closestLocation.pos.y)
+			for(var y = Math.max(0, closestLocation.y-1); y <= Math.min(49, closestLocation.y+1); y++)
 			{
-				continue; //Skip over the location the harvester/builder should be sitting at that this link is for.
+				if(x == closestLocation.x && y == closestLocation.y)
+				{
+					continue; //Skip over the location the harvester/builder should be sitting at that this link is for.
+				}
+				
+				var nextPosition = new RoomPosition(x, y, closestLocation.roomName);
+				var findTerrain = closeSpawn.room.lookForAt('terrain', x, y);
+				var findFlag = closeSpawn.room.lookForAt('flag', x, y);
+				var findCreep = closeSpawn.room.lookForAt('creep', x, y);
+				var findStructure = closeSpawn.room.lookForAt('structure', x, y);
+				var findConstruction = closeSpawn.room.lookForAt('constructionSite', x, y);
+				
+				//console.log('testing: ' + nextPosition + ' range: ' + nextPosition.getRangeTo(closeSpawn) + ' Terrain: ' + findTerrain + ' findFlag: ' + findFlag.length + ' findCreep: ' + findCreep.length + ' findStructure: ' + findStructure.length + ' findConstruction: ' + findConstruction.length);
+				//Terrain should be movable (not constructable otherwise), if there is a flag, structure
+				//or creep this area is being used for something important (usually travel) and so this
+				//should only construct within 2 range of anchor in a buildable, unused spot.
+				if(findTerrain.length > 0 && (findTerrain[0] == 'plain' || findTerrain[0] == 'swamp') &&
+					findFlag.length == 0 && findCreep.length == 0 && findStructure.length == 0 && 
+					findConstruction.length == 0 && 
+					(closeBuild == null || closeBuild.getRangeTo(closeSpawn) > nextPosition.getRangeTo(closeSpawn)))
+				{
+					closeBuild = nextPosition;
+				}
 			}
-			
-			var findTerrain = closeSpawn.room.lookForAt('terrain', x, y);
-			var findFlag = closeSpawn.room.lookForAt('flag', x, y);
-			var findCreep = closeSpawn.room.lookForAt('creep', x, y);
-			var findStructure = closeSpawn.room.lookForAt('structure', x, y);
-			var findConstruction = closeSpawn.room.lookForAt('constructionSite', x, y);
-			//Terrain should be movable (not constructable otherwise), if there is a flag, structure
-			//or creep this area is being used for something important (usually travel) and so this
-			//should only construct within 2 range of anchor in a buildable, unused spot.
-			if(findTerrain.length > 0 && (findTerrain[0] == 'plain' || findTerrain[0] == 'swamp') &&
-				findFlag.length == 0 && findCreep.length == 0 && findStructure.length == 0 && findConstruction.length == 0)
+		}
+		
+		//Build a structure at the closest found location to the spawn
+		if(closeBuild != null)
+		{
+			success = closeBuild.createConstructionSite(structure);
+			if(success == 0)
 			{
-				success = findTerrain[0].pos.createConstructionSite(structure);
-				if(success == 0)
-				{
-					if(structure == STRUCTURE_STORAGE)
-					{	//Spawn a link next to the storage in a empty position
-						return(constructOutOfWay(findTerrain[0].pos, STRUCTURE_LINK, closeSpawn));
-					}
-					return(success);
+				if(structure == STRUCTURE_STORAGE)
+				{	//Spawn a link next to the storage in a empty position
+					return(constructOutOfWay(closeBuild, STRUCTURE_LINK, closeSpawn));
 				}
-				else
-				{
-					//If fail construction for whatever reason, try again in another location.
-					console.log('Trying to construct link failed, trying another location.');
-				}
+				return(success);
+			}
+			else
+			{
+				//If fail construction for whatever reason, try again in another location.
+				console.log('Trying to construct link failed, trying another location.');
 			}
 		}
 	}
@@ -1127,10 +1141,9 @@
 			var findTerrain = closeSpawn.room.lookForAt('terrain', x, y);
 			if(findTerrain.length > 0 && (findTerrain[0] == 'plain' || findTerrain[0] == 'swamp') &&
 				(closestLocation == null || closeSpawn.pos.getRangeTo(closestLocation) > closeSpawn.pos.getRangeTo(findTerrain)))
-				//closestLocation > closeSpawn.pos.getRangeTo(x, y))
 			{
-				closestLocation = findTerrain;
-				//closestLocation = closeSpawn.pos.getRangeTo(x, y);
+				closestLocation = new RoomPosition(x, y, anchor.room.name);
+				//console.log(closestLocation + ', pos: ' + closestLocation.pos + ' range: ' + closeSpawn.pos.getRangeTo(closestLocation));
 			}
 		}
 	}
