@@ -7,6 +7,7 @@
  */
 
  var followFlagForward = require('createPathFlags');
+ var spawnFrom = require('Spawner');
 
  //Recorded by how many units we've assigned a harvest spot to in this room.
  function getNeedHarvest(spawn)
@@ -1402,7 +1403,7 @@
 	if(scoutInit + searchRoom + newRoom > 15)
 	{
 		//console.log(unit.name + ' scoutInit: ' + scoutInit + 'searchRooms: ' + searchRoom + ' newRoom: ' + newRoom);
-		Game.notify(unit.name + ' scoutInit: ' + scoutInit + 'searchRooms: ' + searchRoom + ' newRoom: ' + newRoom, 480);
+		//Game.notify(unit.name + ' scoutInit: ' + scoutInit + 'searchRooms: ' + searchRoom + ' newRoom: ' + newRoom, 480);
 	}
 	
 	//This unit shouldn't be created until the spawner has the chance to set everything it needs in the core room. This is for every other room the scout visits.
@@ -1529,6 +1530,26 @@
 	else if(currentRoom.controller == null)
 	{		//Is evaluated once when a 'no controller' room is entered and defines the threat value and again in the next tick
 			//to find if there is a source defined and populates that if needed (more CPU effective this way)
+		var bank = unit.room.find(STRUCTURE_POWER_BANK);
+		//If less then 1500 we're deeming this impossible to gather
+		if(bank.length > 0 && (bank[0].ticksToDecay > 1500 || bank[0].hits < bank[0].hitsMax))
+		{
+			console.log('Found Power Bank ' + bank[0] + ' in ' + bank[0].room + ' power: ' + bank[0].power + ' (' + bank[0].hits + '/' + bank[0].hitsMax + ')');
+			
+			//Can get how long until death by deathTime-Game.time. If negative, already dead
+			var timeTillDeath = bank[0].ticksToDecay + Game.time;
+			var healthRatio = bank[0].hits / bank[0].hitsMax;
+			
+			//When these entries are found, spawn 2 power, 2 heal and send them to the roomName, when they have identical room names, go to id
+			unit.room.memory.bank = { id: bank[0].id, power: bank[0].power, deathTime: timeTillDeath, roomName: bank[0].room.name, health: healthRatio };
+			//unit.room.memory.bank = [ id: bank[0].id, power: bank[0].power, deathTime: timeTillDeath, roomName: bank[0].room.name, health: healthRatio ];
+			//unit.room.memory.bank = [ { id: bank[0].id, power: bank[0].power, deathTime: timeTillDeath, roomName: bank[0].room.name, health: healthRatio } ];
+		}
+		else if(unit.room.memory.bank != null)	//bank exists and no bank found
+		{
+			delete unit.room.memory.bank;
+		}
+		
 		if(currentRoom.memory.sources == null)
 		{
 			if(currentRoom.memory.threat == null)
@@ -1896,6 +1917,184 @@
 	}
 	return('attack');
  }
+ 
+ function attackPower(unit)
+ {
+	//When these entries are found, spawn 2 power, 2 heal and send them to the roomName, when they have identical room names, go to id
+	//unit.room.memory.bank = { id: bank[0].id, power: bank[0].power, deathTime: timeTillDeath, roomName: bank[0].room.name, health: healthRatio };
+	detectEnemyCreep(unit);
+	
+	var useSpawn = getSpawnId(unit);
+	var bank;
+	//If hasn't been assigned to anywhere, look in memory for a bank to raid, select the first one found and store it in this units memory
+	if(unit.memory.usingSourceId == null)
+	{
+		for(var x in Memory.rooms)
+		{
+			bank = Memory.rooms[x].bank;
+			if(bank != null && bank.deathTime-Game.time > 1500)
+			{
+				unit.memory.usingSourceId = bank.roomName;
+				unit.memory.bankId = bank.id;
+				break;
+			}
+		}
+		followFlagForward(unit, true);
+	}
+	else
+	{
+		//As long as we aren't in the right room yet, just follow the path to the appropriate room
+		if(unit.room.name != unit.memory.usingSourceId)
+		{	//WARNING: Move out of border first? In check above?
+			followFlagForward(unit, true);
+		}
+		else
+		{
+			//Once we are in the right room, move with range of the bank and wait for a pairing unit to show up.
+			bank = Game.getObjectById(unit.memory.bankId);
+			
+			if(bank != null && unit.pos.getRangeTo(bank) > 2)
+			{
+				unit.moveTo(bank);
+			}
+			else if(bank != null)	//And within range
+			{
+				var attack = unit.getActiveComponents(MELEE);
+				var heal = unit.getActiveComponents(HEAL);
+				var pairedUnit;
+				
+				//If this is a attacker, look for a healer in the room that hasn't been paired and pair him
+				if(attack > 0)
+				{
+					if(unit.memory.pair == null)
+					{
+						var healers = unit.room.find(FIND_MY_CREEPS, {
+							filter: function(object) {
+								return(object.memory.role == 'attackPower' && object.getActiveComponents(HEAL) > 0 && unit.memory.pair == null);
+							}
+						});
+						
+						if(healers.length > 0)
+						{
+							healers[0].memory.pair = unit.id;
+							unit.memory.pair = healers[0].id;
+						}
+					}
+					else
+					{	//When have a pair, move to the bank, and as long as the pairedUnit is within healing range attack the bank.
+						pairedUnit = Game.getObjectById(unit.memory.pair);
+						if(unit.pos.getRangeTo(bank.pos) > 1)
+						{
+							unit.moveTo(bank);
+						}
+						if(unit.pos.getRangeTo(pairedUnit.pos) <= 1)
+						{
+							//hits/attack is how long it will take this unit to destroy the structure
+							//If this is less then the time it would to spawn a unit and have him travel over here
+							//Spawn a unit and send him this direction.
+							if(unit.attack(bank) == 0 && bank.hits/(attack*30) < unit.memory.pathLength+(3*bank.power/25) &&
+								harvestIdInList(useSpawn, unit.memory.usingSourceId) == false)
+							{
+								//TO DO:
+								//Give gathers or power gathers logic enough to go to a power source and return when there is no more
+								//on the ground, or when the capacity is full.
+								
+								var gatherAmount = Math.ceil(bank.power/(useSpawn.room.energyCapacityAvailable*.5)) + 1;
+								console.log(unit.name + ' is asking for gathers: ' + gatherAmount + ' for power: ' + bank.power);
+								
+								console.log(unit.name + ' BAD, DONT GO HERE YET: scout creating room related temp spawn.');
+								var role = 'gather';
+								//name = findNextUnusedName(role, useSpawn.room.name);
+								var memoryForTempUnit = {'role': role, 'usingSourceId': unit.memory.usingSourceId, 'spawnID': useSpawn.id, 'pathLength': unit.memory.pathLength};
+								
+								//Find how many temp gathers we have for this bank, if we don't hit the threshold, attempt to spawn another gather.
+								var countTotalGathers;
+								if(bank.room.memory.bank.totalGathers != null)
+								{
+									countTotalGathers = bank.room.memory.bank.totalGathers;
+								}
+								else
+								{
+									countTotalGathers = 0;
+								}
+
+								//use the role provided and the memory provided for a temp unit. Updating how many gathers we have for this bank.
+								if(countTotalGathers < gatherAmount && spawnFrom.createTempCreep(role, memoryForTempUnit) == true)
+								{
+									if(bank.room.memory.bank.totalGathers != null)
+									{
+										bank.room.memory.bank.totalGathers++;
+									}
+									else
+									{
+										bank.room.memory.bank.totalGathers = 1;
+									}
+									console.log('Check for null totalGathers(BAD): ' + bank.room.memory.bank.totalGathers);
+								}
+							}
+						}
+					}
+				}
+				//If this is a healer, look for an attacker to pair with
+				else if(heal > 0)
+				{
+					if(unit.memory.pair == null)
+					{
+						var attackers = unit.room.find(FIND_MY_CREEPS, {
+							filter: function(object) {
+								return(object.memory.role == 'attackPower' && object.getActiveComponents(MELEE) > 0 && unit.memory.pair == null);
+							}
+						});
+						
+						if(attackers.length > 0)
+						{
+							attackers[0].memory.pair = unit.id;
+							unit.memory.pair = attackers[0].id;
+						}
+					}
+					else
+					{	//Once paired, move within 1 unit of the paired unit and heal him forever
+						pairedUnit = Game.getObjectById(unit.memory.pair);
+						if(unit.pos.getRangeTo(pairedUnit.pos) > 1)
+						{
+							unit.moveTo(pairedUnit);
+							unit.rangedHeal(pairedUnit);
+						}
+						else if(pairedUnit.hits < pairedUnit.hitsMax)
+						{
+							unit.heal(pairedUnit);
+						}
+					}
+				}
+			}
+			else
+			{
+				//Bank doesn't exist anymore, if power is on the ground call for a gatherer if needed, otherwise we got here to late
+				//or need further orders
+				console.log(unit.name + ' power attacker no longer has a bank to attack');
+				
+				for(var x in Memory.rooms)
+				{
+					bank = Memory.rooms[x].bank;
+					if(bank != null && bank.id == unit.memory.bankId)
+					{
+						console.log(unit.name + ' deleting bank id: ' + bank.id);
+						delete Memory.rooms[x].bank;
+						break;
+					}
+				}
+				//Can use usingSourceId and followFlagForward(unit,false); to return to spawn if desired
+				unit.memory.role = 'attacker';	//This unit isn't any real use anymore, either kill or translate into attacker to defend the area
+			}
+		}
+	}
+ }
+ 
+module.exports.attackPower = function(unit)
+{
+	if(unit.memory.role == 'attackPower')
+		return(attackPower(unit));
+}
  
 module.exports.detectEnemyCreep = function()
 {

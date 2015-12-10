@@ -17,6 +17,10 @@
                       { cost: 640, body: [TOUGH, TOUGH, MOVE, MOVE, MOVE, MOVE, MOVE, MOVE, ATTACK, ATTACK, ATTACK, ATTACK] },
                       { cost: 700, body: [TOUGH, TOUGH, TOUGH, MOVE, MOVE, MOVE, MOVE, MOVE, MOVE, MOVE, ATTACK, ATTACK, ATTACK, ATTACK] }];//,	//75% Armour, +23.6% more effective against spawn keeper (max effectiveness), around 5 needed to kill for all to survive
 					  //{ cost: 1400, body: [TOUGH, TOUGH, TOUGH, TOUGH, TOUGH, TOUGH, MOVE, MOVE, MOVE, MOVE, MOVE, MOVE, MOVE, MOVE, MOVE, MOVE, MOVE, MOVE, MOVE, MOVE, ATTACK, ATTACK, ATTACK, ATTACK, ATTACK, ATTACK, ATTACK, ATTACK] } ];	//2 needed for keeper
+ var attackPower = [ { cost: 2990, body: [MOVE, MOVE, MOVE, MOVE, MOVE, MOVE, MOVE, MOVE, MOVE, MOVE, MOVE, MOVE, MOVE, MOVE, MOVE, MOVE, MOVE, MOVE, MOVE, MOVE, MOVE, MOVE, MOVE, 
+										  ATTACK,ATTACK,ATTACK,ATTACK,ATTACK,ATTACK,ATTACK,ATTACK,ATTACK,ATTACK,ATTACK,ATTACK,ATTACK,ATTACK,ATTACK,ATTACK,ATTACK,ATTACK,ATTACK,ATTACK,ATTACK,ATTACK,ATTACK] } ];
+ var healPower = [ { cost: 8700, body: [MOVE, MOVE, MOVE, MOVE, MOVE, MOVE, MOVE, MOVE, MOVE, MOVE, MOVE, MOVE, MOVE, MOVE, MOVE, MOVE, MOVE, MOVE, MOVE, MOVE, MOVE, MOVE, MOVE, MOVE, MOVE, MOVE, MOVE, MOVE, MOVE, 
+										HEAL, HEAL, HEAL, HEAL, HEAL, HEAL, HEAL, HEAL, HEAL, HEAL, HEAL, HEAL, HEAL, HEAL, HEAL, HEAL, HEAL, HEAL, HEAL, HEAL, HEAL, HEAL, HEAL, HEAL, HEAL, HEAL, HEAL, HEAL, HEAL] } ];
  var rangedBody = [ { cost: 200, body: [MOVE, RANGED_ATTACK] },
                       { cost: 400, body: [MOVE, MOVE, RANGED_ATTACK, RANGED_ATTACK] },
                       { cost: 600, body: [MOVE, MOVE, MOVE, RANGED_ATTACK, RANGED_ATTACK, RANGED_ATTACK] },
@@ -851,6 +855,7 @@
         //console.log("Extracting Name: " + returnName + " saving: " + spawner.memory.respawnName);
         return(returnName);
     }
+	console.log('ERROR: cant find respawnName from ' + spawner);
     return(null);
  }
  
@@ -1345,7 +1350,42 @@
 	return(false);
  }
  
- module.exports = function(spawner, harvestersSeen, gatherersSeen, buildersSeen, attackersSeen, scoutsSeen)
+ //Find unused spawn if possible, create temp creep with the input data. Returns if successful
+ module.exports.createTempCreep = function(role, memToInput)
+ {
+	var spawner;
+	for(var spawners in Game.spawns)
+    {
+		if(Game.spawns[spawners].spawning == null)
+		{
+			spawner = Game.spawns[spawners];
+			break;
+		}
+	}
+	
+	if(spawner != null)
+	{
+		var body = retrieveBody(role, spawner);
+		var canCreateUnit = spawner.canCreateCreep(body);
+		if(canCreateUnit == 0)
+		{
+			var _ = require('lodash');
+			var badSpawn = spawner.createCreep(body, memToInput);
+			if(_.isString(badSpawn))
+			{
+				console.log(badSpawn + ' created from ' + spawner.name + ' for role ' + role + ' with mem: ' + memToInput);
+				return(true);
+			}
+			else 
+			{
+				console.log('TEMP Spawn error: ' + badSpawn + ' bodyLength: ' + body.length + ' spawner: ' + spawner.name);
+			}
+		}
+	}
+	return(false);
+ }
+ 
+ module.exports.spawn = function(spawner, harvestersSeen, gatherersSeen, buildersSeen, attackersSeen, scoutsSeen)
  {
 	spawner.memory.scoutsAlive = scoutsSeen;
 	//If spawner is spawning something, this returns that creep's information, if null it is ready to spawn something

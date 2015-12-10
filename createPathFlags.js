@@ -895,9 +895,9 @@
  //adding the last flag as a 'return only' flag, useful when going to energy spawns but not
  //when traveling between rooms since the path will continue beyond the room the path is being
  //generated in
- module.exports.createDefinedPath = function(inRoom, path, spawnId, capEnd, startPos)
+ module.exports.createDefinedPath = function(inRoom, path, currentSourceId, capEnd, startPos)
  {
-	return(createPathToFlags(inRoom, path, spawnId, capEnd, startPos));
+	return(createPathToFlags(inRoom, path, currentSourceId, capEnd, startPos));
  }
 
  module.exports.findFlag = function(unit, findSourceId)

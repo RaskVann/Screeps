@@ -72,6 +72,35 @@
 	//Unit isn't in a valid 'ready' state, ignore this check
 	return(false);
  }
+ 
+ //Returns true if a new path has been created. Checks if the builder sent in has a path created already at the storage
+ //Before a storage is created they path to and from the spawn this switches over to storage instead.
+ function createNewPath(unit, findStorage)
+ {
+	if(findStorage.length > 0 && unit.memory.usingSourceId != null)
+	{
+		var flagsAtStorage = findStorage[0].pos.findInRange(FIND_FLAGS, 1, {
+			filter: function(object) { 
+				return(object.memory.usingDestinationId == unit.memory.usingSourceId);
+			}
+		});
+		
+		var buildObject = Game.getObjectById(unit.memory.usingSourceId);
+		
+		if(flagsAtStorage.length <= 0 && buildObject != null)
+		{
+			//No flag around storage when storage exists, we're going to delete the existing path and path to storage instead
+			//that way all builders get their energy from there instead of the spawns
+			console.log('cleaning path: ' + unit.memory.usingSourceId + ' to re-path to storage.');
+			
+			cleanMemory.purgeFlagsWithId(unit.memory.usingSourceId);
+			var newPath = findStorage[0].pos.findPathTo(buildObject.pos, {maxOps: 4000, ignoreCreeps: true});
+			followFlagForward.createDefinedPath(unit.room, newPath, unit.memory.usingSourceId, true, findStorage[0].pos);
+			return(true);
+		}
+	}
+	return(false);
+ }
 
  function needEnergy(unit)
  {
@@ -97,7 +126,8 @@
 				useSavedSpawn.energy > 0 &&
 				Math.abs(unit.pos.getRangeTo(useSavedSpawn.pos)) <= 1)
 		{
-			useSavedSpawn.transferEnergy(unit);	//We don't always have 300 energy in the spawn, take if needed
+			if(useSavedSpawn.transferEnergy(unit) == 0)
+				unit.memory.usingSourceId = null;	//Reset, ready for new source;	//We don't always have 300 energy in the spawn, take if needed
 		}
 		else if(useSavedSpawn.energy > 0)	//Don't report if we have nothing to pull from
 		{
@@ -116,15 +146,43 @@
 			var findLinks = unit.pos.findInRange(FIND_MY_STRUCTURES, 1, {
 				filter: { structureType: STRUCTURE_LINK }
 			});
-
-			if(findLinks.length)
+			
+			var findStorage = unit.room.find(FIND_MY_STRUCTURES, {
+				filter: { structureType: STRUCTURE_STORAGE }
+			});
+			
+			var init = Game.getUsedCpu();
+			if(createNewPath(unit, findStorage) == false)
 			{
-				for(var i in findLinks)
+				if(findLinks.length > 0)
 				{
-					if(findLinks[i].transferEnergy(unit) == 0)
-						break;
+					for(var i in findLinks)
+					{
+						if(unit.pos.getRangeTo(findLinks[i].pos) <= 1 &&
+							findLinks[i].energy > 0 &&
+							findLinks[i].cooldown == 0 &&
+							findLinks[i].transferEnergy(unit) == 0)
+							break;
+					}
+				}
+				else if(findStorage.length > 0)
+				{
+					followFlagForward(unit, unit.carry.energy > 0);
+					if(unit.pos.getRangeTo(findStorage[0].pos) <= 1 && 
+						findStorage[0].store.energy > 0 &&
+						findStorage[0].transferEnergy(unit) == 0)
+					{
+						unit.memory.usingSourceId = null;	//Reset, ready for new source
+					}
+					//unit.moveTo(findStorage[0]);
+					//if(unit.memory.direction != null)
+					//{
+					//	delete unit.memory.direction;
+					//}
 				}
 			}
+			var storageCpu = Game.getUsedCpu() - init;
+			console.log(unit.name + ' getting energy from storage or link takes cpu: ' + storageCpu);
 		}
 		
 		//While we're returning check for nearby energy and pick it up if found
@@ -536,15 +594,15 @@
 						var findSpawn = findLinks[0].pos.findInRange(FIND_MY_SPAWNS, 1);
 						
 						//If the spawn is empty, fill it with the link
-						if(findSpawn.length > 0 && findSpawn[0].energy <= 0 && findLinks[0].energy > 0)
+						if(findSpawn.length > 0 && findSpawn[0].energy < findSpawn[0].energyCapacity && findLinks[0].energy > 0)
 						{
 							findLinks[0].transferEnergy(findSpawn[0]);
 						}
-						//If the link is empty, fill it with the storage
-						else if(findLinks[0].energy <= 0)
-						{
-							findStorage[0].transferEnergy(findLinks[0], findLinks[0].energyCapacity*.5);
-						}
+						//Storage can't transfer to buildings, only creeps
+						//else if(findLinks[0].energy <= 0 && findStorage[0].store.energy > 0)
+						//{
+						//	var temp = findStorage[0].transferEnergy(findLinks[0]);
+						//}
 						//If the link is full (90% or higher), place half the energy storage
 						else if(findLinks[0].energy >= findLinks[0].energyCapacity * .9)
 						{
@@ -556,7 +614,7 @@
 		}
 		
 		var manageEnergyFinal = Game.getUsedCpu() - manageEnergyInit;
-		if(manageEnergyFinal > 1)
+		if(manageEnergyFinal > 5)
 			console.log('Manage Energy takes cpu: ' + manageEnergyFinal);
 	//}
  }

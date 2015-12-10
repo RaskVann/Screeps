@@ -544,6 +544,7 @@
 						return(object.carry.energy < object.carryCapacity && object.memory != null && object.memory.role == 'gather');
 					}
 				});
+				
 				for(var store in gathers)
 				{
 					if(gathers[store] != null && findLinks[i].transferEnergy(gathers[store]) == 0)
@@ -591,7 +592,7 @@
 						return(object.carry.energy < object.carryCapacity && object.memory != null && object.memory.role == 'gather');
 					}
 				});
-				
+
 				//Try to transfer to anything in range from lists populated above
 				if(neighbors.length)
 				{
@@ -795,15 +796,17 @@
  function fillUpRoomWithEnergy(unit, returnResources)
  {
 	var transferEnergyReturn = unit.transferEnergy(returnResources);
+
 	//If make it back to the drop off and its full go and fill up a extension instead, delete the direction so when it finishes
 	//the drop off it finds the start of the path again and resumes the path.
 	if(transferEnergyReturn == ERR_FULL || unit.memory.direction == null)
 	{
 		var transferExtension = unit.room.find(FIND_MY_STRUCTURES, {
 			filter: function(object) {
-				return(object.structureType == STRUCTURE_EXTENSION && object.energy < object.carryCapacity);
+				return(object.structureType == STRUCTURE_EXTENSION);
 			}
 		});
+		
 		var transferTarget;
 		var transferRange = 999999;
 		for(var drained in transferExtension)
@@ -812,6 +815,7 @@
 				transferExtension[drained].energy < transferExtension[drained].energyCapacity)
 			{
 				var transfer = unit.transferEnergy(transferExtension[drained]);
+				
 				if(transfer == ERR_NOT_IN_RANGE)
 				{
 					var tempRange = unit.pos.getRangeTo(transferExtension[drained]);
@@ -850,6 +854,7 @@
 			var cpu = Game.getUsedCpu();
 			//unit.moveTo(transferTarget);
 			unit.moveByPath(unit.pos.findPathTo(transferTarget), {maxOps: 100, ignoreCreeps: false});
+			
 			cpu = Game.getUsedCpu()-cpu;
 			//console.log(unit.name + ' moving to capacitor costs: ' + cpu);
 		}
@@ -857,14 +862,17 @@
 		{
 			var transferStorage = unit.room.find(FIND_MY_STRUCTURES, {
 				filter: function(object) {
-					return(object.structureType == STRUCTURE_STORAGE && object.energy < object.carryCapacity);
+					return(object.structureType == STRUCTURE_STORAGE);// && object.energy < object.carryCapacity
 				}
 			});
 			
 			if(transferStorage.length > 0)
 			{		//If we're in a room with a storage go over and transfer to the storage
 				unit.moveByPath(unit.pos.findPathTo(transferStorage[0]), {maxOps: 100, ignoreCreeps: false});
-				unit.transferEnergy(transferStorage[0]);
+				var what = unit.transferEnergy(transferStorage[0]);
+				
+				if(unit.memory.direction != null)
+					delete unit.memory.direction;
 			}
 			else	//If room is full and no storage found, send back to retrieve what energy they can, until full.
 			{
@@ -907,6 +915,10 @@
 				//transferAround(unit);
 			}
 		}
+	}
+	else if(transferEnergyReturn != 0)
+	{
+		console.log(unit.name + ' transfer not handled. ' + transferEnergyReturn);
 	}
  }
  
@@ -1056,8 +1068,54 @@
 	return(thisRoom.memory.currentBuilders);
  }
  
+ //Attempts to construct structure as close to closeSpawn as possible center being closestLocation, within range 1
+ function constructOutOfWay(closestLocation, structure, closeSpawn)
+ {
+	var success;
+	
+	for(var x = Math.max(0, closestLocation.pos.x-1); x <= Math.min(49, closestLocation.pos.x+1); x++)
+	{
+		for(var y = Math.max(0, closestLocation.pos.y-1); y <= Math.min(49, closestLocation.pos.y+1); y++)
+		{
+			if(x == closestLocation.pos.x && y == closestLocation.pos.y)
+			{
+				continue; //Skip over the location the harvester/builder should be sitting at that this link is for.
+			}
+			
+			var findTerrain = closeSpawn.room.lookForAt('terrain', x, y);
+			var findFlag = closeSpawn.room.lookForAt('flag', x, y);
+			var findCreep = closeSpawn.room.lookForAt('creep', x, y);
+			var findStructure = closeSpawn.room.lookForAt('structure', x, y);
+			var findConstruction = closeSpawn.room.lookForAt('constructionSite', x, y);
+			//Terrain should be movable (not constructable otherwise), if there is a flag, structure
+			//or creep this area is being used for something important (usually travel) and so this
+			//should only construct within 2 range of anchor in a buildable, unused spot.
+			if(findTerrain.length > 0 && (findTerrain[0] == 'plain' || findTerrain[0] == 'swamp') &&
+				findFlag.length == 0 && findCreep.length == 0 && findStructure.length == 0 && findConstruction.length == 0)
+			{
+				success = findTerrain[0].pos.createConstructionSite(structure);
+				if(success == 0)
+				{
+					if(structure == STRUCTURE_STORAGE)
+					{	//Spawn a link next to the storage in a empty position
+						return(constructOutOfWay(findTerrain[0].pos, STRUCTURE_LINK, closeSpawn));
+					}
+					return(success);
+				}
+				else
+				{
+					//If fail construction for whatever reason, try again in another location.
+					console.log('Trying to construct link failed, trying another location.');
+				}
+			}
+		}
+	}
+	console.log('structure: ' + structure + ' could not be built around: ' + closestLocation);
+	return(success);
+ }
+ 
  //Tries to find a ideal location, 1-2 spaces away from anchor, not in the way of anything in use and add construction site for link
- function constructLink(anchor)
+ function constructStructure(anchor, structure)
  {
 	var closeSpawn = anchor.pos.findClosestByRange(FIND_MY_SPAWNS);
 	var closestLocation;
@@ -1082,39 +1140,8 @@
 	//isn't in a wall
 	if(closestLocation != null)
 	{
-		for(var x = Math.max(0, closestLocation.pos.x-1); x <= Math.min(49, closestLocation.pos.x+1); x++)
-		{
-			for(var y = Math.max(0, closestLocation.pos.y-1); y <= Math.min(49, closestLocation.pos.y+1); y++)
-			{
-				if(x == closestLocation.pos.x && y == closestLocation.pos.y)
-				{
-					continue; //Skip over the location the harvester/builder should be sitting at that this link is for.
-				}
-				
-				var findTerrain = closeSpawn.room.lookForAt('terrain', x, y);
-				var findFlag = closeSpawn.room.lookForAt('flag', x, y);
-				var findCreep = closeSpawn.room.lookForAt('creep', x, y);
-				var findStructure = closeSpawn.room.lookForAt('structure', x, y);
-				var findConstruction = closeSpawn.room.lookForAt('constructionSite', x, y);
-				//Terrain should be movable (not constructable otherwise), if there is a flag, structure
-				//or creep this area is being used for something important (usually travel) and so this
-				//should only construct within 2 range of anchor in a buildable, unused spot.
-				if(findTerrain.length > 0 && (findTerrain[0] == 'plain' || findTerrain[0] == 'swamp') &&
-					findFlag.length == 0 && findCreep.length == 0 && findStructure.length == 0 && findConstruction.length == 0)
-				{
-					success = findTerrain[0].pos.createConstructionSite(STRUCTURE_LINK);
-					if(success == 0)
-					{
-						return(success);
-					}
-					else
-					{
-						//If fail construction for whatever reason, try again in another location.
-						console.log('Trying to construct link failed, trying another location.');
-					}
-				}
-			}
-		}
+		console.log('attempting to build ' + structure + ' near location: ' + closestLocation);
+		return(constructOutOfWay(closestLocation, structure, closeSpawn));
 	}
 	else
 	{
@@ -1154,30 +1181,34 @@ module.exports.link = function()
 						if(allConstructLinks.length <= 0)
 						{
 							//Construct link, nothing exists.
-							//constructLink(sources[i]);
+							constructStructure(sources[i], STRUCTURE_LINK);
 						}
 					}
 				}
 				
 				//Look at the controller and make sure there is a link within 2 spaces of it
-				var controllerLink = nextRoom.controller.pos.findInRange(FIND_MY_STRUCTURES, 2, {
-					filter: { structureType: STRUCTURE_LINK }
+				var controllerStorage = nextRoom.controller.pos.findInRange(FIND_MY_STRUCTURES, 2, {
+					filter: { structureType: STRUCTURE_STORAGE }
 				});
 				
-				if(controllerLink.length <= 0)
+				if(controllerStorage.length <= 0)
 				{
-					var controllerConstructLinks = nextRoom.controller.pos.findInRange(FIND_MY_CONSTRUCTION_SITES, 2, {
-						filter: { structureType: STRUCTURE_LINK }
+					var controllerConstructStorage = nextRoom.controller.pos.findInRange(FIND_MY_CONSTRUCTION_SITES, 2, {
+						filter: { structureType: STRUCTURE_STORAGE }
 					});
 					//No link within 2 spaces, create one.
-					if(controllerConstructLinks.length <= 0)
+					if(controllerConstructStorage.length <= 0)
 					{
 						//Construct link, nothing exists.
-						//constructLink(nextRoom.controller);
+						constructStructure(nextRoom.controller, STRUCTURE_STORAGE);
 					}
 				}
 			}
 		}
+	}
+	else
+	{
+		console.log('creation of links and storage skipped, not enough cpu');
 	}
 }
  

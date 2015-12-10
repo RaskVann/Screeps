@@ -14,7 +14,7 @@ module.exports.loop = function()
 	
 	//Triggers a function every 'defaultWait' ticks.
 	var defaultWait = 20;
-	var defaultLongWait = 1000;
+	var defaultLongWait = 20;//1000
 	if(Memory.waitForTicks == null || Memory.waitForTicks-- <= 0)
 	{
 		cleanMemory();
@@ -88,7 +88,7 @@ module.exports.loop = function()
 	//TO DO: Adjust to only count unit types tied to the spawn we're sending in
     for(var spawners in Game.spawns)
     {
-        spawnFrom(Game.spawns[spawners], harvestersSeen, gatherersSeen, buildersSeen, attackersSeen, scoutsSeen);
+        spawnFrom.spawn(Game.spawns[spawners], harvestersSeen, gatherersSeen, buildersSeen, attackersSeen, scoutsSeen);
     }
 	var reportSpawnCpuUsed = Game.getUsedCpu() - reportInitializeCpuUsed - reportCreepCpuUsed;
 	//console.log('Spawn logic CPU: ' + reportSpawnCpuUsed);
