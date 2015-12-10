@@ -1099,7 +1099,7 @@
 					findFlag.length == 0 && findCreep.length == 0 && findStructure.length == 0 && 
 					findConstruction.length == 0 && 
 					(closeBuild == null || closeBuild.getRangeTo(closeSpawn) > nextPosition.getRangeTo(closeSpawn)))
-				{
+				{//TO DO: Replace these getRangeTo with Math.sqrt(Math.pow(x1-x2, 2)+Math.pow(y1-y2, 2))
 					closeBuild = nextPosition;
 				}
 			}

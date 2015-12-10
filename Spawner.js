@@ -535,9 +535,7 @@
 				if((countActiveGather*50) >= respawnThreshold)
 				{
 					//console.log(nextName + ' found ' + (countActiveGather*50) + ' capacity of needed ' + respawnThreshold + ' moving to end.');
-					extractNextName(spawner);
-					extractNextRespawnTime(spawner);
-					addRespawnEnd(spawner, nextName);
+					moveRespawnToEnd(spawner);
 					return(null);
 				}
 			}
@@ -557,9 +555,7 @@
 			if((countActiveWork*2) >= respawnThreshold)
 			{
 				//console.log(nextName + ' found ' + (countActiveWork*2) + ' work of needed ' + respawnThreshold + ' moving to end.');
-				extractNextName(spawner);
-				extractNextRespawnTime(spawner);
-				addRespawnEnd(spawner, nextName);
+				moveRespawnToEnd(spawner);
 				return(null);
 			}
 		}
@@ -693,9 +689,7 @@
 				
 				if(findLinks.length > 0 && storage.length > 0)
 				{
-					extractNextName(spawner);
-					extractNextRespawnTime(spawner);
-					addRespawnEnd(spawner, nextName);
+					moveRespawnToEnd(spawner);
 					return(null);
 				}
 			}
@@ -844,6 +838,13 @@
     }
     return(null);
  }
+ 
+ function moveRespawnToEnd(spawner)
+ {
+	var atEnd = extractNextName(spawner);
+	//extractNextRespawnTime(spawner);
+	addRespawnEnd(spawner, atEnd);
+ }
 
  function extractNextName(spawner)
  {
@@ -862,6 +863,14 @@
  //Adds the current name and time to the end of the respawnTime and respawnName
  function addRespawnEnd(spawner, name)
  {
+	var respawnName = spawner.memory.respawnName;
+	var found = respawnName.indexOf(name);
+	if(found >= 0)
+	{
+		console.log('addRespawnEnd-Redundant ' + name + ' was found at ' + found);
+		Game.notify('addRespawnEnd-Redundant ' + name + ' was found at ' + found, 480);
+	}
+	
 	if(spawner.memory.respawnTime == null)
 	{
 		//spawner.memory.respawnTime = calculateRespawnTime(spawner, body).toString()+",";
@@ -892,9 +901,7 @@
 	else if(body == null)
 	{
 		//console.log(spawner.name + ' found null body. Skipping over: ' + name);
-		extractNextName(spawner);
-		extractNextRespawnTime(spawner);
-		addRespawnEnd(spawner, name);
+		moveRespawnToEnd(spawner);
 	}
 	
 	//Skip over gatherers if there are no workers present
@@ -904,18 +911,14 @@
 		(harvestersSeen <= 0 || 
 		(Memory.creeps[name] != null && Memory.creeps[name].usingSourceId != null && quickestUnitToDie('worker', Memory.creeps[name].usingSourceId) == null)))
 	{
-		extractNextName(spawner);
-		extractNextRespawnTime(spawner);
-		addRespawnEnd(spawner, name);
+		moveRespawnToEnd(spawner);
 		//console.log('adding ' + name + ' to end of respawn list.');
 		return(true);
 	}
 	//If there aren't harvesters and gatherers, skip over attackers
 	else if(role == 'attack' && Math.min(harvestersSeen*2, gatherersSeen*2) <= attackersSeen+1)
 	{
-		extractNextName(spawner);
-		extractNextRespawnTime(spawner);
-		addRespawnEnd(spawner, name);
+		moveRespawnToEnd(spawner);
 		//console.log('adding ' + name + ' to end of respawn list.');
 		return(true);
 	}
@@ -926,9 +929,7 @@
 			//spawner.room.energyAvailable < spawner.room.energyCapacityAvailable))
 			
 	{
-		extractNextName(spawner);
-		extractNextRespawnTime(spawner);
-		addRespawnEnd(spawner, name);
+		moveRespawnToEnd(spawner);
 		//console.log('adding ' + name + ' to end of respawn list.');
 		return(true);
 	}
@@ -1087,7 +1088,8 @@
 			//role = findDeadUnitRole(spawner, name);
 			role = findRoleWithinName(name);
 			extractNextName(spawner);
-			extractNextRespawnTime(spawner);
+			//extractNextRespawnTime(spawner);
+			
 			//If is a attack or build unit, check if we have at least as many harvesters/gatherers as the amount 
 			//of attackers/builders we're trying to make, if there isn't, skip them.
 			if(role == 'attack' || role == 'builder' || role == 'gather' || role == 'worker')
@@ -1195,9 +1197,7 @@
 				else
 				{	//Skip over unit
 					console.log('next unit: ' + name + ' is still alive for ' + Game.creeps[units].ticksToLive + ' but we are at full power, skipping over.');
-					extractNextName(spawner);
-					extractNextRespawnTime(spawner);
-					addRespawnEnd(spawner, name);
+					moveRespawnToEnd(spawner);
 				}
 				break;
 			}

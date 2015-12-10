@@ -87,16 +87,22 @@
 		
 		var buildObject = Game.getObjectById(unit.memory.usingSourceId);
 		
-		if(flagsAtStorage.length <= 0 && buildObject != null)
+		if(flagsAtStorage.length <= 0 && buildObject != null && findStorage[0].getRangeTo(buildObject) > 2)
 		{
 			//No flag around storage when storage exists, we're going to delete the existing path and path to storage instead
 			//that way all builders get their energy from there instead of the spawns
 			console.log('cleaning path: ' + unit.memory.usingSourceId + ' to re-path to storage.');
 			
-			cleanMemory.purgeFlagsWithId(unit.memory.usingSourceId);
+			//Only delete old path and create new one if the path is both valid and large enough
+			//createPathFlags has problems with short paths
 			var newPath = findStorage[0].pos.findPathTo(buildObject.pos, {maxOps: 4000, ignoreCreeps: true});
-			followFlagForward.createDefinedPath(unit.room, newPath, unit.memory.usingSourceId, true, findStorage[0].pos);
-			return(true);
+			if(newPath != null && newPath.length > 2)
+			{
+				cleanMemory.purgeFlagsWithId(unit.memory.usingSourceId);
+				
+				followFlagForward.createDefinedPath(unit.room, newPath, unit.memory.usingSourceId, true, findStorage[0].pos);
+				return(true);
+			}
 		}
 	}
 	return(false);
