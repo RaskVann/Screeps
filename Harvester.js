@@ -1068,6 +1068,11 @@
 	return(thisRoom.memory.currentBuilders);
  }
  
+ function distance(x1, y1, x2, y2)
+ {
+	return(Math.sqrt(Math.pow(x1-x2, 2)+Math.pow(y1-y2, 2)));
+ }
+ 
  //Attempts to construct structure as close to closeSpawn as possible center being closestLocation, within range 1
  function constructOutOfWay(closestLocation, structure, closeSpawn)
  {
@@ -1098,8 +1103,8 @@
 				if(findTerrain.length > 0 && (findTerrain[0] == 'plain' || findTerrain[0] == 'swamp') &&
 					findFlag.length == 0 && findCreep.length == 0 && findStructure.length == 0 && 
 					findConstruction.length == 0 && 
-					(closeBuild == null || closeBuild.getRangeTo(closeSpawn) > nextPosition.getRangeTo(closeSpawn)))
-				{//TO DO: Replace these getRangeTo with Math.sqrt(Math.pow(x1-x2, 2)+Math.pow(y1-y2, 2))
+					(closeBuild == null || distance(closeBuild.x, closeBuild.y, closeSpawn.pos.x, closeSpawn.pos.y) > distance(nextPosition.x, nextPosition.y, closeSpawn.pos.x, closeSpawn.pos.y)))
+				{
 					closeBuild = nextPosition;
 				}
 			}
@@ -1140,7 +1145,7 @@
 		{
 			var findTerrain = closeSpawn.room.lookForAt('terrain', x, y);
 			if(findTerrain.length > 0 && (findTerrain[0] == 'plain' || findTerrain[0] == 'swamp') &&
-				(closestLocation == null || closeSpawn.pos.getRangeTo(closestLocation) > closeSpawn.pos.getRangeTo(findTerrain)))
+				(closestLocation == null || distance(closeSpawn.pos.x, closeSpawn.pos.y, closestLocation.x, closestLocation.y) > distance(closeSpawn.pos.x, closeSpawn.pos.y, x, y)))
 			{
 				closestLocation = new RoomPosition(x, y, anchor.room.name);
 				//console.log(closestLocation + ', pos: ' + closestLocation.pos + ' range: ' + closeSpawn.pos.getRangeTo(closestLocation));

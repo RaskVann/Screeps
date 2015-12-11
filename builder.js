@@ -87,7 +87,7 @@
 		
 		var buildObject = Game.getObjectById(unit.memory.usingSourceId);
 		
-		if(flagsAtStorage.length <= 0 && buildObject != null && findStorage[0].getRangeTo(buildObject) > 2)
+		if(flagsAtStorage.length <= 0 && buildObject != null && findStorage[0].pos.getRangeTo(buildObject) > 2)
 		{
 			//No flag around storage when storage exists, we're going to delete the existing path and path to storage instead
 			//that way all builders get their energy from there instead of the spawns
@@ -137,7 +137,9 @@
 		}
 		else if(useSavedSpawn.energy > 0)	//Don't report if we have nothing to pull from
 		{
-			console.log(unit.name + ' returning builder has sourceId: ' + unit.memory.usingSourceId + ' and spawn: ' + useSavedSpawn + ' range: ' + unit.pos.getRangeTo(useSavedSpawn.pos) + ' energy: ' + useSavedSpawn.energy);
+			unit.moveTo(useSavedSpawn);
+			useSavedSpawn.transferEnergy(unit);
+			//console.log(unit.name + ' returning builder has sourceId: ' + unit.memory.usingSourceId + ' and spawn: ' + useSavedSpawn + ' range: ' + unit.pos.getRangeTo(useSavedSpawn.pos) + ' energy: ' + useSavedSpawn.energy);
 		    //return(true);
 		}
 		
@@ -180,11 +182,16 @@
 					{
 						unit.memory.usingSourceId = null;	//Reset, ready for new source
 					}
-					//unit.moveTo(findStorage[0]);
-					//if(unit.memory.direction != null)
-					//{
-					//	delete unit.memory.direction;
-					//}
+					else if(findStorage[0].store.energy <= 0 &&
+							useSavedSpawn.energy > 0)
+					{
+						unit.moveTo(useSavedSpawn);
+						useSavedSpawn.transferEnergy(unit);
+						if(unit.memory.direction != null)
+						{
+							delete unit.memory.direction;
+						}
+					}
 				}
 			}
 			var storageCpu = Game.getUsedCpu() - init;
@@ -215,6 +222,12 @@
  {
     var upgradeStart = 0;
     var upgradeLimit = 2;
+	//When a storage is built the builders no longer need to travel, 1 builder should be sufficient for 15work/tick
+	if(unit.room.storage != null)
+	{
+		upgradeLimit = 1;
+	}
+	
     if(builderNumber >= upgradeStart && builderNumber < upgradeLimit)
 	{
 	    //console.log('unit: ' + unit + ' is builder ' + builderNumber + ' and is upgrading controller');

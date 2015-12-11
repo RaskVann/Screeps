@@ -441,7 +441,7 @@
 	}
 	else if(structure.length)
 	{
-		console.log(startPos + ' checking position blocked, found ' + structure[0].structureType + ' that is not road or rampart');
+		//console.log(startPos + ' checking position blocked, found ' + structure[0].structureType + ' that is not road or rampart');
 		return(null);
 	}
 	var terrain = startPos.lookFor('terrain');

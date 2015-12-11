@@ -28,8 +28,8 @@ module.exports.loop = function()
 	}
 	else if(Memory.waitForLong == null || Memory.waitForLong-- <= 0)
 	{
-		harvester.link();	//Create links near spawners
-		//Create storage if doesn't exist, link next to storage
+		harvester.link();	//Create links near spawners and storage
+		spawnFrom.createSpawn();	//Create additional spawns
 		//Create extensions if doesn't exist
 		//TO DO: Walls / ramparts to secure exits
 		Memory.waitForLong = defaultLongWait;

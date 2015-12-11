@@ -309,6 +309,7 @@
 		var findRoads = spawner.room.find(FIND_STRUCTURES, {
 			filter: { structureType: STRUCTURE_ROAD }
 		});
+		
 		if(findRoads != null && findRoads.length > 10)
 		{
 			//Once we get some roads up and running switch over to the builder's with only 1 MOVE
@@ -904,6 +905,7 @@
 		moveRespawnToEnd(spawner);
 	}
 	
+	var seenMod = 1;
 	//Skip over gatherers if there are no workers present
 	//or
 	//Skip over gatherers if we can't find a live worker at this source already
@@ -916,7 +918,7 @@
 		return(true);
 	}
 	//If there aren't harvesters and gatherers, skip over attackers
-	else if(role == 'attack' && Math.min(harvestersSeen*2, gatherersSeen*2) <= attackersSeen+1)
+	else if(role == 'attack' && Math.min(harvestersSeen*seenMod, gatherersSeen*seenMod) <= attackersSeen+1)
 	{
 		moveRespawnToEnd(spawner);
 		//console.log('adding ' + name + ' to end of respawn list.');
@@ -925,7 +927,7 @@
 	//If you're a builder and there isn't enough gatherers and harvesters already, skip over
 	//ignore the gatherer/harvester limit if we are at the energy cap.
 	else if(role == 'builder' && 
-			(Math.min(harvestersSeen*2, gatherersSeen*2) <= buildersSeen+1))// && 
+			(Math.min(harvestersSeen*seenMod, gatherersSeen*seenMod) <= buildersSeen+1))// && 
 			//spawner.room.energyAvailable < spawner.room.energyCapacityAvailable))
 			
 	{
@@ -957,7 +959,7 @@
  //Note: This assumes there is always a dead unit to pull from that is assigned to the source we're 
  //		interested in to spawn ahead of the dieing unit to replace it. It simply won't spawn anything
  //		if there isn't anything in the respawn list to take its place.
- function quickestToDieRespawn(spawner)
+ function quickestToDieRespawn(spawner, chosenSpawn)
  {
 	var unit = nextToDie();
 	var pathLength = 5;
@@ -991,7 +993,7 @@
 	
 	//If the spawner is able to handle our request and
 	//If we pass this we have a unit near death that if a unit spawns now can take it's place or close to it when we need it.
-	if(spawner != null && spawner.spawning == null && 
+	if(spawner != null && chosenSpawn.spawning == null && 
 		unit != null && unit.ticksToLive <= estimatedBodyLength*3+pathLength)
 	{
 		var replaceWithName = nextDeadRoleName(spawner, role, sourceId);
@@ -1004,9 +1006,9 @@
 				var countActiveGather = countGatherAtSource(unit.name);
 				var respawnThreshold = (pathLength*2*10);
 				if((countActiveGather-unit.getActiveBodyparts(CARRY))*50 < respawnThreshold &&
-					spawner.canCreateCreep(returnBody, replaceWithName) == 0)
+					chosenSpawn.canCreateCreep(returnBody, replaceWithName) == 0)
 				{
-					var badSpawn = spawner.createCreep(returnBody, replaceWithName);
+					var badSpawn = chosenSpawn.createCreep(returnBody, replaceWithName);
 					//TO DO: Update respawn list, move unit we're spawning here to end.
 					console.log('Spawn: ' + replaceWithName + ' to replace ' + unit.name + ' dieing in ' + unit.ticksToLive + ' ticks. Found ' + (countActiveGather-unit.getActiveBodyparts(CARRY))*50 + ' gather of needed ' + respawnThreshold);
 					return(true);
@@ -1017,9 +1019,9 @@
 				var countActiveWork = countWorkAtSource(unit.name);
 				var respawnThreshold = 10;
 				if((countActiveWork-unit.getActiveBodyparts(WORK))*2 < respawnThreshold &&
-					spawner.canCreateCreep(returnBody, replaceWithName) == 0)
+					chosenSpawn.canCreateCreep(returnBody, replaceWithName) == 0)
 				{
-					var badSpawn = spawner.createCreep(returnBody, replaceWithName);
+					var badSpawn = chosenSpawn.createCreep(returnBody, replaceWithName);
 					//TO DO: Update respawn list, move unit we're spawning here to end.
 					console.log('Spawn: ' + replaceWithName + ' to replace ' + unit.name + ' dieing in ' + unit.ticksToLive + ' ticks. Found ' + (countActiveWork-unit.getActiveBodyparts(WORK))*2 + ' work of needed ' + respawnThreshold);
 					return(true);
@@ -1036,7 +1038,7 @@
 	return(false);
  }
 
- function spawnNextInQueue(spawner, harvestersSeen, gatherersSeen, buildersSeen, attackersSeen)
+ function spawnNextInQueue(spawner, chosenSpawn, harvestersSeen, gatherersSeen, buildersSeen, attackersSeen)
  {
 	//Look at respawn list and check if needs to spawn new unit from the dead
     var name = findDeadUnitName(spawner);
@@ -1070,11 +1072,11 @@
 	var canCreateUnit;
 	if(name == null)
 	{
-		canCreateUnit = spawner.canCreateCreep(body);
+		canCreateUnit = chosenSpawn.canCreateCreep(body);
 	}
 	else
 	{
-		canCreateUnit = spawner.canCreateCreep(body, name);
+		canCreateUnit = chosenSpawn.canCreateCreep(body, name);
 	}
 	if(canCreateUnit == 0)
 	{
@@ -1094,7 +1096,7 @@
 			//of attackers/builders we're trying to make, if there isn't, skip them.
 			if(role == 'attack' || role == 'builder' || role == 'gather' || role == 'worker')
 			{
-				badSpawn = spawner.createCreep(body, name);
+				badSpawn = chosenSpawn.createCreep(body, name);
 			}
 			else    //Not expecting this here
 			{
@@ -1105,7 +1107,7 @@
 		//Have body and role, don't have name, should only be true for 'defend'
 		else if(name == null)
 		{
-			badSpawn = spawner.createCreep(body, {'role' : role});
+			badSpawn = chosenSpawn.createCreep(body, {'role' : role});
 		}
 		//TO DO: Remove when ensure scout writing to memory works.
 		//If creating a worker or gatherer for another room, place sourceId in the unit on spawn
@@ -1113,12 +1115,12 @@
 		//		(getNeedGather(spawner) > 0 || getNeedHarvest(spawner) > 0))
 		//{
 			//console.log(spawner.name + ' is not handling spawning of different rooms directly.');
-			//badSpawn = spawner.createCreep(body, name, {'role': role, 'usingSourceId': getHarvestId(spawner)});
+			//badSpawn = chosenSpawn.createCreep(body, name, {'role': role, 'usingSourceId': getHarvestId(spawner)});
 		//}
 		//Have body, name and role, should be true for all new units, requested through memory
 		else
 		{
-			badSpawn = spawner.createCreep(body, name, {'role' : role});
+			badSpawn = chosenSpawn.createCreep(body, name, {'role' : role});
 		}
 		if(_.isString(badSpawn))
 		{
@@ -1241,17 +1243,17 @@
  }
  
  //Spawns a dead unit from the respawn queue with the role and sourceId provided (at spawner provided)
- function respawnPreexisting(spawner, role, sourceId)
+ function respawnPreexisting(spawner, chosenSpawn, role, sourceId)
  {
 	var replaceWithName = nextDeadRoleName(spawner, role, sourceId);	//Gets next available respawnable unit matching this role and id
 	var returnRole = findRoleWithinName(replaceWithName);	//Usually interchangable with role above, but just to be safe
 	var returnBody = retrieveBody(returnRole, spawner);		//Gets body to match this role, given how much available energy we have.
 	if(replaceWithName != null && returnRole != null && returnBody != null)
 	{
-		var creation = spawner.canCreateCreep(returnBody, replaceWithName);
+		var creation = chosenSpawn.canCreateCreep(returnBody, replaceWithName);
 		if(creation == 0)
 		{
-			var badSpawn = spawner.createCreep(returnBody, replaceWithName);
+			var badSpawn = chosenSpawn.createCreep(returnBody, replaceWithName);
 			//TO DO: Update respawn list, move unit we're spawning here to end.
 			//console.log('Spawn: ' + replaceWithName);
 			return(true);
@@ -1274,10 +1276,10 @@
  //we have access to and check all the sources at each, cycling through all alive units for potential matching workers and gathers
  //As long as we have one of each we meet the bare minimum requirements, otherwise we try to spawn what's missing from the respawn list.
  //If the respawn list doesn't have a gather or worker with a matching energy source id, this will fail.
- function respawnEmptyRolesAtSources(spawner)
+ function respawnEmptyRolesAtSources(spawner, chosenSpawn)
  {
 	//If the spawner exists, isn't spawning and we haven't used a lot of cpu this frame. This is a conveniance (optional) function
-	if(spawner != null && spawner.spawning == null && Game.getUsedCpu() < 30)
+	if(spawner != null && chosenSpawn.spawning == null && Game.getUsedCpu() < 30)
 	{
 		for(var eachRoom in Game.rooms)
 		{
@@ -1318,7 +1320,7 @@
 				if(worker <= 0)
 				{
 					//No workers at this source, found a missed creep.
-					var replacementSuccess = respawnPreexisting(spawner, "worker", currentSourceId);
+					var replacementSuccess = respawnPreexisting(spawner, chosenSpawn, "worker", currentSourceId);
 					if(replacementSuccess == false)
 					{
 						//console.log('Source[' + currentSourceId + '] has 0 workers, success of spawn: ' + replacementSuccess + ' no respawnable unit or energy?');
@@ -1333,7 +1335,7 @@
 				else if(gather <= 0 && (findLinks == null || findLinks.length <= 0))
 				{
 					//No gathers at this source, found a missed creep.
-					var replacementSuccess = respawnPreexisting(spawner, "gather", currentSourceId);
+					var replacementSuccess = respawnPreexisting(spawner, chosenSpawn, "gather", currentSourceId);
 					if(replacementSuccess == false)
 					{
 						//console.log('Source[' + currentSourceId + '] has 0 gatherers, success of spawn: ' + replacementSuccess + ' no respawnable unit or energy?');
@@ -1348,6 +1350,130 @@
 		}
 	}
 	return(false);
+ }
+ 
+ function distance(x1, y1, x2, y2)
+ {
+	return(Math.sqrt(Math.pow(x1-x2, 2)+Math.pow(y1-y2, 2)));
+ }
+ 
+ //Attempts to construct structure as close to closeSpawn as possible, within radius
+ function constructOutOfWay(structure, closeSpawn, radius)
+ {
+	var closestLocation = closeSpawn.pos;
+	var success;
+	var closeBuild;
+	if(closestLocation != null)
+	{
+		//Radius is a box so that if move any distance, up, down, left, right the radius, we check that box for a applicable
+		//spot and builds something there. As close to the sent in spawn as possible.
+		for(var x = Math.max(0, closestLocation.x-radius); x <= Math.min(49, closestLocation.x+radius); x++)
+		{
+			for(var y = Math.max(0, closestLocation.y-radius); y <= Math.min(49, closestLocation.y+radius); y++)
+			{
+				if(x == closestLocation.x && y == closestLocation.y)
+				{
+					continue; //Skip over the location the harvester/builder should be sitting at that this link is for.
+				}
+				
+				var nextPosition = new RoomPosition(x, y, closestLocation.roomName);
+				var findTerrain = closeSpawn.room.lookForAt('terrain', x, y);
+				var findFlag = closeSpawn.room.lookForAt('flag', x, y);
+				var findCreep = closeSpawn.room.lookForAt('creep', x, y);
+				var findStructure = closeSpawn.room.lookForAt('structure', x, y);
+				var findConstruction = closeSpawn.room.lookForAt('constructionSite', x, y);
+				
+				//console.log('testing: ' + nextPosition + ' range: ' + nextPosition.getRangeTo(closeSpawn) + ' Terrain: ' + findTerrain + ' findFlag: ' + findFlag.length + ' findCreep: ' + findCreep.length + ' findStructure: ' + findStructure.length + ' findConstruction: ' + findConstruction.length);
+				//Terrain should be movable (not constructable otherwise), if there is a flag, structure
+				//or creep this area is being used for something important (usually travel) and so this
+				//should only construct within 2 range of anchor in a buildable, unused spot.
+				if(findTerrain.length > 0 && (findTerrain[0] == 'plain' || findTerrain[0] == 'swamp') &&
+					findFlag.length == 0 && findCreep.length == 0 && findStructure.length == 0 && 
+					findConstruction.length == 0 && 
+					(closeBuild == null || distance(closeBuild.x, closeBuild.y, closeSpawn.pos.x, closeSpawn.pos.y) > distance(nextPosition.x, nextPosition.y, closeSpawn.pos.x, closeSpawn.pos.y)))
+				{
+					closeBuild = nextPosition;
+				}
+			}
+		}
+		
+		//Build a structure at the closest found location to the spawn
+		if(closeBuild != null)
+		{
+			success = closeBuild.createConstructionSite(structure);
+			if(success == 0)
+			{
+				return(success);
+			}
+			else
+			{
+				//If fail construction for whatever reason, try again in another location.
+				console.log('Trying to construct ' + structure + ' failed.');
+			}
+		}
+	}
+	console.log('structure: ' + structure + ' could not be built around: ' + closeSpawn);
+	return(success);
+ }
+ 
+ //If don't find any previous construction sites (already pending construction). attemp to build structure
+ function constructIfNotFound(structure, selectSpawn, radius)
+ {
+	var findConstruct = nextRoom.find(FIND_CONSTRUCTION_SITES, {
+		filter: { structureType: structure }
+	});
+	
+	if(findConstruct.length <= 0)
+	{
+		return(constructOutOfWay(structure, selectSpawn, radius));
+	}
+	return(false);
+ }
+ 
+ //If we find less then structureThreshold of the sent in structure, attempts to build structure
+ function constructIfFoundLessThen(structure, selectSpawn, radius, structureThreshold)
+ {
+	var findStructure = nextRoom.find(FIND_MY_STRUCTURES, {
+		filter: { structureType: structure }
+	});
+	
+	if(findStructure.length < structureThreshold)
+	{
+		return(constructIfNotFound(structure, selectSpawn, radius));
+	}
+	return(false);
+ }
+ 
+ module.exports.createSpawn = function()
+ {
+	//Look through all the rooms we have access to
+	for(var eachRoom in Game.rooms)
+	{
+		var nextRoom = Game.rooms[eachRoom];
+		//If the room is mine and has access to links, look for applicable link locations
+		if(nextRoom.controller != null &&
+			nextRoom.controller.owner != null &&
+			nextRoom.controller.owner.username == 'RaskVann')
+		{
+			//If we are at controller level 7 we can have 2 spawns, at level 8 we can have 3 in a room
+			var findSpawns = nextRoom.find(FIND_MY_SPAWNS);
+			var radius = 10;
+			
+			if(findSpawns.length > 0)
+			{
+				if(nextRoom.controller.level == 7)
+				{
+					constructIfFoundLessThen(STRUCTURE_SPAWN, findSpawns[0], radius, 2);
+				}
+				else if(nextRoom.controller.level == 8)
+				{
+					constructIfFoundLessThen(STRUCTURE_SPAWN, findSpawns[0], radius, 3);
+					constructIfFoundLessThen(STRUCTURE_POWER_SPAWN, findSpawns[0], radius, 1);
+					constructIfFoundLessThen(STRUCTURE_OBSERVER, findSpawns[0], radius, 1);
+				}
+			}
+		}
+	}
  }
  
  //Find unused spawn if possible, create temp creep with the input data. Returns if successful
@@ -1385,19 +1511,113 @@
 	return(false);
  }
  
+ //Designate the first spawn as the master and the other 2 as auxilliary to support the first as needed.
+ //Only runs once when master is not found, unless the auxilliary can't find the master in which case
+ //we have an error and it loops until one is found.
+ function installAuxilliarySpawn(spawner)
+ {
+	if(spawner.room.controller.level >= 7 && spawner.memory.master == null)
+	{
+		var findSpawns = spawner.room.find(FIND_MY_SPAWNS);
+		if(findSpawns.length == 1)
+		{
+			spawner.memory.master = true;
+		}
+		else if(findSpawns.length > 1)
+		{
+			spawner.memory.master = false;
+			
+			var foundMaster;
+			for(var x in findSpawns)
+			{
+				if(findSpawns[x].memory.master == true)
+				{
+					foundMaster = findSpawns[x];
+				}
+			}
+			
+			if(foundMaster != null)
+			{
+				if(findSpawns.length == 2)
+				{
+					foundMaster.memory.auxilliary1 = spawner.id;
+					spawner.memory.masterId = foundMaster.id;
+				}
+				else if(findSpawns.length == 3)
+				{
+					foundMaster.memory.auxilliary2 = spawner.id;
+					spawner.memory.masterId = foundMaster.id;
+				}
+			}
+			else
+			{
+				console.log('ERROR: Spawn: ' + spawner + ' cant find master to link to');
+				delete spawner.memory.master;
+			}
+		}
+	}
+ }
+ 
+ //If this is the master spawn, return the master spawn if it isn't spawning
+ //Otherwise look at the auxilliary spawns if they exist and send them back if
+ //they aren't spawning anything. Otherwise return null (can't spawn anything)
+ function spawnNotSpawning(spawner)
+ {
+	if(spawner.memory.master == true)
+	{
+		//If spawner is spawning something, this returns that creep's information, if null it is ready to spawn something
+		//new. Only then do we go through the spawning logic to save processing time.
+		if(spawner.spawning == null)
+		{
+			return(spawner);
+		}
+		else
+		{
+			if(spawner.memory.auxilliary1 != null)
+			{
+				var auxilliarySpawn1 = Game.getObjectById(spawner.memory.auxilliary1);
+				if(auxilliarySpawn1.spawning == null)
+				{
+					return(auxilliarySpawn1);
+				}
+			}
+			
+			if(spawner.memory.auxilliary2 != null)
+			{
+				var auxilliarySpawn2 = Game.getObjectById(spawner.memory.auxilliary2);
+				if(auxilliarySpawn2.spawning == null)
+				{
+					return(auxilliarySpawn2);
+				}
+			}
+		}
+	}
+	return(null);
+ }
+ 
  module.exports.spawn = function(spawner, harvestersSeen, gatherersSeen, buildersSeen, attackersSeen, scoutsSeen)
  {
-	spawner.memory.scoutsAlive = scoutsSeen;
-	//If spawner is spawning something, this returns that creep's information, if null it is ready to spawn something
-	//new. Only then do we go through the spawning logic to save processing time.
-	if(spawner.spawning == null)
+	installAuxilliarySpawn(spawner);	//Link spawns in the same room together
+	
+	//Only go into internal logic if this is the master, no need to triple the amount of spawning logic in each room.
+	if(spawner.memory.master == true)
 	{
-		if(quickestToDieRespawn(spawner) == false)
+		spawner.memory.scoutsAlive = scoutsSeen;
+		
+		//Choose a spawn that isn't occupied with spawning (if null, all occupied and we can't spawn anything)
+		var chosenSpawn = spawnNotSpawning(spawner);
+		if(chosenSpawn != null)
 		{
-			//If it fails to find something to replace a unit.
-			//Check if there are any previous units we now need since quickestToDie couldn't get to it while a spawn was occuring
-			respawnEmptyRolesAtSources(spawner);
+			//We're still storing everything inside the master spawner but using the chosenSpawn to spawn the actual unit.
+			//Check if we need to respawn a unit because it's close to death
+			if(quickestToDieRespawn(spawner, chosenSpawn) == false)
+			{
+				//If it fails to find something to replace a unit.
+				//Check if there are any previous units we now need since quickestToDie couldn't get to it while a spawn was occuring
+				respawnEmptyRolesAtSources(spawner, chosenSpawn);
+			}
+			//If nothing above created a unit, check if we can spawn a new unit, or respawn the next unit in the list (or other needs)
+			spawnNextInQueue(spawner, chosenSpawn, harvestersSeen, gatherersSeen, buildersSeen, attackersSeen, scoutsSeen);
 		}
-		spawnNextInQueue(spawner, harvestersSeen, gatherersSeen, buildersSeen, attackersSeen, scoutsSeen);
 	}
  }
