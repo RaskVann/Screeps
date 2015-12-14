@@ -137,8 +137,8 @@
 		}
 		else if(useSavedSpawn.energy > 0)	//Don't report if we have nothing to pull from
 		{
-			unit.moveTo(useSavedSpawn);
-			useSavedSpawn.transferEnergy(unit);
+			//unit.moveTo(useSavedSpawn);
+			//useSavedSpawn.transferEnergy(unit);
 			//console.log(unit.name + ' returning builder has sourceId: ' + unit.memory.usingSourceId + ' and spawn: ' + useSavedSpawn + ' range: ' + unit.pos.getRangeTo(useSavedSpawn.pos) + ' energy: ' + useSavedSpawn.energy);
 		    //return(true);
 		}
@@ -162,25 +162,23 @@
 			var init = Game.getUsedCpu();
 			if(createNewPath(unit, findStorage) == false)
 			{
-				if(findLinks.length > 0)
+				if(findStorage.length > 0)
 				{
-					for(var i in findLinks)
-					{
-						if(unit.pos.getRangeTo(findLinks[i].pos) <= 1 &&
-							findLinks[i].energy > 0 &&
-							findLinks[i].cooldown == 0 &&
-							findLinks[i].transferEnergy(unit) == 0)
-							break;
-					}
-				}
-				else if(findStorage.length > 0)
-				{
-					followFlagForward(unit, unit.carry.energy > 0);
 					if(unit.pos.getRangeTo(findStorage[0].pos) <= 1 && 
 						findStorage[0].store.energy > 0 &&
 						findStorage[0].transferEnergy(unit) == 0)
 					{
 						unit.memory.usingSourceId = null;	//Reset, ready for new source
+					}
+					else if(unit.memory.usingSourceId == null &&
+							findStorage[0].store.energy > 0)
+					{
+						unit.moveTo(findStorage[0]);
+						findStorage[0].transferEnergy(unit);
+						if(unit.memory.direction != null)
+						{
+							delete unit.memory.direction;
+						}
 					}
 					else if(findStorage[0].store.energy <= 0 &&
 							useSavedSpawn.energy > 0)
@@ -191,6 +189,21 @@
 						{
 							delete unit.memory.direction;
 						}
+					}
+					else
+					{
+						followFlagForward(unit, unit.carry.energy > 0);
+					}
+				}
+				else if(findLinks.length > 0)
+				{
+					for(var i in findLinks)
+					{
+						if(unit.pos.getRangeTo(findLinks[i].pos) <= 1 &&
+							findLinks[i].energy > 0 &&
+							findLinks[i].cooldown == 0 &&
+							findLinks[i].transferEnergy(unit) == 0)
+							break;
 					}
 				}
 			}
@@ -228,7 +241,8 @@
 		upgradeLimit = 1;
 	}
 	
-    if(builderNumber >= upgradeStart && builderNumber < upgradeLimit)
+    if((builderNumber >= upgradeStart && builderNumber < upgradeLimit) || 
+		(unit.room.controller != null && newUniqueSourceId(unit, unit.room.controller.id) == true))
 	{
 	    //console.log('unit: ' + unit + ' is builder ' + builderNumber + ' and is upgrading controller');
 		newSourceId(unit, unit.room.controller.id);
@@ -411,7 +425,7 @@
  function buildRoad(unit)
  {
 	var workComponents = unit.getActiveBodyparts(WORK);
-	if(workComponents > 0)
+	if(workComponents > 0 && unit.carry.energy > 0)
 	{
 		var findStructure = unit.pos.lookFor('structure');
 		var foundRoad = -1;
@@ -520,6 +534,19 @@
 	
 	if(structure.structureType == STRUCTURE_CONTROLLER)
 	{
+		//If the storage exists. Has energy, and the unit is almost empty. Transfer energy from the storage
+		//The storeEnergy code does unnecessary movements that is hurting my through-put.
+		if(unit.room.controller != null &&
+			unit.room.controller.owner != null &&
+			unit.room.controller.owner.username == 'RaskVann' &&
+			unit.room.controller.level >= 5 && 
+			unit.room.storage != null &&
+			unit.room.storage.store.energy > 0 &&
+			unit.carry.energy/unit.carryCapacity < .2)
+		{
+			unit.room.storage.transferEnergy(unit);
+		}
+	
 		//var errorController = unit.upgradeController(unit.room.controller);
 		//var errorController = unit.upgradeController(structure);
 		var errorController = upgradeController(unit, builderNumber);
@@ -529,6 +556,7 @@
 		}
 		else
 		{
+			delete unit.memory.usingSourceId;
 			console.log(unit.name + ' can not upgrade controller, code: ' + errorController);
 		}
 	}
@@ -538,7 +566,11 @@
 	}
 	else
 	{
-		followFlagForward(unit, unit.carry.energy > 0);	//Keep it moving so units can move through it.
+		var nextToCreep = unit.pos.findInRange(FIND_MY_CREEPS, 1);
+		//This search finds itself, if it finds more then that, move to get out of the way
+		if(nextToCreep.length > 1 || unit.pos.getRangeTo(structure) > 2)
+			followFlagForward(unit, unit.carry.energy > 0);	//Keep it moving so units can move through it.
+			
 		if(structure.hits < structure.hitsMax)
 		{
 			var repairCode = unit.repair(structure);
@@ -587,7 +619,8 @@
  {
 	var manageEnergyInit = Game.getUsedCpu();
 	//if(manageEnergyInit < 20)
-	//{
+	if(Game.time % 2 == 0)	//Do this every other tick
+	{
 		for(var owned in Game.rooms)
 		{
 			//If I own this room (at 5, links are available, at 4 storage is available)
@@ -635,7 +668,7 @@
 		var manageEnergyFinal = Game.getUsedCpu() - manageEnergyInit;
 		if(manageEnergyFinal > 5)
 			console.log('Manage Energy takes cpu: ' + manageEnergyFinal);
-	//}
+	}
  }
 
  module.exports.units = function (unit, builderNumber)

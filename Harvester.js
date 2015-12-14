@@ -502,6 +502,11 @@
 	{
 		for(var i in findLinks)
 		{
+			if(findLinks[i].cooldown > 0)
+			{
+				continue;
+			}
+			
 			//If transfer is successful, or the link is already full, make the link
 			//look for other links to transfer energy to so we have room for subsequent transfers
 			var transferCode = unit.transferEnergy(findLinks[i]);
@@ -515,6 +520,7 @@
 					var links = unit.room.find(FIND_MY_STRUCTURES, { 
 						filter: { structureType: STRUCTURE_LINK } 
 					});
+					
 					var lowestEnergy = recievedEnergy.energy;
 					var transferHere;
 					for(var j in links)
@@ -534,21 +540,6 @@
 					{
 						return(true);
 					}
-				}
-			}
-			
-			if(findLinks[i] != null && findLinks[i].cooldown <= 0)
-			{
-				var gathers = findLinks[i].pos.findInRange(FIND_MY_CREEPS, 1, { 
-					filter: function(object) {
-						return(object.carry.energy < object.carryCapacity && object.memory != null && object.memory.role == 'gather');
-					}
-				});
-				
-				for(var store in gathers)
-				{
-					if(gathers[store] != null && findLinks[i].transferEnergy(gathers[store]) == 0)
-						return(true);
 				}
 			}
 		}
@@ -718,7 +709,7 @@
  function findRoadOrCreate(unit)
  {
 	var workComponents = unit.getActiveBodyparts(WORK);
-	if(workComponents > 0)
+	if(workComponents > 0 && unit.carry.energy > 0)
 	{
 		var findStructure = unit.pos.lookFor('structure');
 		var foundRoad = -1;
@@ -803,7 +794,8 @@
 	{
 		var transferExtension = unit.room.find(FIND_MY_STRUCTURES, {
 			filter: function(object) {
-				return(object.structureType == STRUCTURE_EXTENSION);
+				return(object.energy < object.energyCapacity && 
+						(object.structureType == STRUCTURE_SPAWN || object.structureType == STRUCTURE_EXTENSION));
 			}
 		});
 		
@@ -853,7 +845,7 @@
 		{	//As long as there is a target to go to and the room isn't full of energy, move to the target
 			var cpu = Game.getUsedCpu();
 			//unit.moveTo(transferTarget);
-			unit.moveByPath(unit.pos.findPathTo(transferTarget), {maxOps: 100, ignoreCreeps: false});
+			unit.moveByPath(unit.pos.findPathTo(transferTarget), {maxOps: 100});//, ignoreCreeps: false
 			
 			cpu = Game.getUsedCpu()-cpu;
 			//console.log(unit.name + ' moving to capacitor costs: ' + cpu);
@@ -868,7 +860,7 @@
 			
 			if(transferStorage.length > 0)
 			{		//If we're in a room with a storage go over and transfer to the storage
-				unit.moveByPath(unit.pos.findPathTo(transferStorage[0]), {maxOps: 100, ignoreCreeps: false});
+				unit.moveByPath(unit.pos.findPathTo(transferStorage[0]), {maxOps: 100});//, ignoreCreeps: false
 				var what = unit.transferEnergy(transferStorage[0]);
 				
 				if(unit.memory.direction != null)
@@ -888,7 +880,8 @@
 		{
 			//If room is full, send back to retrieve what energy they can.
 			followFlagForward(unit, unit.carry.energy <= unit.carryCapacity*.5 || 
-							returnResources.room.energyAvailable >= returnResources.room.energyCapacityAvailable);
+							(returnResources.room.energyAvailable >= returnResources.room.energyCapacityAvailable &&
+							unit.carry.energy < unit.carryCapacity*.9));
 		}
 		else
 		{
@@ -938,6 +931,21 @@
 		else
 		{
 			activeSource = retrieveSource(unit);
+		}
+		
+		if(unit.room.controller != null &&
+			unit.room.controller.owner != null &&
+			unit.room.controller.owner.username == 'RaskVann' &&
+			unit.room.controller.level >= 5)
+		{
+			var links = unit.pos.findInRange(FIND_MY_STRUCTURES, 1, { 
+				filter: { structureType: STRUCTURE_LINK } 
+			});
+			
+			if(links.length > 0 && links[0].cooldown <= 0)
+			{
+				links[0].transferEnergy(unit);
+			}
 		}
 
 		findRoadOrCreate(unit);

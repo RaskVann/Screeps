@@ -34,6 +34,7 @@ module.exports.loop = function()
 		//TO DO: Walls / ramparts to secure exits
 		Memory.waitForLong = defaultLongWait;
 	}
+	var reportPeriodic = Game.getUsedCpu()-reportInitializeCpuUsed;
 
     var buildersSeen = 0;
 	var harvestersSeen = 0;
@@ -80,7 +81,7 @@ module.exports.loop = function()
 		}
 		individualCPU = Game.getUsedCpu();
     }
-	var reportCreepCpuUsed = Game.getUsedCpu() - reportInitializeCpuUsed;
+	var reportCreepCpuUsed = Game.getUsedCpu() - reportInitializeCpuUsed - reportPeriodic;
 	//console.log('Creep logic CPU: ' + reportCreepCpuUsed);
 	
 	builder.manageEnergy();	//Move energy around between storage and spawn (through a link)
@@ -90,20 +91,20 @@ module.exports.loop = function()
     {
         spawnFrom.spawn(Game.spawns[spawners], harvestersSeen, gatherersSeen, buildersSeen, attackersSeen, scoutsSeen);
     }
-	var reportSpawnCpuUsed = Game.getUsedCpu() - reportInitializeCpuUsed - reportCreepCpuUsed;
+	var reportSpawnCpuUsed = Game.getUsedCpu() - reportInitializeCpuUsed - reportPeriodic - reportCreepCpuUsed;
 	//console.log('Spawn logic CPU: ' + reportSpawnCpuUsed);
 
 	cpuUsage();
-	var reportCPUCpuUsed = Game.getUsedCpu() - reportInitializeCpuUsed - reportCreepCpuUsed - reportSpawnCpuUsed;
+	var reportCPUCpuUsed = Game.getUsedCpu() - reportInitializeCpuUsed - reportPeriodic - reportCreepCpuUsed - reportSpawnCpuUsed;
 	//console.log('CPU tracking: ' + reportCPUCpuUsed);
 	//Game.cpuLimit raises if unused energy was spent, used 30 since that's our account limit so if we use over this amount we're cutting into our reserves
 	if((Game.getUsedCpu() > 30 && Game.cpuLimit < 400) || Game.getUsedCpu() > 60)
 	{
-	    console.log('Initialize: ' + reportInitializeCpuUsed + ', Creep: ' + reportCreepCpuUsed + ', Spawn: ' + reportSpawnCpuUsed + ', Report: ' + reportCPUCpuUsed);
+	    console.log('Initialize: ' + reportInitializeCpuUsed + ', Periodic Check: ' + reportPeriodic + ', Creep: ' + reportCreepCpuUsed + ', Spawn: ' + reportSpawnCpuUsed + ', Report: ' + reportCPUCpuUsed);
 	}
 	else if(Game.cpuLimit < 200)
 	{
-	    Game.notify('LOW LIMIT: ' + Game.cpuLimit + ' Initialize: ' + reportInitializeCpuUsed + ', Creep: ' + reportCreepCpuUsed + ', Spawn: ' + reportSpawnCpuUsed + ', Report: ' + reportCPUCpuUsed, 480);
-		console.log('LOW LIMIT: ' + Game.cpuLimit + ' Initialize: ' + reportInitializeCpuUsed + ', Creep: ' + reportCreepCpuUsed + ', Spawn: ' + reportSpawnCpuUsed + ', Report: ' + reportCPUCpuUsed);
+	    Game.notify('LOW LIMIT: ' + Game.cpuLimit + ' Initialize: ' + reportInitializeCpuUsed + ', Periodic Check: ' + reportPeriodic + ', Creep: ' + reportCreepCpuUsed + ', Spawn: ' + reportSpawnCpuUsed + ', Report: ' + reportCPUCpuUsed, 480);
+		console.log('LOW LIMIT: ' + Game.cpuLimit + ' Initialize: ' + reportInitializeCpuUsed + ', Periodic Check: ' + reportPeriodic + ', Creep: ' + reportCreepCpuUsed + ', Spawn: ' + reportSpawnCpuUsed + ', Report: ' + reportCPUCpuUsed);
 	}
 }

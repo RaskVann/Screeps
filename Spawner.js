@@ -906,6 +906,23 @@
 	}
 	
 	var seenMod = 1;
+	
+	if(spawner.room.storage != null)
+	{
+		if(spawner.room.storage.store.energy > 10000)
+		{
+			seenMod = 1.25;
+		}
+		else if(spawner.room.storage.store.energy > 50000)
+		{
+			seenMod = 1.5;
+		}
+		else if(spawner.room.storage.store.energy > 100000)
+		{
+			seenMod = 2;
+		}
+	}
+	
 	//Skip over gatherers if there are no workers present
 	//or
 	//Skip over gatherers if we can't find a live worker at this source already
@@ -1419,7 +1436,7 @@
  //If don't find any previous construction sites (already pending construction). attemp to build structure
  function constructIfNotFound(structure, selectSpawn, radius)
  {
-	var findConstruct = nextRoom.find(FIND_CONSTRUCTION_SITES, {
+	var findConstruct = selectSpawn.room.find(FIND_CONSTRUCTION_SITES, {
 		filter: { structureType: structure }
 	});
 	
@@ -1433,7 +1450,7 @@
  //If we find less then structureThreshold of the sent in structure, attempts to build structure
  function constructIfFoundLessThen(structure, selectSpawn, radius, structureThreshold)
  {
-	var findStructure = nextRoom.find(FIND_MY_STRUCTURES, {
+	var findStructure = selectSpawn.room.find(FIND_MY_STRUCTURES, {
 		filter: { structureType: structure }
 	});
 	
