@@ -792,7 +792,7 @@
 	//the drop off it finds the start of the path again and resumes the path.
 	if(unit.carry.energy > 0 && (transferEnergyReturn == ERR_FULL || unit.memory.direction == null))
 	{
-		var cpu2 = Game.getUsedCpu();
+		//var cpu2 = Game.getUsedCpu();
 		var transferExtension = unit.pos.findClosestByRange(FIND_MY_STRUCTURES, {
 			filter: function(object) {
 				return(object.energy < object.energyCapacity && 
@@ -800,8 +800,8 @@
 			}
 		});
 		
-		cpu2 = Game.getUsedCpu()-cpu2;
-		console.log(unit.name + ' finding closest (need filled) ' + transferExtension.name + ' costs: ' + cpu2);
+		//cpu2 = Game.getUsedCpu()-cpu2;
+		//console.log(unit.name + ' finding closest (need filled) ' + transferExtension + ' costs: ' + cpu2);
 		
 		if(transferExtension != null)//transferExtension.length > 0
 		{
