@@ -17,10 +17,14 @@
                       { cost: 640, body: [TOUGH, TOUGH, MOVE, MOVE, MOVE, MOVE, MOVE, MOVE, ATTACK, ATTACK, ATTACK, ATTACK] },
                       { cost: 700, body: [TOUGH, TOUGH, TOUGH, MOVE, MOVE, MOVE, MOVE, MOVE, MOVE, MOVE, ATTACK, ATTACK, ATTACK, ATTACK] }];//,	//75% Armour, +23.6% more effective against spawn keeper (max effectiveness), around 5 needed to kill for all to survive
 					  //{ cost: 1400, body: [TOUGH, TOUGH, TOUGH, TOUGH, TOUGH, TOUGH, MOVE, MOVE, MOVE, MOVE, MOVE, MOVE, MOVE, MOVE, MOVE, MOVE, MOVE, MOVE, MOVE, MOVE, ATTACK, ATTACK, ATTACK, ATTACK, ATTACK, ATTACK, ATTACK, ATTACK] } ];	//2 needed for keeper
- var attackPower = [ { cost: 2990, body: [MOVE, MOVE, MOVE, MOVE, MOVE, MOVE, MOVE, MOVE, MOVE, MOVE, MOVE, MOVE, MOVE, MOVE, MOVE, MOVE, MOVE, MOVE, MOVE, MOVE, MOVE, MOVE, MOVE, 
-										  ATTACK,ATTACK,ATTACK,ATTACK,ATTACK,ATTACK,ATTACK,ATTACK,ATTACK,ATTACK,ATTACK,ATTACK,ATTACK,ATTACK,ATTACK,ATTACK,ATTACK,ATTACK,ATTACK,ATTACK,ATTACK,ATTACK,ATTACK] } ];
- var healPower = [ { cost: 8700, body: [MOVE, MOVE, MOVE, MOVE, MOVE, MOVE, MOVE, MOVE, MOVE, MOVE, MOVE, MOVE, MOVE, MOVE, MOVE, MOVE, MOVE, MOVE, MOVE, MOVE, MOVE, MOVE, MOVE, MOVE, MOVE, MOVE, MOVE, MOVE, MOVE, 
-										HEAL, HEAL, HEAL, HEAL, HEAL, HEAL, HEAL, HEAL, HEAL, HEAL, HEAL, HEAL, HEAL, HEAL, HEAL, HEAL, HEAL, HEAL, HEAL, HEAL, HEAL, HEAL, HEAL, HEAL, HEAL, HEAL, HEAL, HEAL, HEAL] } ];
+ var attackPower = [ { cost: 8710, body: [MOVE, MOVE, MOVE, MOVE, MOVE, MOVE, MOVE, MOVE, MOVE, MOVE, MOVE, MOVE, MOVE, MOVE, MOVE, MOVE, MOVE, MOVE, MOVE, MOVE, MOVE, MOVE, MOVE, MOVE, MOVE, MOVE, MOVE, MOVE, 
+										  MOVE, MOVE, MOVE, MOVE, MOVE, MOVE, MOVE, MOVE, MOVE, MOVE, MOVE, MOVE, MOVE, MOVE, MOVE, MOVE, MOVE, MOVE, MOVE, MOVE, MOVE, MOVE, MOVE, MOVE, MOVE, MOVE, MOVE, MOVE, 
+										  MOVE, MOVE, MOVE, MOVE, MOVE, MOVE, MOVE, MOVE, MOVE, MOVE, MOVE, 
+										  ATTACK,ATTACK,ATTACK,ATTACK,ATTACK,ATTACK,ATTACK,ATTACK,ATTACK,ATTACK,ATTACK,ATTACK,ATTACK,ATTACK,ATTACK,ATTACK,ATTACK,ATTACK,ATTACK,ATTACK,ATTACK,ATTACK,ATTACK,ATTACK,
+										  ATTACK,ATTACK,ATTACK,ATTACK,ATTACK,ATTACK,ATTACK,ATTACK,ATTACK,ATTACK,ATTACK,ATTACK,ATTACK,ATTACK,ATTACK,ATTACK,ATTACK,ATTACK,ATTACK,ATTACK,ATTACK,ATTACK,ATTACK,ATTACK,
+										  ATTACK,ATTACK,ATTACK,ATTACK,ATTACK,ATTACK,ATTACK,ATTACK,ATTACK,ATTACK,ATTACK,ATTACK,ATTACK,ATTACK,ATTACK,ATTACK,ATTACK,ATTACK,ATTACK] } ];
+ var healPower = [ { cost: 8400, body: [MOVE, MOVE, MOVE, MOVE, MOVE, MOVE, MOVE, MOVE, MOVE, MOVE, MOVE, MOVE, MOVE, MOVE, MOVE, MOVE, MOVE, MOVE, MOVE, MOVE, MOVE, MOVE, MOVE, MOVE, MOVE, MOVE, MOVE, MOVE, 
+										HEAL, HEAL, HEAL, HEAL, HEAL, HEAL, HEAL, HEAL, HEAL, HEAL, HEAL, HEAL, HEAL, HEAL, HEAL, HEAL, HEAL, HEAL, HEAL, HEAL, HEAL, HEAL, HEAL, HEAL, HEAL, HEAL, HEAL, HEAL] } ];
  var rangedBody = [ { cost: 200, body: [MOVE, RANGED_ATTACK] },
                       { cost: 400, body: [MOVE, MOVE, RANGED_ATTACK, RANGED_ATTACK] },
                       { cost: 600, body: [MOVE, MOVE, MOVE, RANGED_ATTACK, RANGED_ATTACK, RANGED_ATTACK] },
@@ -29,14 +33,29 @@
  var gatherBody = [ { cost: 100, body: [CARRY, MOVE] },
 					  { cost: 300, body: [CARRY, MOVE, CARRY, MOVE, CARRY, MOVE] },
                       { cost: 400, body: [CARRY, MOVE, CARRY, MOVE, CARRY, MOVE, CARRY, MOVE] },
-                      { cost: 600, body: [CARRY, MOVE, CARRY, MOVE, CARRY, MOVE, CARRY, MOVE, CARRY, MOVE, CARRY, MOVE] },
-					  { cost: 800, body: [CARRY, MOVE, CARRY, MOVE, CARRY, MOVE, CARRY, MOVE, CARRY, MOVE, CARRY, MOVE, CARRY, MOVE, CARRY, MOVE] },
-					  { cost: 1000, body: [CARRY, MOVE, CARRY, MOVE, CARRY, MOVE, CARRY, MOVE, CARRY, MOVE, CARRY, MOVE, CARRY, MOVE, CARRY, MOVE, CARRY, MOVE, CARRY, MOVE] }, 
-					  { cost: 1200, body: [CARRY, MOVE, CARRY, MOVE, CARRY, MOVE, CARRY, MOVE, CARRY, MOVE, CARRY, MOVE, CARRY, MOVE, CARRY, MOVE, CARRY, MOVE, CARRY, MOVE, CARRY, MOVE, CARRY, MOVE] } ];
+                      { cost: 750, body: [WORK, CARRY, MOVE, CARRY, MOVE, CARRY, MOVE, CARRY, MOVE, CARRY, MOVE, CARRY, MOVE, MOVE] },
+					  { cost: 950, body: [WORK, CARRY, MOVE, CARRY, MOVE, CARRY, MOVE, CARRY, MOVE, CARRY, MOVE, CARRY, MOVE, CARRY, MOVE, CARRY, MOVE, MOVE] },
+					  { cost: 1150, body: [WORK, MOVE, CARRY, MOVE, CARRY, MOVE, CARRY, MOVE, CARRY, MOVE, CARRY, MOVE, CARRY, MOVE, CARRY, MOVE, CARRY, MOVE, CARRY, MOVE, CARRY, MOVE] }, 
+					  { cost: 1350, body: [WORK, MOVE, CARRY, MOVE, CARRY, MOVE, CARRY, MOVE, CARRY, MOVE, CARRY, MOVE, CARRY, MOVE, CARRY, MOVE, CARRY, MOVE, CARRY, MOVE, CARRY, MOVE, CARRY, MOVE, CARRY, MOVE] },
+					  { cost: 2550, body: [WORK, MOVE, CARRY, MOVE, CARRY, MOVE, CARRY, MOVE, CARRY, MOVE, CARRY, MOVE, CARRY, MOVE, CARRY, MOVE, CARRY, MOVE, CARRY, MOVE, CARRY, MOVE, CARRY, MOVE, CARRY, MOVE,
+											CARRY, MOVE, CARRY, MOVE, CARRY, MOVE, CARRY, MOVE, CARRY, MOVE, CARRY, MOVE, CARRY, MOVE, CARRY, MOVE, CARRY, MOVE, CARRY, MOVE, CARRY, MOVE, CARRY, MOVE] },
+					  { cost: 4950, body: [WORK, MOVE, CARRY, MOVE, CARRY, MOVE, CARRY, MOVE, CARRY, MOVE, CARRY, MOVE, CARRY, MOVE, CARRY, MOVE, CARRY, MOVE, CARRY, MOVE, CARRY, MOVE, CARRY, MOVE, CARRY, MOVE,
+											CARRY, MOVE, CARRY, MOVE, CARRY, MOVE, CARRY, MOVE, CARRY, MOVE, CARRY, MOVE, CARRY, MOVE, CARRY, MOVE, CARRY, MOVE, CARRY, MOVE, CARRY, MOVE, CARRY, MOVE,
+											CARRY, MOVE, CARRY, MOVE, CARRY, MOVE, CARRY, MOVE, CARRY, MOVE, CARRY, MOVE, CARRY, MOVE, CARRY, MOVE, CARRY, MOVE, CARRY, MOVE, CARRY, MOVE, CARRY, MOVE,
+											CARRY, MOVE, CARRY, MOVE, CARRY, MOVE, CARRY, MOVE, CARRY, MOVE, CARRY, MOVE, CARRY, MOVE, CARRY, MOVE, CARRY, MOVE, CARRY, MOVE, CARRY, MOVE, CARRY, MOVE] } ];
  var gatherRoadBody = [ { cost: 300, body: [CARRY, CARRY, CARRY, CARRY, MOVE, MOVE] },
                       { cost: 500, body: [WORK, CARRY, CARRY, CARRY, CARRY, CARRY, MOVE, MOVE, MOVE] },
                       { cost: 800, body: [WORK, CARRY, CARRY, CARRY, CARRY, CARRY, CARRY, CARRY, CARRY, CARRY, MOVE, MOVE, MOVE, MOVE, MOVE] },
-					  { cost: 1250, body: [WORK, CARRY, CARRY, CARRY, CARRY, CARRY, CARRY, CARRY, CARRY, CARRY, CARRY, CARRY, CARRY, CARRY, CARRY, CARRY, MOVE, MOVE, MOVE, MOVE, MOVE, MOVE, MOVE, MOVE] } ];
+					  { cost: 1250, body: [WORK, CARRY, CARRY, CARRY, CARRY, CARRY, CARRY, CARRY, CARRY, CARRY, CARRY, CARRY, CARRY, CARRY, CARRY, CARRY, MOVE, MOVE, MOVE, MOVE, MOVE, MOVE, MOVE, MOVE] },
+					  { cost: 2450, body: [WORK, CARRY, CARRY, CARRY, CARRY, CARRY, CARRY, CARRY, CARRY, CARRY, CARRY, CARRY, CARRY, CARRY, CARRY, CARRY, 
+											CARRY, CARRY, CARRY, CARRY, CARRY, CARRY, CARRY, CARRY, CARRY, CARRY, CARRY, CARRY, CARRY, CARRY, CARRY, CARRY,
+											MOVE, MOVE, MOVE, MOVE, MOVE, MOVE, MOVE, MOVE, MOVE, MOVE, MOVE, MOVE, MOVE, MOVE, MOVE, MOVE] },
+					  { cost: 4700, body: [WORK, CARRY, CARRY, CARRY, CARRY, CARRY, CARRY, CARRY, CARRY, CARRY, CARRY, CARRY, CARRY, CARRY, CARRY, CARRY, 
+											CARRY, CARRY, CARRY, CARRY, CARRY, CARRY, CARRY, CARRY, CARRY, CARRY, CARRY, CARRY, CARRY, CARRY, CARRY, CARRY,
+											CARRY, CARRY, CARRY, CARRY, CARRY, CARRY, CARRY, CARRY, CARRY, CARRY, CARRY, CARRY, CARRY, CARRY, CARRY, CARRY,
+											CARRY, CARRY, CARRY, CARRY, CARRY, CARRY, CARRY, CARRY, CARRY, CARRY, CARRY, CARRY, CARRY, CARRY
+											MOVE, MOVE, MOVE, MOVE, MOVE, MOVE, MOVE, MOVE, MOVE, MOVE, MOVE, MOVE, MOVE, MOVE, MOVE, MOVE,
+											MOVE, MOVE, MOVE, MOVE, MOVE, MOVE, MOVE, MOVE, MOVE, MOVE, MOVE, MOVE, MOVE, MOVE, MOVE] } ];	//Carries 3050
 // var builderBody = [WORK, CARRY, MOVE, CARRY, MOVE];
  var builderBody = [ { cost: 300, body: [WORK, CARRY, CARRY, MOVE, MOVE] },
                       { cost: 450, body: [WORK, WORK, CARRY, CARRY, MOVE, MOVE, MOVE] },
@@ -262,6 +281,74 @@
     return(baseBody[0].body);
  }
  
+ //Caps the body size of a unit based on the stored needs of the task instead of building as big of a unit as possible.
+ //If this is a type of unit that isn't supported, simply calls retrieveBody() with the provided information
+ function retrieveBodyMod(role, spawner, unitName)
+ {
+	var newBody;
+	var availableEnergy = spawner.room.energyAvailable;
+	
+	if(unitName != null && role == 'gather' && Memory.creeps[unitName] != null && Memory.creeps[unitName].pathLength != null)
+	{
+		var pathLength = Memory.creeps[unitName].pathLength;
+		//If the path supports less energy then what we have, spawn a unit with this less energy amount
+		//Gathers need pathLength*10*2 capacity per trip, their more expensive version carries half their cost
+		//back and forth becoming (pathLength*10*2*2). simplifying becomes pathLength*40.
+		//Since upgradeBody searches for a body that is under this amount we give a little extra to cushion what we need
+		//or we rely on gatherRoad giving us enough space to offset this.
+		var modEnergy = pathLength*40;
+		var divideBy = 1;
+		//It may be that we don't have enough capacity to support the unit we truely want to send (1 big one). If this is the
+		//case, split up the desired unit into a max of 5 units and this is the new desired size of the unit.
+		while(divideBy < 5 && spawner.room.energyCapacityAvailable < (modEnergy/divideBy))
+		{
+			divideBy++;
+		}
+		//Monitor requests where we divide or requesting units higher then we support
+		if(divideBy > 1 || (modEnergy/divideBy) > 4700)
+		{
+			console.log(role + ' wants ' + modEnergy + ' cost and room has capacity of ' + spawner.room.energyCapacityAvailable + ' assuming sending ' + divideBy + ' units.');
+		}
+		
+		availableEnergy = Math.min(availableEnergy, modEnergy/divideBy);
+
+		//Find out if their are roads where the gather is going to, if so maintain the roads.
+		//Otherwise spawn the expensive version so we can keep moving while we get started
+		//on the foundation for the roads in this room.
+		var findRoadsIn = spawner;
+		if(Memory.creeps[unitName].usingSourceId != null)
+		{
+			findRoadsIn = Game.getObjectById(Memory.creeps[unitName].usingSourceId);
+			if(findRoadsIn == null)
+			{
+				//Don't have access to this location or sourceId doesn't exist as an object
+				newBody = upgradeBody(availableEnergy, gatherBody);
+				return(newBody);
+			}
+		}
+		
+		var findRoads = findRoadsIn.room.find(FIND_STRUCTURES, {
+			filter: { structureType: STRUCTURE_ROAD }
+		});
+		
+		if(findRoads != null && findRoads.length > 10)
+		{
+			newBody = upgradeBody(availableEnergy, gatherRoadBody);
+		}
+		else
+		{
+			console.log(spawner.name + ' may be spawning expensive gather, wants ' + availableEnergy + ' in ' + findRoadsIn.room.name + ' for ' + unitName);
+			newBody = upgradeBody(availableEnergy, gatherBody);
+		}
+	}
+	else
+	{
+		return(retrieveBody(role, spawner));
+	}
+	
+	return(newBody);
+ }
+ 
  function retrieveBody(role, spawner)
  {
     var newBody = null;
@@ -323,6 +410,14 @@
 	else if(role == 'scout')
 	{
 		newBody = upgradeBody(availableEnergy, scoutBody);
+	}
+	else if(role == 'healPower')
+	{
+		newBody = upgradeBody(availableEnergy, attackPower);
+	}
+	else if(role == 'attackPower')
+	{
+		newBody = upgradeBody(availableEnergy, healPower);
 	}
     else if(role != 'empty')
     {
@@ -511,7 +606,7 @@
     var role = findDeadUnitRole(spawner, nextName);
     if(role != null)
     {
-		var returnBody = retrieveBody(role, spawner);
+		var returnBody = retrieveBodyMod(role, spawner, nextName);
 		
 		//If next dead unit is a gather or worker and we already have enough units fielded for this source, do not spawn and
 		//add to the end of the list.
@@ -840,6 +935,18 @@
     return(null);
  }
  
+ //Temporary creeps are stored here if they couldn't be spawned when the first request is made. Retrieve them on request.
+ function getNextRequest(spawner)
+ {
+    if(spawner.memory.requestCreep != null)
+    {
+        var requestCreep = spawner.memory.requestCreep;
+        console.log("Getting Request Name: " + requestCreep.substring(0, requestCreep.indexOf(",")));
+        return(requestCreep.substring(0, requestCreep.indexOf(",")));
+    }
+    return(null);
+ }
+ 
  function moveRespawnToEnd(spawner)
  {
 	var atEnd = extractNextName(spawner);
@@ -858,6 +965,20 @@
         return(returnName);
     }
 	console.log('ERROR: cant find respawnName from ' + spawner);
+    return(null);
+ }
+ 
+ function extractRequestCreep(spawner)
+ {
+	if(spawner.memory.requestCreep != null)
+    {
+        var requestCreep = spawner.memory.requestCreep;
+        var returnName = requestCreep.substring(0, requestCreep.indexOf(","));
+        spawner.memory.requestCreep = requestCreep.substring(requestCreep.indexOf(",")+1);
+        console.log("Extracting Name: " + returnName + " saving: " + spawner.memory.requestCreep);
+        return(returnName);
+    }
+	console.log('ERROR: cant find requestCreep from ' + spawner);
     return(null);
  }
  
@@ -1015,7 +1136,7 @@
 	{
 		var replaceWithName = nextDeadRoleName(spawner, role, sourceId);
 		var returnRole = findRoleWithinName(replaceWithName);
-		var returnBody = retrieveBody(returnRole, spawner);
+		var returnBody = retrieveBodyMod(returnRole, spawner, replaceWithName);
 		if(replaceWithName != null && returnRole != null && returnBody != null)
 		{
 			if(returnRole == 'gather')
@@ -1193,6 +1314,7 @@
 				addRespawnEnd(spawner, name);
 				//console.log("time: " + spawner.memory.respawnTime + ", role: " + spawner.memory.respawnName);
 			}
+			return(true);
 		}
 		else 
 		{
@@ -1226,6 +1348,7 @@
 	{
 		//console.log('next unit: ' + name + ' isnt spawning, body ' + body);
 	}
+	return(false);
  }
 
  //spawner is which spawner we're dealing with, maxPerEnergy allows this many harvesters at each energy node
@@ -1264,7 +1387,7 @@
  {
 	var replaceWithName = nextDeadRoleName(spawner, role, sourceId);	//Gets next available respawnable unit matching this role and id
 	var returnRole = findRoleWithinName(replaceWithName);	//Usually interchangable with role above, but just to be safe
-	var returnBody = retrieveBody(returnRole, spawner);		//Gets body to match this role, given how much available energy we have.
+	var returnBody = retrieveBodyMod(returnRole, spawner, replaceWithName);		//Gets body to match this role, given how much available energy we have.
 	if(replaceWithName != null && returnRole != null && returnBody != null)
 	{
 		var creation = chosenSpawn.canCreateCreep(returnBody, replaceWithName);
@@ -1425,7 +1548,7 @@
 			else
 			{
 				//If fail construction for whatever reason, try again in another location.
-				console.log('Trying to construct ' + structure + ' failed.');
+				console.log('Trying to construct ' + structure + ' failed at ' + closeBuild + '. Error: ' + success);
 			}
 		}
 	}
@@ -1493,13 +1616,64 @@
 	}
  }
  
+ //Creates a temporary unit that already has its memory written into Memory.creeps that .createCreep will inherit
+ module.exports.createTempCreepWithName = function(role, name, spawnRoom)
+ {	//Either send in spawn room, or look at the name in memory, extract spawnId and use the room there
+	if(Memory.creeps[name] != null && role != null && spawnRoom != null)
+	{
+		if(spawnRoom == null && Memory.creeps[name].spawnId != null)
+		{
+			spawnRoom = Game.getObjectById(Memory.creeps[name].spawnId).room.name;
+		}
+		else if(spawnRoom == null)
+		{
+			console.log('could not find spawnId in createTempCreepWithName and no spawnRoom was sent in');
+		}
+		
+		var spawner;
+		for(var spawners in Game.spawns)
+		{
+			if(Game.spawns[spawners].spawning == null && Game.spawns[spawners].room.name == spawnRoom)
+			{
+				spawner = Game.spawns[spawners];
+				break;
+			}
+		}
+		
+		if(spawner != null)
+		{
+			var body = retrieveBodyMod(role, spawner, name);
+			var canCreateUnit = spawner.canCreateCreep(body, name);
+			if(canCreateUnit == 0)
+			{
+				var _ = require('lodash');
+				var badSpawn = spawner.createCreep(body, name);
+				if(_.isString(badSpawn))
+				{
+					console.log(badSpawn + ' created from ' + spawner.name + ' for role ' + role + ' with mem: ' + memToInput);
+					return(true);
+				}
+				else 
+				{
+					console.log('TEMP Spawn error: ' + badSpawn + ' bodyLength: ' + body.length + ' spawner: ' + spawner.name);
+				}
+			}
+		}
+	}
+	else
+	{
+		console.log(name + ' could not be found in Memory.creeps[name] to create temp creep.');
+	}
+	return(false);
+ }
+ 
  //Find unused spawn if possible, create temp creep with the input data. Returns if successful
- module.exports.createTempCreep = function(role, memToInput)
+ module.exports.createTempCreep = function(role, memToInput, spawnRoom)
  {
 	var spawner;
 	for(var spawners in Game.spawns)
     {
-		if(Game.spawns[spawners].spawning == null)
+		if(Game.spawns[spawners].spawning == null && Game.spawns[spawners].room.name == spawnRoom)
 		{
 			spawner = Game.spawns[spawners];
 			break;
@@ -1508,6 +1682,8 @@
 	
 	if(spawner != null)
 	{
+		console.log(memToInput + ' contains path length? ' + memToInput.pathLength);
+		//var body = retrieveBodyMod(role, spawner, memToInput.pathLength);
 		var body = retrieveBody(role, spawner);
 		var canCreateUnit = spawner.canCreateCreep(body);
 		if(canCreateUnit == 0)
@@ -1634,7 +1810,23 @@
 				respawnEmptyRolesAtSources(spawner, chosenSpawn);
 			}
 			//If nothing above created a unit, check if we can spawn a new unit, or respawn the next unit in the list (or other needs)
-			spawnNextInQueue(spawner, chosenSpawn, harvestersSeen, gatherersSeen, buildersSeen, attackersSeen, scoutsSeen);
+			if(spawnNextInQueue(spawner, chosenSpawn, harvestersSeen, gatherersSeen, buildersSeen, attackersSeen, scoutsSeen) == false)
+			{
+				//If don't successfully spawn anything in the default spawn functionality, look for temporary units to spawn
+				var requestNextCreep = getNextRequest(spawner);
+				if(requestNextCreep != null)
+				{
+					var role = Memory.creeps[requestNextCreep].role;
+					if(role != null && createTempCreepWithName(role, requestNextCreep, spawner.room.name) == true)
+					{
+						extractRequestCreep(spawner);
+					}
+					else
+					{
+						console.log('Temp creation failed because role returned null: ' + role + ' or temp creation failed.');
+					}
+				}
+			}
 		}
 	}
  }

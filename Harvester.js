@@ -790,78 +790,66 @@
 
 	//If make it back to the drop off and its full go and fill up a extension instead, delete the direction so when it finishes
 	//the drop off it finds the start of the path again and resumes the path.
-	if(transferEnergyReturn == ERR_FULL || unit.memory.direction == null)
+	if(unit.carry.energy > 0 && (transferEnergyReturn == ERR_FULL || unit.memory.direction == null))
 	{
-		var transferExtension = unit.room.find(FIND_MY_STRUCTURES, {
+		var cpu2 = Game.getUsedCpu();
+		var transferExtension = unit.pos.findClosestByRange(FIND_MY_STRUCTURES, {
 			filter: function(object) {
 				return(object.energy < object.energyCapacity && 
 						(object.structureType == STRUCTURE_SPAWN || object.structureType == STRUCTURE_EXTENSION));
 			}
 		});
 		
-		var transferTarget;
-		var transferRange = 999999;
-		for(var drained in transferExtension)
+		cpu2 = Game.getUsedCpu()-cpu2;
+		console.log(unit.name + ' finding closest (need filled) ' + transferExtension.name + ' costs: ' + cpu2);
+		
+		if(transferExtension != null)//transferExtension.length > 0
 		{
-			if(transferExtension[drained].energy != null && 
-				transferExtension[drained].energy < transferExtension[drained].energyCapacity)
+			var transferTarget = transferExtension;
+			var transferRange = unit.pos.getRangeTo(transferTarget);
+
+			if(transferRange > 1)
 			{
-				var transfer = unit.transferEnergy(transferExtension[drained]);
+				if(unit.memory.direction != null)
+				{
+					//If you find a extension that needs energy, move to it. This takes you off the route the gatherer
+					//was on, so delete the direction now so it will search for the beginning of the route afterwards.
+					delete unit.memory.direction;
+				}
 				
-				if(transfer == ERR_NOT_IN_RANGE)
-				{
-					var tempRange = unit.pos.getRangeTo(transferExtension[drained]);
-					if(tempRange < transferRange)
-					{
-						transferRange = tempRange;
-						transferTarget = transferExtension[drained];
-						//console.log(unit.name + ' found new range: ' + transferRange + ' to ' + transferExtension[drained]);
-					}
+				findRoadOrCreate(unit);
+				if(transferTarget != null)
+				{	//As long as there is a target to go to and the room isn't full of energy, move to the target
+					var cpu = Game.getUsedCpu();
+					//unit.moveTo(transferTarget);
+					unit.moveByPath(unit.pos.findPathTo(transferTarget), {maxOps: 100});//, ignoreCreeps: false
 					
-					if(unit.memory.direction != null)
-					{
-						//If you find a extension that needs energy, move to it. This takes you off the route the gatherer
-						//was on, so delete the direction now so it will search for the beginning of the route afterwards.
-						delete unit.memory.direction;
-					}
+					cpu = Game.getUsedCpu()-cpu;
+					//console.log(unit.name + ' moving to ' + transferTarget.name + ' costs: ' + cpu);
 				}
-				else if(transfer == 0)
+			}
+			else
+			{
+				if(transferTarget.energy != null && 
+					transferTarget.energy < transferTarget.energyCapacity && 
+					unit.transferEnergy(transferTarget) == 0)
 				{
-					transferTarget = null;
-					break;
+					//Don't look for any more structures to transfer to, successfully filled one.
+				}
+				else
+				{
+					console.log(unit.name + ' couldnt fill ' + transferTarget.name);
 				}
 			}
-			else if(transferExtension[drained].energy != null && 
-				transferExtension[drained].energy < transferExtension[drained].energyCapacity && 
-				Math.abs(unit.pos.getRangeTo(transferExtension[drained])) == 1 &&
-				unit.transferEnergy(transferExtension[drained]) == 0)
-			{	//Don't look for any more structures to transfer to, successfully filled one.
-				transferTarget = null;
-				break;
-			}
-		}
-		findRoadOrCreate(unit);
-		if(transferTarget != null && returnResources.room.energyAvailable < returnResources.room.energyCapacityAvailable)
-		{	//As long as there is a target to go to and the room isn't full of energy, move to the target
-			var cpu = Game.getUsedCpu();
-			//unit.moveTo(transferTarget);
-			unit.moveByPath(unit.pos.findPathTo(transferTarget), {maxOps: 100});//, ignoreCreeps: false
-			
-			cpu = Game.getUsedCpu()-cpu;
-			//console.log(unit.name + ' moving to capacitor costs: ' + cpu);
 		}
 		else if(returnResources.room.energyAvailable >= returnResources.room.energyCapacityAvailable)
 		{
-			var transferStorage = unit.room.find(FIND_MY_STRUCTURES, {
-				filter: function(object) {
-					return(object.structureType == STRUCTURE_STORAGE);// && object.energy < object.carryCapacity
-				}
-			});
+			var transferStorage = unit.room.storage;
 			
-			if(transferStorage.length > 0)
+			if(transferStorage != null)
 			{		//If we're in a room with a storage go over and transfer to the storage
-				unit.moveByPath(unit.pos.findPathTo(transferStorage[0]), {maxOps: 100});//, ignoreCreeps: false
-				var what = unit.transferEnergy(transferStorage[0]);
+				unit.moveByPath(unit.pos.findPathTo(transferStorage), {maxOps: 100});//, ignoreCreeps: false
+				var transferCode = unit.transferEnergy(transferStorage);
 				
 				if(unit.memory.direction != null)
 					delete unit.memory.direction;
@@ -894,19 +882,19 @@
 		//more energy
 		if(unit.carry.energy == unit.carryCapacity)
 		{
-			var unitOnPath = creepAtDirection(unit);
-			if(unitOnPath != null && unitOnPath[0] != null && unitOnPath[0].memory != null &&
-				unitOnPath[0].memory.role == 'builder' && unitOnPath[0].carry.energy <= 0)
-			{	//If transfer fails, attempt to transfer to all possible units in range
-				if(unit.transferEnergy(unitOnPath[0] < 0))
-				{
+			//var unitOnPath = creepAtDirection(unit);
+			//if(unitOnPath != null && unitOnPath[0] != null && unitOnPath[0].memory != null &&
+			//	unitOnPath[0].memory.role == 'builder' && unitOnPath[0].carry.energy <= 0)
+			//{	//If transfer fails, attempt to transfer to all possible units in range
+			//	if(unit.transferEnergy(unitOnPath[0] < 0))
+			//	{
 					//transferAround(unit);
-				}
-			}
-			else	//Was unable to transfer to path
-			{
+			//	}
+			//}
+			//else	//Was unable to transfer to path
+			//{
 				//transferAround(unit);
-			}
+			//}
 		}
 	}
 	else if(transferEnergyReturn != 0)

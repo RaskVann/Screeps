@@ -230,16 +230,28 @@
 	}
 	return(false);
  }
-
+ 
+ var upgradeIncrease = 0;
+ 
  function upgradeController(unit, builderNumber)
  {
     var upgradeStart = 0;
-    var upgradeLimit = 2;
+	var upgradeLimit = 2;
 	//When a storage is built the builders no longer need to travel, 1 builder should be sufficient for 15work/tick
 	if(unit.room.storage != null)
 	{
 		upgradeLimit = 1;
 	}
+	//If someone is about to die (we're really doing this for when the controller dies)
+	//Let anyone we possibly can into upgrade while we transition to new unit.
+	if(unit.ticksToLive < 50)
+	{
+		//TO DO: Check for if at least 2 units having sourceId of controller
+		//If so, suicide this unit (near death). So spawners will hopefully start spawning a new one
+		//TO DO: Check if spawners are available for this to be a valid action.
+		upgradeIncrease = builderNumber+1;
+	}
+	upgradeLimit += upgradeIncrease;
 	
     if((builderNumber >= upgradeStart && builderNumber < upgradeLimit) || 
 		(unit.room.controller != null && newUniqueSourceId(unit, unit.room.controller.id) == true))
@@ -542,8 +554,10 @@
 			unit.room.controller.level >= 5 && 
 			unit.room.storage != null &&
 			unit.room.storage.store.energy > 0 &&
-			unit.carry.energy/unit.carryCapacity < .2)
-		{
+			unit.carry.energy/unit.carryCapacity < .2 &&
+			builderNumber <= 0)	//Only allow the first unit this luxury, this locks him into the controller
+		{	//TO DO: Either look around controller for more then 1 builder unit assigned to this controller
+			//		or find another way to make this room independant
 			unit.room.storage.transferEnergy(unit);
 		}
 	

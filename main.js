@@ -72,6 +72,10 @@ module.exports.loop = function()
 			previousScoutState = defense.scout(creep, scoutsSeen, previousScoutState);
 			scoutsSeen++;
 		}
+		else if(creep.memory.role == 'attackPower' || creep.memory.role == 'healPower')
+		{
+			defense.attackPower(unit);
+		}
 		
 		var calc = Game.getUsedCpu()-individualCPU;
 		if((calc > 10 && Game.cpuLimit < 400) || calc > 20)
