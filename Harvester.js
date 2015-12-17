@@ -1112,10 +1112,10 @@
 			success = closeBuild.createConstructionSite(structure);
 			if(success == 0)
 			{
-				if(structure == STRUCTURE_STORAGE)
-				{	//Spawn a link next to the storage in a empty position
-					return(constructOutOfWay(closeBuild, STRUCTURE_LINK, closeSpawn));
-				}
+				//if(structure == STRUCTURE_STORAGE)
+				//{	//Spawn a link next to the storage in a empty position
+				//	return(constructOutOfWay(closeBuild, STRUCTURE_LINK, closeSpawn));
+				//}
 				return(success);
 			}
 			else
@@ -1175,46 +1175,51 @@ module.exports.link = function()
 			//If the room is mine and has access to links, look for applicable link locations
 			if(nextRoom.controller != null &&
 				nextRoom.controller.owner != null &&
-				nextRoom.controller.owner.username == 'RaskVann' &&
-				nextRoom.controller.level >= 5)
+				nextRoom.controller.owner.username == 'RaskVann')
 			{
-				var sources = nextRoom.find(FIND_SOURCES);
-				//Make sure there is a link within 2 spaces of every source, and create one if there isn't.
-				for(var i in sources)
+				if(nextRoom.controller.level >= 5)
 				{
-					var allLinks = sources[i].pos.findInRange(FIND_MY_STRUCTURES, 2, {
-						filter: { structureType: STRUCTURE_LINK }
-					});
-					
-					if(allLinks.length <= 0)
+					var sources = nextRoom.find(FIND_SOURCES);
+					//Make sure there is a link within 2 spaces of every source, and create one if there isn't.
+					for(var i in sources)
 					{
-						var allConstructLinks = sources[i].pos.findInRange(FIND_MY_CONSTRUCTION_SITES, 2, {
+						var allLinks = sources[i].pos.findInRange(FIND_MY_STRUCTURES, 2, {
 							filter: { structureType: STRUCTURE_LINK }
 						});
-						//No link within 2 spaces, create one.
-						if(allConstructLinks.length <= 0)
+						
+						if(allLinks.length <= 0)
 						{
-							//Construct link, nothing exists.
-							constructStructure(sources[i], STRUCTURE_LINK);
+							var allConstructLinks = sources[i].pos.findInRange(FIND_MY_CONSTRUCTION_SITES, 2, {
+								filter: { structureType: STRUCTURE_LINK }
+							});
+							//No link within 2 spaces, create one.
+							if(allConstructLinks.length <= 0)
+							{
+								//Construct link, nothing exists.
+								constructStructure(sources[i], STRUCTURE_LINK);
+							}
 						}
 					}
 				}
 				
-				//Look at the controller and make sure there is a link within 2 spaces of it
-				var controllerStorage = nextRoom.controller.pos.findInRange(FIND_MY_STRUCTURES, 2, {
-					filter: { structureType: STRUCTURE_STORAGE }
-				});
-				
-				if(controllerStorage.length <= 0)
+				if(nextRoom.controller.level >= 4)
 				{
-					var controllerConstructStorage = nextRoom.controller.pos.findInRange(FIND_MY_CONSTRUCTION_SITES, 2, {
+					//Look at the controller and make sure there is a link within 2 spaces of it
+					var controllerStorage = nextRoom.controller.pos.findInRange(FIND_MY_STRUCTURES, 2, {
 						filter: { structureType: STRUCTURE_STORAGE }
 					});
-					//No link within 2 spaces, create one.
-					if(controllerConstructStorage.length <= 0)
+					
+					if(controllerStorage.length <= 0)
 					{
-						//Construct link, nothing exists.
-						constructStructure(nextRoom.controller, STRUCTURE_STORAGE);
+						var controllerConstructStorage = nextRoom.controller.pos.findInRange(FIND_MY_CONSTRUCTION_SITES, 2, {
+							filter: { structureType: STRUCTURE_STORAGE }
+						});
+						//No link within 2 spaces, create one.
+						if(controllerConstructStorage.length <= 0)
+						{
+							//Construct link, nothing exists.
+							constructStructure(nextRoom.controller, STRUCTURE_STORAGE);
+						}
 					}
 				}
 			}

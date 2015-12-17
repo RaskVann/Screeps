@@ -15,16 +15,18 @@
  var attackBody = [ { cost: 300, body: [TOUGH, TOUGH, TOUGH, TOUGH, MOVE, MOVE, ATTACK, ATTACK] },
                       { cost: 320, body: [TOUGH, MOVE, MOVE, MOVE, ATTACK, ATTACK] },	//50% Armour, +18.8% more effective against spawn keeper, around 10 needed to kill for all to survive
                       { cost: 640, body: [TOUGH, TOUGH, MOVE, MOVE, MOVE, MOVE, MOVE, MOVE, ATTACK, ATTACK, ATTACK, ATTACK] },
-                      { cost: 700, body: [TOUGH, TOUGH, TOUGH, MOVE, MOVE, MOVE, MOVE, MOVE, MOVE, MOVE, ATTACK, ATTACK, ATTACK, ATTACK] }];//,	//75% Armour, +23.6% more effective against spawn keeper (max effectiveness), around 5 needed to kill for all to survive
-					  //{ cost: 1400, body: [TOUGH, TOUGH, TOUGH, TOUGH, TOUGH, TOUGH, MOVE, MOVE, MOVE, MOVE, MOVE, MOVE, MOVE, MOVE, MOVE, MOVE, MOVE, MOVE, MOVE, MOVE, ATTACK, ATTACK, ATTACK, ATTACK, ATTACK, ATTACK, ATTACK, ATTACK] } ];	//2 needed for keeper
- var attackPower = [ { cost: 8710, body: [MOVE, MOVE, MOVE, MOVE, MOVE, MOVE, MOVE, MOVE, MOVE, MOVE, MOVE, MOVE, MOVE, MOVE, MOVE, MOVE, MOVE, MOVE, MOVE, MOVE, MOVE, MOVE, MOVE, MOVE, MOVE, MOVE, MOVE, MOVE, 
-										  MOVE, MOVE, MOVE, MOVE, MOVE, MOVE, MOVE, MOVE, MOVE, MOVE, MOVE, MOVE, MOVE, MOVE, MOVE, MOVE, MOVE, MOVE, MOVE, MOVE, MOVE, MOVE, MOVE, MOVE, MOVE, MOVE, MOVE, MOVE, 
-										  MOVE, MOVE, MOVE, MOVE, MOVE, MOVE, MOVE, MOVE, MOVE, MOVE, MOVE, 
-										  ATTACK,ATTACK,ATTACK,ATTACK,ATTACK,ATTACK,ATTACK,ATTACK,ATTACK,ATTACK,ATTACK,ATTACK,ATTACK,ATTACK,ATTACK,ATTACK,ATTACK,ATTACK,ATTACK,ATTACK,ATTACK,ATTACK,ATTACK,ATTACK,
-										  ATTACK,ATTACK,ATTACK,ATTACK,ATTACK,ATTACK,ATTACK,ATTACK,ATTACK,ATTACK,ATTACK,ATTACK,ATTACK,ATTACK,ATTACK,ATTACK,ATTACK,ATTACK,ATTACK,ATTACK,ATTACK,ATTACK,ATTACK,ATTACK,
-										  ATTACK,ATTACK,ATTACK,ATTACK,ATTACK,ATTACK,ATTACK,ATTACK,ATTACK,ATTACK,ATTACK,ATTACK,ATTACK,ATTACK,ATTACK,ATTACK,ATTACK,ATTACK,ATTACK] } ];
- var healPower = [ { cost: 8400, body: [MOVE, MOVE, MOVE, MOVE, MOVE, MOVE, MOVE, MOVE, MOVE, MOVE, MOVE, MOVE, MOVE, MOVE, MOVE, MOVE, MOVE, MOVE, MOVE, MOVE, MOVE, MOVE, MOVE, MOVE, MOVE, MOVE, MOVE, MOVE, 
-										HEAL, HEAL, HEAL, HEAL, HEAL, HEAL, HEAL, HEAL, HEAL, HEAL, HEAL, HEAL, HEAL, HEAL, HEAL, HEAL, HEAL, HEAL, HEAL, HEAL, HEAL, HEAL, HEAL, HEAL, HEAL, HEAL, HEAL, HEAL] } ];
+                      { cost: 700, body: [TOUGH, TOUGH, TOUGH, MOVE, MOVE, MOVE, MOVE, MOVE, MOVE, MOVE, ATTACK, ATTACK, ATTACK, ATTACK] },
+					  { cost: 1400, body: [TOUGH, TOUGH, TOUGH, TOUGH, TOUGH, TOUGH, MOVE, MOVE, MOVE, MOVE, MOVE, MOVE, MOVE, MOVE, MOVE, MOVE, MOVE, MOVE, MOVE, MOVE, ATTACK, ATTACK, ATTACK, ATTACK, ATTACK, ATTACK, ATTACK, ATTACK] },
+					  { cost: 3250, body: [MOVE, MOVE, MOVE, MOVE, MOVE, MOVE, MOVE, MOVE, MOVE, MOVE, MOVE, MOVE, MOVE, MOVE, MOVE, MOVE, MOVE, MOVE, MOVE, MOVE, MOVE, MOVE, MOVE, MOVE, MOVE,
+										  ATTACK,ATTACK,ATTACK,ATTACK,ATTACK,ATTACK,ATTACK,ATTACK,ATTACK,ATTACK,ATTACK,ATTACK,ATTACK,ATTACK,ATTACK,ATTACK,ATTACK,ATTACK,ATTACK,ATTACK,ATTACK,ATTACK,ATTACK,ATTACK,ATTACK] } ];
+ var raidBody = [ { cost: 5420, body: [TOUGH, TOUGH, TOUGH, TOUGH, TOUGH, TOUGH, TOUGH, MOVE, MOVE, MOVE, MOVE, MOVE, MOVE, MOVE, MOVE, MOVE, MOVE, MOVE, MOVE, MOVE, MOVE, MOVE, MOVE, MOVE,
+									   RANGED_ATTACK,RANGED_ATTACK,RANGED_ATTACK,RANGED_ATTACK,RANGED_ATTACK,RANGED_ATTACK,RANGED_ATTACK,RANGED_ATTACK,RANGED_ATTACK,RANGED_ATTACK,
+									   RANGED_ATTACK,RANGED_ATTACK,RANGED_ATTACK,RANGED_ATTACK,RANGED_ATTACK,RANGED_ATTACK,RANGED_ATTACK,RANGED_ATTACK,RANGED_ATTACK,RANGED_ATTACK,
+									   HEAL, HEAL, HEAL, HEAL, HEAL, HEAL] } ];	//Used to take out Keepers and heal self between battles, functions alone within 75 tick intervals between fights, on roads
+ var attackPower = [ { cost: 2990, body: [MOVE, MOVE, MOVE, MOVE, MOVE, MOVE, MOVE, MOVE, MOVE, MOVE, MOVE, MOVE, MOVE, MOVE, MOVE, MOVE, MOVE, MOVE, MOVE, MOVE, MOVE, MOVE, MOVE,
+										  ATTACK,ATTACK,ATTACK,ATTACK,ATTACK,ATTACK,ATTACK,ATTACK,ATTACK,ATTACK,ATTACK,ATTACK,ATTACK,ATTACK,ATTACK,ATTACK,ATTACK,ATTACK,ATTACK,ATTACK,ATTACK,ATTACK,ATTACK] } ];
+ var healPower = [ { cost: 4500, body: [MOVE, MOVE, MOVE, MOVE, MOVE, MOVE, MOVE, MOVE, MOVE, MOVE, MOVE, MOVE, MOVE, MOVE, MOVE,
+										HEAL, HEAL, HEAL, HEAL, HEAL, HEAL, HEAL, HEAL, HEAL, HEAL, HEAL, HEAL, HEAL, HEAL, HEAL] } ];
  var rangedBody = [ { cost: 200, body: [MOVE, RANGED_ATTACK] },
                       { cost: 400, body: [MOVE, MOVE, RANGED_ATTACK, RANGED_ATTACK] },
                       { cost: 600, body: [MOVE, MOVE, MOVE, RANGED_ATTACK, RANGED_ATTACK, RANGED_ATTACK] },
@@ -38,24 +40,18 @@
 					  { cost: 1150, body: [WORK, MOVE, CARRY, MOVE, CARRY, MOVE, CARRY, MOVE, CARRY, MOVE, CARRY, MOVE, CARRY, MOVE, CARRY, MOVE, CARRY, MOVE, CARRY, MOVE, CARRY, MOVE] }, 
 					  { cost: 1350, body: [WORK, MOVE, CARRY, MOVE, CARRY, MOVE, CARRY, MOVE, CARRY, MOVE, CARRY, MOVE, CARRY, MOVE, CARRY, MOVE, CARRY, MOVE, CARRY, MOVE, CARRY, MOVE, CARRY, MOVE, CARRY, MOVE] },
 					  { cost: 2550, body: [WORK, MOVE, CARRY, MOVE, CARRY, MOVE, CARRY, MOVE, CARRY, MOVE, CARRY, MOVE, CARRY, MOVE, CARRY, MOVE, CARRY, MOVE, CARRY, MOVE, CARRY, MOVE, CARRY, MOVE, CARRY, MOVE,
-											CARRY, MOVE, CARRY, MOVE, CARRY, MOVE, CARRY, MOVE, CARRY, MOVE, CARRY, MOVE, CARRY, MOVE, CARRY, MOVE, CARRY, MOVE, CARRY, MOVE, CARRY, MOVE, CARRY, MOVE] },
-					  { cost: 4950, body: [WORK, MOVE, CARRY, MOVE, CARRY, MOVE, CARRY, MOVE, CARRY, MOVE, CARRY, MOVE, CARRY, MOVE, CARRY, MOVE, CARRY, MOVE, CARRY, MOVE, CARRY, MOVE, CARRY, MOVE, CARRY, MOVE,
-											CARRY, MOVE, CARRY, MOVE, CARRY, MOVE, CARRY, MOVE, CARRY, MOVE, CARRY, MOVE, CARRY, MOVE, CARRY, MOVE, CARRY, MOVE, CARRY, MOVE, CARRY, MOVE, CARRY, MOVE,
-											CARRY, MOVE, CARRY, MOVE, CARRY, MOVE, CARRY, MOVE, CARRY, MOVE, CARRY, MOVE, CARRY, MOVE, CARRY, MOVE, CARRY, MOVE, CARRY, MOVE, CARRY, MOVE, CARRY, MOVE,
 											CARRY, MOVE, CARRY, MOVE, CARRY, MOVE, CARRY, MOVE, CARRY, MOVE, CARRY, MOVE, CARRY, MOVE, CARRY, MOVE, CARRY, MOVE, CARRY, MOVE, CARRY, MOVE, CARRY, MOVE] } ];
  var gatherRoadBody = [ { cost: 300, body: [CARRY, CARRY, CARRY, CARRY, MOVE, MOVE] },
                       { cost: 500, body: [WORK, CARRY, CARRY, CARRY, CARRY, CARRY, MOVE, MOVE, MOVE] },
                       { cost: 800, body: [WORK, CARRY, CARRY, CARRY, CARRY, CARRY, CARRY, CARRY, CARRY, CARRY, MOVE, MOVE, MOVE, MOVE, MOVE] },
+					  { cost: 1100, body: [WORK, CARRY, CARRY, CARRY, CARRY, CARRY, CARRY, CARRY, CARRY, CARRY, CARRY, CARRY, CARRY, CARRY, MOVE, MOVE, MOVE, MOVE, MOVE, MOVE, MOVE] },
 					  { cost: 1250, body: [WORK, CARRY, CARRY, CARRY, CARRY, CARRY, CARRY, CARRY, CARRY, CARRY, CARRY, CARRY, CARRY, CARRY, CARRY, CARRY, MOVE, MOVE, MOVE, MOVE, MOVE, MOVE, MOVE, MOVE] },
-					  { cost: 2450, body: [WORK, CARRY, CARRY, CARRY, CARRY, CARRY, CARRY, CARRY, CARRY, CARRY, CARRY, CARRY, CARRY, CARRY, CARRY, CARRY, 
+					  { cost: 1850, body: [WORK, CARRY, CARRY, CARRY, CARRY, CARRY, CARRY, CARRY, CARRY, CARRY, CARRY, CARRY, CARRY, CARRY, CARRY, CARRY, 
+											CARRY, CARRY, CARRY, CARRY, CARRY, CARRY, CARRY, CARRY,
+											MOVE, MOVE, MOVE, MOVE, MOVE, MOVE, MOVE, MOVE, MOVE, MOVE, MOVE, MOVE] },
+					  { cost: 2550, body: [WORK, CARRY, CARRY, CARRY, CARRY, CARRY, CARRY, CARRY, CARRY, CARRY, CARRY, CARRY, CARRY, CARRY, CARRY, CARRY, 
 											CARRY, CARRY, CARRY, CARRY, CARRY, CARRY, CARRY, CARRY, CARRY, CARRY, CARRY, CARRY, CARRY, CARRY, CARRY, CARRY,
-											MOVE, MOVE, MOVE, MOVE, MOVE, MOVE, MOVE, MOVE, MOVE, MOVE, MOVE, MOVE, MOVE, MOVE, MOVE, MOVE] },
-					  { cost: 4700, body: [WORK, CARRY, CARRY, CARRY, CARRY, CARRY, CARRY, CARRY, CARRY, CARRY, CARRY, CARRY, CARRY, CARRY, CARRY, CARRY, 
-											CARRY, CARRY, CARRY, CARRY, CARRY, CARRY, CARRY, CARRY, CARRY, CARRY, CARRY, CARRY, CARRY, CARRY, CARRY, CARRY,
-											CARRY, CARRY, CARRY, CARRY, CARRY, CARRY, CARRY, CARRY, CARRY, CARRY, CARRY, CARRY, CARRY, CARRY, CARRY, CARRY,
-											CARRY, CARRY, CARRY, CARRY, CARRY, CARRY, CARRY, CARRY, CARRY, CARRY, CARRY, CARRY, CARRY, CARRY,
-											MOVE, MOVE, MOVE, MOVE, MOVE, MOVE, MOVE, MOVE, MOVE, MOVE, MOVE, MOVE, MOVE, MOVE, MOVE, MOVE,
-											MOVE, MOVE, MOVE, MOVE, MOVE, MOVE, MOVE, MOVE, MOVE, MOVE, MOVE, MOVE, MOVE, MOVE, MOVE] } ];	//Carries 3050
+											CARRY, CARRY, MOVE, MOVE, MOVE, MOVE, MOVE, MOVE, MOVE, MOVE, MOVE, MOVE, MOVE, MOVE, MOVE, MOVE, MOVE, MOVE] } ];	//Max 50 components
 // var builderBody = [WORK, CARRY, MOVE, CARRY, MOVE];
  var builderBody = [ { cost: 300, body: [WORK, CARRY, CARRY, MOVE, MOVE] },
                       { cost: 450, body: [WORK, WORK, CARRY, CARRY, MOVE, MOVE, MOVE] },
@@ -281,6 +277,30 @@
     return(baseBody[0].body);
  }
  
+ function upgradeBodyWithin(maxEnergy, targetEnergy, baseBody)
+ {
+	if(maxEnergy == targetEnergy)
+	{
+		return(upgradeBody(targetEnergy, baseBody));
+	}
+	else
+	{
+		var newBody = baseBody;
+		for(var bodyAdvancements = 0; bodyAdvancements < baseBody.length; bodyAdvancements++)
+		{
+			var cost = baseBody[bodyAdvancements].cost;
+			if(cost <= maxEnergy &&
+				cost >= targetEnergy)
+			{
+				//console.log('Found body at ' + cost + ' was shooting to be higher then ' + targetEnergy + ' and lower then ' + maxEnergy);
+				return(baseBody[bodyAdvancements].body);
+			}
+		}
+		console.log('No body found between ' + targetEnergy + ' and ' + maxEnergy);
+		return(upgradeBody(maxEnergy, baseBody));
+	}
+ }
+ 
  //Caps the body size of a unit based on the stored needs of the task instead of building as big of a unit as possible.
  //If this is a type of unit that isn't supported, simply calls retrieveBody() with the provided information
  function retrieveBodyMod(role, spawner, unitName)
@@ -298,14 +318,17 @@
 		//or we rely on gatherRoad giving us enough space to offset this.
 		var modEnergy = pathLength*40;
 		var divideBy = 1;
+		//We have a max of MAX_CREEP_SIZE, which is currently 50. This gets us to 2550 energy for gatherers.
+		//This means modEnergy/thisNum, rounded up is how many creeps we'll need to support
+		var maxEnergy = Math.min(2550, spawner.room.energyCapacityAvailable);
 		//It may be that we don't have enough capacity to support the unit we truely want to send (1 big one). If this is the
-		//case, split up the desired unit into a max of 5 units and this is the new desired size of the unit.
-		while(divideBy < 5 && spawner.room.energyCapacityAvailable < (modEnergy/divideBy))
+		//case, split up the desired unit into a max of 6 units and this is the new desired size of the unit.
+		while(divideBy < 6 && maxEnergy < (modEnergy/divideBy))
 		{
 			divideBy++;
 		}
 		//Monitor requests where we divide or requesting units higher then we support
-		if(divideBy > 1 || (modEnergy/divideBy) > 4700)
+		if(divideBy > 1)
 		{
 			console.log(role + ' wants ' + modEnergy + ' cost and room has capacity of ' + spawner.room.energyCapacityAvailable + ' assuming sending ' + divideBy + ' units.');
 		}
@@ -322,7 +345,8 @@
 			if(findRoadsIn == null)
 			{
 				//Don't have access to this location or sourceId doesn't exist as an object
-				newBody = upgradeBody(availableEnergy, gatherBody);
+				console.log(spawner.name + ' no id, spawn expensive gather, wants ' + availableEnergy + '/' + modEnergy + ' in ' + spawner.room.name + ' for ' + unitName);
+				newBody = upgradeBodyWithin(spawner.room.energyAvailable, availableEnergy, gatherBody);
 				return(newBody);
 			}
 		}
@@ -333,12 +357,13 @@
 		
 		if(findRoads != null && findRoads.length > 10)
 		{
-			newBody = upgradeBody(availableEnergy, gatherRoadBody);
+			//console.log(spawner.name + ' found roads, spawning gather, wants ' + availableEnergy + '/' + modEnergy + ' in ' + findRoadsIn.room.name + ' for ' + unitName);
+			newBody = upgradeBodyWithin(spawner.room.energyAvailable, availableEnergy, gatherRoadBody);
 		}
 		else
 		{
-			console.log(spawner.name + ' may be spawning expensive gather, wants ' + availableEnergy + ' in ' + findRoadsIn.room.name + ' for ' + unitName);
-			newBody = upgradeBody(availableEnergy, gatherBody);
+			console.log(spawner.name + ' no roads, expensive gather, wants ' + availableEnergy + '/' + modEnergy + ' in ' + findRoadsIn.room.name + ' for ' + unitName);
+			newBody = upgradeBodyWithin(spawner.room.energyAvailable, availableEnergy, gatherBody);
 		}
 	}
 	else
@@ -1401,7 +1426,7 @@
 		else if(creation != ERR_NOT_ENOUGH_ENERGY)
 		{
 			//Can't create creep for some reason, usually not enough energy
-			console.log('Trying to respawn replacement unit failed. Code: ' + creation);
+			console.log('Trying to respawn replacement unit failed. Code: ' + creation + ' body: ' + returnBody);
 		}
 	}
 	else

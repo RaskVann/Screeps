@@ -1166,6 +1166,35 @@
 	}
 	return(false);
  }
+ 
+ //Used to spawn another role 'attackPower' or 'healPower' but can be modified slightly to spawn any temporary unit.
+ function spawnTempUnit(role, useSpawn, memoryForTempUnit)
+ {
+	if(useSpawn.createTempCreep(role, memoryForTempUnit, useSpawn.room.name) == true)
+	{
+		//Success, otherwise we have to spawn it when we have enough power
+		return(true);
+	}
+	else
+	{
+		var name = findNextUnusedName(role, useSpawn.room.name);
+		Memory.creeps[name] = memoryForTempUnit;
+		
+		//TO DO: Find 'name' in memory and spawn when able, remove name from requestCreep
+		//when successful. Use equivalent to createTempCreep but with name.
+		if(useSpawn.memory.requestCreep == null)
+		{
+			useSpawn.memory.requestCreep = name+',';
+		}
+		else
+		{
+			useSpawn.memory.requestCreep += name+',';
+		}
+		console.log(useSpawn.name + ' placed ' + name + ' in creep memory, after finding bank, needs spawned.');
+		return(true);
+	}
+	return(false);
+ }
 
  function scout(unit, scoutsSeen, previousScoutState)
  {
@@ -1454,8 +1483,11 @@
 					addHarvestId(useSpawn, sources[x].id);
 					addNeedHarvest(useSpawn, 2);	//Only need 1, but add another in memory so we can have one spawn when the other is dieing
 					//Alternative Gatherer per Harvester= ABSOLUTE(ROUND_UP((HarvestRate*(DistanceToNode*2))/CapacityPerGatherer))
-					//A quirk of gatherer capacity with CARRY,MOVE pattern is energy cost/2 is equivalent to their carry capacity
-					var gatherAmount = Math.abs(Math.ceil(10.0*2.0*pathLength/(useSpawn.room.energyCapacityAvailable*.5)));
+					//A quirk of gatherer capacity with CARRY,MOVE pattern is energy cost/2 is equivalent to their carry capacity(10*2*2)
+					//We then have to fit all of this within the largest unit we can possibly use which happens to be a 50 unit gatherer that
+					//costs 2550, use energyCapacity if that happens to be lower however.
+					var maxCapacity = Math.min(2550, useSpawn.room.energyCapacityAvailable);
+					var gatherAmount = Math.abs(Math.ceil(40.0*pathLength/maxCapacity));
 					addNeedGather(useSpawn, gatherAmount+1);	//Only need gatherAmount but add another in memory so we can have one spawn when the other is dieing
 					
 					//console.log(unit.name + ' success, added harvester for: ' + sources[x].id + ' and gatherer(s): ' + gatherAmount + ' to pending list for creation in spawn ' + useSpawn);
@@ -1553,27 +1585,10 @@
 			{
 				var role = 'attackPower';
 				var memoryForTempUnit = {'role': role, 'usingSourceId': currentRoom.name, 'spawnID': useSpawn.id, 'bankId': bank[0].id};
-				if(useSpawn.createTempCreep(role, memoryForTempUnit, useSpawn.room.name) == true)
-				{
-					//Success, otherwise we have to spawn it when we have enough power
-				}
-				else
-				{
-					var name = findNextUnusedName(role, useSpawn.room.name);
-					Memory.creeps[name] = memoryForTempUnit;
-					
-					//TO DO: Find 'name' in memory and spawn when able, remove name from requestCreep
-					//when successful. Use equivalent to createTempCreep but with name.
-					if(useSpawn.memory.requestCreep == null)
-					{
-						useSpawn.memory.requestCreep = name+',';
-					}
-					else
-					{
-						useSpawn.memory.requestCreep += name+',';
-					}
-					console.log(useSpawn.name + ' placed ' + name + ' in creep memory, after finding bank, needs spawned.');
-				}
+				//We need 3 attackPower units for each bank (at 2M hit points)
+				spawnTempUnit(role, useSpawn, memoryForTempUnit);
+				spawnTempUnit(role, useSpawn, memoryForTempUnit);
+				spawnTempUnit(role, useSpawn, memoryForTempUnit);
 			}
 		}
 		else if(unit.room.memory.bank != null)	//bank exists and no bank found
@@ -1745,9 +1760,12 @@
 	var reportRoom;
 	if(unit != null)
 	{
+		//Kill any unit with the capacity to heal, otherwise kill any unit that can attack and has the ability to move
 		targetCreep = unit.pos.findClosestByRange(FIND_HOSTILE_CREEPS, {
 			filter: function(object) {
-				return(object.getActiveBodyparts(ATTACK) > 0 || object.getActiveBodyparts(RANGED_ATTACK) > 0 || object.getActiveBodyparts(HEAL) > 0);
+				return(object.getActiveBodyparts(HEAL) > 0 ||
+						((object.getActiveBodyparts(ATTACK) > 0 || object.getActiveBodyparts(RANGED_ATTACK) > 0) &&
+						object.getActiveBodyparts(MOVE) > 0));
 			}
 		});
 		reportRoom = unit.room;
@@ -1757,9 +1775,12 @@
 		//Look through all spawns for a enemy creep, report the last one found.
 		for(var x in Game.spawns)
 		{
+			//Kill any unit with the capacity to heal, otherwise kill any unit that can attack and has the ability to move
 			var findEnemy = Game.spawns[x].room.find(FIND_HOSTILE_CREEPS, {
 				filter: function(object) {
-					return(object.getActiveBodyparts(ATTACK) > 0 || object.getActiveBodyparts(RANGED_ATTACK) > 0 || object.getActiveBodyparts(HEAL) > 0);
+					return(object.getActiveBodyparts(HEAL) > 0 ||
+						((object.getActiveBodyparts(ATTACK) > 0 || object.getActiveBodyparts(RANGED_ATTACK) > 0) &&
+						object.getActiveBodyparts(MOVE) > 0));
 				}
 			});
 			
@@ -1840,9 +1861,12 @@
    
     if(unit.getActiveBodyparts(RANGED_ATTACK) > 0)
 	{
+		//Kill any unit that can heal or can attack and still has capacity to move
 		var rangedTargets = unit.pos.findInRange(FIND_HOSTILE_CREEPS, 3, {
 			filter: function(object) {
-				return(object.getActiveBodyparts(ATTACK) > 0 || object.getActiveBodyparts(RANGED_ATTACK) > 0 || object.getActiveBodyparts(HEAL) > 0);
+				return(object.getActiveBodyparts(HEAL) > 0 ||
+						((object.getActiveBodyparts(ATTACK) > 0 || object.getActiveBodyparts(RANGED_ATTACK) > 0) &&
+						object.getActiveBodyparts(MOVE) > 0));
 			}
 		});
 		if(rangedTargets.length > 0)	//Report getting close to a offensive unit (I potentially attacked it) every hour.
@@ -1873,35 +1897,24 @@
 		}
 		else
 		{
-			var targetSource = unit.room.find(FIND_HOSTILE_SPAWNS);
-			var targetStructure = unit.pos.findClosestByRange(FIND_HOSTILE_STRUCTURES);
+			var targetSpawn = unit.room.find(FIND_HOSTILE_SPAWNS);
+			//var targetStructure = unit.pos.findClosestByRange(FIND_HOSTILE_STRUCTURES);
 			//TO DO: check if have valid path, ignore if do not
-			if(targetSource.length)
+			if(targetSpawn.length)
 			{
-				if(unit.attack(targetSource[0]) == ERR_NOT_IN_RANGE)
+				var path = unit.pos.findPathTo(targetSpawn[0], {maxOps: 200});
+				if( !path.length || !targetSpawn[0].equalsTo(path[path.length - 1]) ) 
 				{
-					unit.moveTo(targetSource[0]);
+					//No path could be found, 
+					console.log(unit.name + ' blocked by structure. ' + unit.room.name + ' to target ' + targetSpawn[0]);
+					//TO DO: blocked by structure, find weakest way through and target that.
+					//path = unit.pos.findPathTo(target, {maxOps: 1000, ignoreDestructibleStructures: true});
+				}
+
+				if(unit.attack(targetSpawn[0]) == ERR_NOT_IN_RANGE)
+				{
+					unit.moveTo(targetSpawn[0]);
 					return('travel');
-				}
-			}
-			//TO DO: Prioritize lowest health instead of first found, also check if have valid path
-			else if(targetStructure != null)
-			{
-				if(targetStructure.structureType == 'STRUCTURE_RAMPART')
-				{
-					if(unit.attack(targetStructure) == ERR_NOT_IN_RANGE)
-					{
-						unit.moveTo(targetStructure);
-						return('travel');
-					}
-				}
-				else if(targetStructure.structureType == 'STRUCTURE_WALL')
-				{
-					if(unit.attack(targetStructure) == ERR_NOT_IN_RANGE)
-					{
-						unit.moveTo(targetStructure);
-						return('travel');
-					}
 				}
 			}
 			else if(Game.flags.Guard != null)
@@ -1992,12 +2005,51 @@
 					else if(rangeToAttack > 1)
 					{
 						unit.moveTo(pairedUnit);
+						
+						//Heal the main unit with rangedHeal if hurt
 						if(pairedUnit.hits < pairedUnit.hitsMax)
+						{
 							unit.rangedHeal(pairedUnit);
+						}
+						else	//If there is a hurt adjacent unit that is more hurt then the assigned unit, heal it instead
+						{
+							var nearby = unit.pos.findInRange(FIND_MY_CREEPS, 1, {
+								filter: function(object) {
+									return(object.hits < object.hitsMax);
+								}
+							});
+							
+							for(var x in nearby)
+							{
+								if(nearby[x].hits/nearby[x].hitsMax < unit.hits/unit.hitsMax)
+								{
+									unit.heal(nearby[x]);
+									return(true);	//Nothing else needs doing, get out of function
+								}
+							}
+						}
 					}
 					else if(pairedUnit.hits < pairedUnit.hitsMax)
 					{
+						//TO DO: If not healing fast enough, check for units that need healing next to the unit and heal them instead (at lower health)
 						unit.heal(pairedUnit);
+					}
+					else	//Next to pairedUnit but it doesn't need healing
+					{
+						var nearby = unit.pos.findInRange(FIND_MY_CREEPS, 1, {
+							filter: function(object) {
+								return(object.hits < object.hitsMax);
+							}
+						});
+						
+						for(var x in nearby)
+						{
+							if(nearby[x].hits/nearby[x].hitsMax < unit.hits/unit.hitsMax)
+							{
+								unit.heal(nearby[x]);
+								return(true);	//Nothing else needs doing, get out of function
+							}
+						}
 					}
 				}
 			}
@@ -2052,15 +2104,15 @@
 				{
 					unit.memory.healers = 0;
 				}
-				
-				if(unit.memory.healers < 3)
+				//Spawn 2 healers for each attackPower unit
+				if(unit.memory.healers < 2)
 				{
 					var role = 'healPower';
 					//name = findNextUnusedName(role, useSpawn.room.name);
 					var memoryForTempUnit = {'role': role, 'usingSourceId': unit.memory.usingSourceId, 'spawnID': useSpawn.id, 'bankId': unit.memory.bankId, 'pair': unit.id};
-					if(spawnFrom.createTempCreep(role, memoryForTempUnit, useSpawn.room.name) == true)
+					if(spawnTempUnit(role, useSpawn, memoryForTempUnit) == true)
 					{
-						unit.memory.healers++;
+						unit.memory.healers++;	//Unit is spawning or in queue to spawn
 					}
 				}
 			}
@@ -2094,10 +2146,11 @@
 					//Give gathers or power gathers logic enough to go to a power source and return when there is no more
 					//on the ground, or when the capacity is full.
 					
-					var gatherAmount = Math.ceil(bank.power/(useSpawn.room.energyCapacityAvailable*.5)) + 1;
+					//We're capped at 50 body which caps gather costs at 2550 or if capacity is lower then that, use that.
+					var ceiling = Math.min(2550, useSpawn.room.energyCapacityAvailable);
+					var gatherAmount = Math.ceil(2.0*bank.power/ceiling) + 1;
 					console.log(unit.name + ' is asking for gathers: ' + gatherAmount + ' for power: ' + bank.power);
 					
-					console.log(unit.name + ' BAD, DONT GO HERE YET: scout creating room related temp spawn.');
 					var role = 'gather';
 					//name = findNextUnusedName(role, useSpawn.room.name);
 					var memoryForTempUnit = {'role': role, 'usingSourceId': unit.memory.usingSourceId, 'spawnID': useSpawn.id, 'pathLength': unit.memory.pathLength};
@@ -2114,7 +2167,7 @@
 					}
 
 					//use the role provided and the memory provided for a temp unit. Updating how many gathers we have for this bank.
-					if(countTotalGathers < gatherAmount && spawnFrom.createTempCreep(role, memoryForTempUnit, useSpawn.room.name) == true)
+					if(countTotalGathers < gatherAmount && spawnTempUnit(role, useSpawn, memoryForTempUnit) == true)
 					{
 						if(bank.room.memory.bank.totalGathers != null)
 						{

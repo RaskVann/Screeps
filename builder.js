@@ -113,7 +113,98 @@
     if(unit.carry.energy == 0)
 	{
 		var useSavedSpawn = findSpawn(unit);
-
+		
+		//If it's possible for links to be in this room, look for them within reach
+		//If found, try to pull energy from them so builder can continue work.
+		//This is at the bottom so if anything is attempted before this, the builder takes from the link first
+		if(unit.room.controller != null &&
+			unit.room.controller.owner != null &&
+			unit.room.controller.owner.username == 'RaskVann')
+		{
+			if(unit.room.controller.level >= 4)	//Storage is available
+			{
+				//var findStorage = unit.room.find(FIND_MY_STRUCTURES, {
+				//	filter: { structureType: STRUCTURE_STORAGE }
+				//});
+				var findStorage = unit.room.storage;
+				
+				//var init = Game.getUsedCpu();
+				
+				//Recreate paths to go to and from storage instead of spawn for builders then try to get
+				//energy from storage if its available, otherwise retrieve it from spawn.
+				//if(findStorage.length > 0 && createNewPath(unit, findStorage) == false)
+				if(findStorage != null && createNewPath(unit, findStorage) == false)
+				{
+					if(unit.pos.getRangeTo(findStorage.pos) <= 1 && 
+						findStorage.store.energy > 0 &&
+						findStorage.transferEnergy(unit) == 0)
+					{
+						unit.memory.usingSourceId = null;	//Reset, ready for new source
+						return(true);	//Don't look for anything else, we got some energy
+					}
+					else if(unit.memory.usingSourceId == null &&
+							findStorage.store.energy > 0)
+					{
+						if(findStorage.transferEnergy(unit) == 0)
+						{
+							unit.memory.usingSourceId = null;	//Reset, ready for new source
+							return(true);	//Don't look for anything else, we got some energy
+						}
+						
+						unit.moveTo(findStorage);
+						if(unit.memory.direction != null)
+						{
+							delete unit.memory.direction;
+						}
+					}
+					else if(findStorage.store.energy <= 0 &&
+							useSavedSpawn.energy > 0)
+					{
+						if(useSavedSpawn.transferEnergy(unit) == 0)
+						{
+							unit.memory.usingSourceId = null;	//Reset, ready for new source
+							return(true);	//Don't look for anything else, we got some energy
+						}
+						
+						unit.moveTo(useSavedSpawn);
+						if(unit.memory.direction != null)
+						{
+							delete unit.memory.direction;
+						}
+					}
+					else
+					{
+						followFlagForward(unit, unit.carry.energy > 0);
+					}
+				}
+				//var storageCpu = Game.getUsedCpu() - init;
+				//console.log(unit.name + ' getting energy from storage or link takes cpu: ' + storageCpu);
+			}
+			
+			if(unit.room.controller.level >= 5)	//Links are available
+			{
+				var findLinks = unit.pos.findInRange(FIND_MY_STRUCTURES, 1, {
+					filter: { structureType: STRUCTURE_LINK }
+				});
+				
+				//Transfer any links within range 1 to the builder that have energy and aren't on cooldown
+				if(findLinks.length > 0)
+				{
+					for(var i in findLinks)
+					{
+						if(findLinks[i].energy > 0 &&
+							findLinks[i].cooldown == 0 &&
+							findLinks[i].transferEnergy(unit) == 0)
+						{
+							unit.memory.usingSourceId = null;	//Reset, ready for new source
+							return(true);	//Don't look for anything else, we got some energy
+							break;
+						}
+					}
+				}
+			}
+		}
+		
 		//TO DO: When carryCapacity is greater then what the spawn holds, this won't work.
 		//As long as spawn exists, and it has energy for the builder, let him approach
 		//otherwise he crowds the spawn and stops drop-off.
@@ -143,73 +234,6 @@
 		    //return(true);
 		}
 		
-		//If it's possible for links to be in this room, look for them within reach
-		//If found, try to pull energy from them so builder can continue work.
-		//This is at the bottom so if anything is attempted before this, the builder takes from the link first
-		if(unit.room.controller != null &&
-			unit.room.controller.owner != null &&
-			unit.room.controller.owner.username == 'RaskVann' &&
-			unit.room.controller.level >= 5)	//Links are available
-		{
-			var findLinks = unit.pos.findInRange(FIND_MY_STRUCTURES, 1, {
-				filter: { structureType: STRUCTURE_LINK }
-			});
-			
-			var findStorage = unit.room.find(FIND_MY_STRUCTURES, {
-				filter: { structureType: STRUCTURE_STORAGE }
-			});
-			
-			var init = Game.getUsedCpu();
-			if(createNewPath(unit, findStorage) == false)
-			{
-				if(findStorage.length > 0)
-				{
-					if(unit.pos.getRangeTo(findStorage[0].pos) <= 1 && 
-						findStorage[0].store.energy > 0 &&
-						findStorage[0].transferEnergy(unit) == 0)
-					{
-						unit.memory.usingSourceId = null;	//Reset, ready for new source
-					}
-					else if(unit.memory.usingSourceId == null &&
-							findStorage[0].store.energy > 0)
-					{
-						unit.moveTo(findStorage[0]);
-						findStorage[0].transferEnergy(unit);
-						if(unit.memory.direction != null)
-						{
-							delete unit.memory.direction;
-						}
-					}
-					else if(findStorage[0].store.energy <= 0 &&
-							useSavedSpawn.energy > 0)
-					{
-						unit.moveTo(useSavedSpawn);
-						useSavedSpawn.transferEnergy(unit);
-						if(unit.memory.direction != null)
-						{
-							delete unit.memory.direction;
-						}
-					}
-					else
-					{
-						followFlagForward(unit, unit.carry.energy > 0);
-					}
-				}
-				else if(findLinks.length > 0)
-				{
-					for(var i in findLinks)
-					{
-						if(unit.pos.getRangeTo(findLinks[i].pos) <= 1 &&
-							findLinks[i].energy > 0 &&
-							findLinks[i].cooldown == 0 &&
-							findLinks[i].transferEnergy(unit) == 0)
-							break;
-					}
-				}
-			}
-			var storageCpu = Game.getUsedCpu() - init;
-			//console.log(unit.name + ' getting energy from storage or link takes cpu: ' + storageCpu);
-		}
 		
 		//While we're returning check for nearby energy and pick it up if found
 		var target = unit.pos.findInRange(FIND_DROPPED_ENERGY, 1);
@@ -551,7 +575,7 @@
 		if(unit.room.controller != null &&
 			unit.room.controller.owner != null &&
 			unit.room.controller.owner.username == 'RaskVann' &&
-			unit.room.controller.level >= 5 && 
+			unit.room.controller.level >= 4 && 
 			unit.room.storage != null &&
 			unit.room.storage.store.energy > 0 &&
 			unit.carry.energy/unit.carryCapacity < .2 &&
@@ -626,63 +650,6 @@
 		}
 	}
 	return(false);
- }
- 
- //Move energy around between storage, link 1 away from storage and spawn 1 away from link
- module.exports.manageEnergy = function()
- {
-	var manageEnergyInit = Game.getUsedCpu();
-	//if(manageEnergyInit < 20)
-	if(Game.time % 2 == 0)	//Do this every other tick
-	{
-		for(var owned in Game.rooms)
-		{
-			//If I own this room (at 5, links are available, at 4 storage is available)
-			if(Game.rooms[owned].controller != null &&
-				Game.rooms[owned].controller.owner != null &&
-				Game.rooms[owned].controller.owner.username == 'RaskVann' &&
-				Game.rooms[owned].controller.level >= 5)
-			{
-				var findStorage = Game.rooms[owned].find(FIND_MY_STRUCTURES, {
-					filter: { structureType: STRUCTURE_STORAGE }
-				});
-				
-				if(findStorage.length > 0)
-				{
-					var findLinks = findStorage[0].pos.findInRange(FIND_MY_STRUCTURES, 1, {
-						filter: { structureType: STRUCTURE_LINK }
-					});
-					
-					//findLinks[0] and findStorage[0] are paired to destribute energy
-					if(findLinks.length > 0 && findLinks[0].cooldown <= 0)
-					{
-						//Assuming the link is within 1 range of a spawn
-						var findSpawn = findLinks[0].pos.findInRange(FIND_MY_SPAWNS, 1);
-						
-						//If the spawn is empty, fill it with the link
-						if(findSpawn.length > 0 && findSpawn[0].energy < findSpawn[0].energyCapacity && findLinks[0].energy > 0)
-						{
-							findLinks[0].transferEnergy(findSpawn[0]);
-						}
-						//Storage can't transfer to buildings, only creeps
-						//else if(findLinks[0].energy <= 0 && findStorage[0].store.energy > 0)
-						//{
-						//	var temp = findStorage[0].transferEnergy(findLinks[0]);
-						//}
-						//If the link is full (90% or higher), place half the energy storage
-						else if(findLinks[0].energy >= findLinks[0].energyCapacity * .9)
-						{
-							findLinks[0].transferEnergy(findStorage[0], findLinks[0].energyCapacity*.5);
-						}
-					}
-				}
-			}
-		}
-		
-		var manageEnergyFinal = Game.getUsedCpu() - manageEnergyInit;
-		if(manageEnergyFinal > 5)
-			console.log('Manage Energy takes cpu: ' + manageEnergyFinal);
-	}
  }
 
  module.exports.units = function (unit, builderNumber)
