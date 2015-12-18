@@ -330,7 +330,7 @@
 		//Monitor requests where we divide or requesting units higher then we support
 		if(divideBy > 1)
 		{
-			console.log(role + ' wants ' + modEnergy + ' cost and room has capacity of ' + spawner.room.energyCapacityAvailable + ' assuming sending ' + divideBy + ' units.');
+			console.log(role + ' wants ' + modEnergy + ' cost and room has max of ' + maxEnergy + ' assuming sending ' + divideBy + ' units.');
 		}
 		
 		availableEnergy = Math.min(availableEnergy, modEnergy/divideBy);
@@ -345,7 +345,7 @@
 			if(findRoadsIn == null)
 			{
 				//Don't have access to this location or sourceId doesn't exist as an object
-				console.log(spawner.name + ' no id, spawn expensive gather, wants ' + availableEnergy + '/' + modEnergy + ' in ' + spawner.room.name + ' for ' + unitName);
+				console.log(spawner.name + ' no id for: ' + Memory.creeps[unitName].usingSourceId + ' found ' + findRoadsIn + ', spawn expensive gather, wants ' + availableEnergy + '/' + modEnergy + ' in ' + spawner.room.name + ' for ' + unitName);
 				newBody = upgradeBodyWithin(spawner.room.energyAvailable, availableEnergy, gatherBody);
 				return(newBody);
 			}
@@ -1196,6 +1196,10 @@
 				//		that you don't over spawn units with this function.
 				//Nothing else is as time intensive as these, expand if necessary
 			}
+		}
+		else if(returnRole == 'gather' || returnRole == 'worker' || returnRole == null) 
+		{
+			console.log(unit.name + ' needs replacement but cant find name: ' + replaceWithName + ' role: ' + returnRole + ' or body: ' + returnBody + ' to replace him in ' + unit.ticksToLive + ' ticks.');
 		}
 	}
 	return(false);

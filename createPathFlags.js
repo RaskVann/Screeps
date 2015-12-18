@@ -11,44 +11,44 @@
  //Checks the direction of unit to see if it's moving towards the scout. If the scout is in the way
  //it is sent a move command to move towards the unit so they can move through one another and return true
  //otherwise nothing happens and returns false.
- function creepDirectionBlocked(unit)
+ function creepDirectionBlocked(unit, unitDirection)
  {
-    if(unit != null && unit.memory.direction != null)
+    if(unit != null && unitDirection != null)
     {
         var posX = unit.pos.x;
         var posY = unit.pos.y;
-        if(unit.memory.direction == TOP)
+        if(unitDirection == TOP)
         {
             posY--;
         }
-        else if(unit.memory.direction == TOP_RIGHT)
+        else if(unitDirection == TOP_RIGHT)
         {
             posX++;
             posY--;
         }
-        else if(unit.memory.direction == RIGHT)
+        else if(unitDirection == RIGHT)
         {
             posX++;
         }
-        else if(unit.memory.direction == BOTTOM_RIGHT)
+        else if(unitDirection == BOTTOM_RIGHT)
         {
             posX++;
             posY++;
         }
-        else if(unit.memory.direction == BOTTOM)
+        else if(unitDirection == BOTTOM)
         {
             posY++;
         }
-        else if(unit.memory.direction == BOTTOM_LEFT)
+        else if(unitDirection == BOTTOM_LEFT)
         {
             posX--;
             posY++;
         }
-        else if(unit.memory.direction == LEFT)
+        else if(unitDirection == LEFT)
         {
             posX--;
         }
-        else if(unit.memory.direction == TOP_LEFT)
+        else if(unitDirection == TOP_LEFT)
         {
             posX--;
             posY--;
@@ -110,9 +110,10 @@
 		//console.log('dir: ' + groupedFlags[currentFlag]);
 		if(groupedFlags[currentFlag].name.startsWith('dir'))
 		{
-			if(groupedFlags[currentFlag].memory.usingDestinationId != null && findSourceId != null)
+			var usingDestinationId = groupedFlags[currentFlag].memory.usingDestinationId;
+			if(usingDestinationId != null && findSourceId != null)
 			{
-				if(groupedFlags[currentFlag].memory.usingDestinationId != findSourceId)
+				if(usingDestinationId != findSourceId)
 				{
 					//If usingDestinationId is populated, and it doesn't match the Id we're using, ignore it. If there
 					//is a diverging path, mark it with the matching ID. Anything that doesn't match will continue on
@@ -149,19 +150,17 @@
 	{
 		//TO DO: Replace with only look at flags within range X if faster. (unit.pos.findInRange(FIND_FLAGS, range)), both listed as 'average'
 		var flagsInRoom = unit.room.find(FIND_FLAGS);
-		if(findSourceId != null && flagsInRoom.length)
+		for(var currentFlag in flagsInRoom)
 		{
-			for(var currentFlag in flagsInRoom)
+			var usingDesintationId = flagsInRoom[currentFlag].memory.usingDestinationId;
+			//Go through all flags in this room, find one that matches destinationId with
+			//units sourceId, also skip over these flags if there is already a creep on it.
+			if(usingDesintationId != null &&
+				usingDesintationId == findSourceId &&
+				flagsInRoom[currentFlag].pos.lookFor('creep').length == 0)
 			{
-				//Go through all flags in this room, find one that matches destinationId with
-				//units sourceId, also skip over these flags if there is already a creep on it.
-				if(flagsInRoom[currentFlag].memory.usingDestinationId != null &&
-					flagsInRoom[currentFlag].memory.usingDestinationId == findSourceId &&
-					flagsInRoom[currentFlag].pos.lookFor('creep').length == 0)
-				{
-					//console.log(unit.name + ' found flag ' + flagsInRoom[currentFlag]);
-					return(flagsInRoom[currentFlag]);
-				}
+				//console.log(unit.name + ' found flag ' + flagsInRoom[currentFlag]);
+				return(flagsInRoom[currentFlag]);
 			}
 		}
 		//console.log(unit.name + ' in room ' + unit.room.name + ' found no flag matching: ' + findSourceId);
@@ -181,12 +180,16 @@
  function copyPathLength(unit, foundFlag)
  {
 	if(unit != null && foundFlag != null &&
-		foundFlag.memory.usingDestinationId == unit.memory.usingSourceId &&
-		foundFlag.memory.pathLength != null && 
-		(unit.memory.pathLength == null || foundFlag.memory.pathLength > unit.memory.pathLength))
+		foundFlag.memory.usingDestinationId == unit.memory.usingSourceId)
 	{
-		unit.memory.pathLength = foundFlag.memory.pathLength;
-		return(unit.memory.pathLength);
+		var flagPathLength = foundFlag.memory.pathLength;
+		var unitPathLength = unit.memory.pathLength;
+		if(flagPathLength != null && 
+		(unitPathLength == null || flagPathLength > unitPathLength))
+		{
+			unit.memory.pathLength = flagPathLength;
+			return(flagPathLength);
+		}
 	}
 	else
 	{
@@ -228,14 +231,15 @@
 
  function followPathToFlags(unit, forward)
  {
-	if(unit.memory.usingSourceId == null)
+	var unitUsingSourceId = unit.memory.usingSourceId;
+	if(unitUsingSourceId == null)
 	{
 		//console.log(unit.name + ' does not have a usingSourceId, needs to be assigned before following/creating path.');
 		return(false);
 	}
 
-	//var foundFlag = findFlagAtUnit(unit, unit.memory.usingSourceId)
-	if(unit.memory.direction != null)// || foundFlag != null)
+	var unitDirection = unit.memory.direction;
+	if(unitDirection != null)
 	{
 		//I assumed when creating the direction system that when the unit was created
 		//it'd go to the origin of the path before getting a direction, it will go in
@@ -243,75 +247,80 @@
 		if(unit.spawning)
 		{
 			delete unit.memory.direction;
+			return(false);	//Unit can't do anything, it's spawning
 			//console.log('look at unit: ' + unit.name + ' remove the direction');
 		}
 		
-	    var foundFlag = findFlagAtUnit(unit, unit.memory.usingSourceId);
+	    var foundFlag = findFlagAtUnit(unit, unitUsingSourceId);
 		if(foundFlag != null)
 		{
 			if(forward == false && foundFlag.memory.returnDirection != null)
 			{
+				unitDirection = foundFlag.memory.returnDirection;
 				//console.log(unit.name + ' dir: ' + foundFlag.memory.returnDirection);
-				unit.memory.direction = foundFlag.memory.returnDirection;
+				unit.memory.direction = unitDirection;
 				copyPathLength(unit, foundFlag);
 			}
 			else
 			{
+				unitDirection = foundFlag.memory.direction;
 				//console.log(unit.name + ' dir: ' + foundFlag.memory.direction);
-			    unit.memory.direction = foundFlag.memory.direction;
+			    unit.memory.direction = unitDirection;
 				copyPathLength(unit, foundFlag);
 			}
 		}
 		//Moves, unless running into walls or moving off screen
-		if(disableMovementEdgeOfMap(unit.pos, unit.memory.direction) == false &&
-			creepDirectionBlocked(unit) == false)
+		if(disableMovementEdgeOfMap(unit.pos, unitDirection) == false &&
+			creepDirectionBlocked(unit, unitDirection) == false)
 		{
-			unit.move(unit.memory.direction);
+			unit.move(unitDirection);
 		}
 		//console.log(unit.name + ' dir: ' + unit.memory.direction);
 		return(true);
 	}
 	//Can't find/follow the flags, go to the beginning of one we need and failing
 	//that create a path with the information we have.
-	return(findPathToFlags(unit, forward));
+	return(findPathToFlags(unit, forward, unitUsingSourceId));
  }
 
  //Tries to find a path that matches the SourceId the unit has. If none are in the
- //flags present, create a path to the location using the pathTo already created
- function findPathToFlags(unit, forward)
+ //flags present, create a path to the location using the pathTo already created (pathTo deprecated)
+ function findPathToFlags(unit, forward, unitUsingSourceId)
  {
-	var findFlag = findFlagInRoom(unit, unit.memory.usingSourceId);
+	var findFlag = findFlagInRoom(unit, unitUsingSourceId);
 	if(findFlag != null)
 	{
+		var returnDirection = findFlag.memory.returnDirection;
+		var forwardDirection = findFlag.memory.direction;
 		//console.log(unit.name + ' found flag ' + findFlag + ' and attempting to move to it.');
 		if(unit.pos.isEqualTo(findFlag.pos) == false)
 		{
 			if(unit.moveTo(findFlag) == 0)
 				return(true);
 		}
-		else if(forward == false && findFlag.memory.returnDirection != null)
+		else if(forward == false && returnDirection != null)
 		{
 			//console.log(unit.name + ' moves backward dir: ' + findFlag.memory.returnDirection);
-			unit.memory.direction = findFlag.memory.returnDirection;
+			unit.memory.direction = returnDirection;
 			copyPathLength(unit, findFlag);
-			unit.move(unit.memory.direction);
+			unit.move(returnDirection);
 			return(true);
 		}
-		else if(forward == true && findFlag.memory.direction != null)
+		else if(forward == true && forwardDirection != null)
 		{
 			//console.log(unit.name + ' moves forward dir: ' + findFlag.memory.direction);
-			unit.memory.direction = findFlag.memory.direction;
+			unit.memory.direction = forwardDirection;
 			copyPathLength(unit, findFlag);
-			unit.move(unit.memory.direction);
+			unit.move(forwardDirection);
 			return(true);
 		}
 		//If trying to return on the path and we're at a 'endOfPath' flag, use the
 		//.direction move, since it's the only valid direction
-		else if(forward == false && findFlag.memory.returnDirection == null)
+		else if(forward == false && returnDirection == null)
 		{
-			unit.memory.direction = findFlag.memory.direction;
+			unit.memory.direction = forwardDirection;
 			copyPathLength(unit, findFlag);
-			unit.move(unit.memory.direction);
+			unit.move(forwardDirection);
 			return(true);
 		}
 		return(false);
@@ -319,15 +328,11 @@
 	
 	var newPath;
 	var startPos;
-	if(unit.memory.pathTo != null)
-	{
-		newPath = unit.memory.pathTo;
-	}
-	else if(unit.memory.usingSourceId != null)
+	if(unitUsingSourceId != null)
 	{
 		spawnFrom = findSpawn(unit);
 		//If unit is in the same room as the spawner, create the beggining at the spawner going to the sourceId found
-		var sourcePos = Game.getObjectById(unit.memory.usingSourceId);
+		var sourcePos = Game.getObjectById(unitUsingSourceId);
 		//If unit is in the same room as the source, which is the same room as the spawn, path from spawn
 		if(sourcePos != null && unit.room.name == sourcePos.room.name && spawnFrom != null && spawnFrom.room.name == sourcePos.room.name)
 		{
@@ -353,7 +358,7 @@
 		return(false);
 	}
 	//If can't find a valid flag to go to, create one to match the SourceId
-	return(createPathToFlags(unit.room, newPath, unit.memory.usingSourceId, true, startPos));
+	return(createPathToFlags(unit.room, newPath, unitUsingSourceId, true, startPos));
  }
 
  //Has problems related to TODO in createPathFlags()

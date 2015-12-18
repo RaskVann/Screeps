@@ -787,10 +787,11 @@
  function fillUpRoomWithEnergy(unit, returnResources)
  {
 	var transferEnergyReturn = unit.transferEnergy(returnResources);
+	var unitDirection = unit.memory.direction;
 
 	//If make it back to the drop off and its full go and fill up a extension instead, delete the direction so when it finishes
 	//the drop off it finds the start of the path again and resumes the path.
-	if(unit.carry.energy > 0 && (transferEnergyReturn == ERR_FULL || unit.memory.direction == null))
+	if(unit.carry.energy > 0 && (transferEnergyReturn == ERR_FULL || unitDirection == null))
 	{
 		//var cpu2 = Game.getUsedCpu();
 		var transferExtension = unit.pos.findClosestByRange(FIND_MY_STRUCTURES, {
@@ -810,7 +811,7 @@
 
 			if(transferRange > 1)
 			{
-				if(unit.memory.direction != null)
+				if(unitDirection != null)
 				{
 					//If you find a extension that needs energy, move to it. This takes you off the route the gatherer
 					//was on, so delete the direction now so it will search for the beginning of the route afterwards.
@@ -851,7 +852,7 @@
 				unit.moveByPath(unit.pos.findPathTo(transferStorage), {maxOps: 100});//, ignoreCreeps: false
 				var transferCode = unit.transferEnergy(transferStorage);
 				
-				if(unit.memory.direction != null)
+				if(unitDirection != null)
 					delete unit.memory.direction;
 			}
 			else	//If room is full and no storage found, send back to retrieve what energy they can, until full.
@@ -906,10 +907,12 @@
  function gatherFrom(unit)
  {
     var returnResources = findSpawn(unit);
+	var unitEnergy = unit.carry.energy;
+	var unitEnergyCapacity = unit.carryCapacity;
 	//Going to try to grab any energy the unit can and immediately try a drop off instead of waiting for it to fill up
 	//since it seems like all energy sits in the gatherers if I wait until they are full.
     //if(unit.carry.energy < unit.carryCapacity)
-	if(unit.carry.energy == 0 && returnResources != null)
+	if(unitEnergy == 0 && returnResources != null)
     {
         var activeSource;
 		if(unit.memory.usingSourceId != null)
@@ -937,14 +940,14 @@
 		}
 
 		findRoadOrCreate(unit);
-		followFlagForward(unit, unit.carry.energy < unit.carryCapacity);
+		followFlagForward(unit, unitEnergy < unitEnergyCapacity);
     }
     else if(returnResources != null)
     {
         fillUpRoomWithEnergy(unit, returnResources);
     }
     
-    if(unit.carry.energy < unit.carryCapacity)
+    if(unitEnergy < unitEnergyCapacity)
     {
         var target = unit.pos.findInRange(FIND_DROPPED_ENERGY, 1);
         if(target.length > 0)

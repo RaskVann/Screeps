@@ -1080,50 +1080,51 @@
  //otherwise nothing happens and returns false.
  function creepDirectionTowards(unit, scout)
  {
-    if(unit != null && unit.memory.direction != null && scout != null)
+	var direction = unit.memory.direction;
+    if(unit != null && direction != null && scout != null)
     {
         var posX = unit.pos.x;
         var posY = unit.pos.y;
 		var directionTowards;
-        if(unit.memory.direction == TOP)
+        if(direction == TOP)
         {
             posY--;
 			directionTowards = BOTTOM;
         }
-        else if(unit.memory.direction == TOP_RIGHT)
+        else if(direction == TOP_RIGHT)
         {
             posX++;
             posY--;
 			directionTowards = BOTTOM_LEFT;
         }
-        else if(unit.memory.direction == RIGHT)
+        else if(direction == RIGHT)
         {
             posX++;
 			directionTowards = LEFT;
         }
-        else if(unit.memory.direction == BOTTOM_RIGHT)
+        else if(direction == BOTTOM_RIGHT)
         {
             posX++;
             posY++;
 			directionTowards = TOP_LEFT;
         }
-        else if(unit.memory.direction == BOTTOM)
+        else if(direction == BOTTOM)
         {
             posY++;
 			directionTowards = TOP;
         }
-        else if(unit.memory.direction == BOTTOM_LEFT)
+        else if(direction == BOTTOM_LEFT)
         {
             posX--;
             posY++;
 			directionTowards = TOP_RIGHT;
         }
-        else if(unit.memory.direction == LEFT)
+        else if(direction == LEFT)
         {
             posX--;
 			directionTowards = RIGHT;
         }
-        else if(unit.memory.direction == TOP_LEFT)
+        else if(direction == TOP_LEFT)
         {
             posX--;
             posY--;
@@ -1247,27 +1248,30 @@
 	var currentRoom = unit.room;
 	var useSpawn = getSpawnId(unit);
 	var scoutsInAllPreviousRooms = scoutsInEachRoom(unit);
+	var roomNameMem = unit.memory.roomName;
+	var usingSourceId = unit.memory.usingSourceId;
 
 	var searchRoom = Game.getUsedCpu() - initialize - scoutInit;
 	//When entering a new room and if the room is the room we intended and there are scouts
 	//in all previous rooms for us to send information to.
 	//TO DO: Potentially reach a state in that roomName is changed but the path isn't created. May want to check
 	//		if the flag isn't found and create a path independent of entering a new room.
-	if(((unit.memory.roomName != unit.room.name) || (unit.memory.roomName == null || unit.memory.roomName == 'changeRouteFromDeadEnd')) && 
-		(unit.room.name == unit.memory.usingSourceId || (unit.memory.usingSourceId == null || unit.memory.usingSourceId == 'changeRouteFromDeadEnd')) && 
+	if(((roomNameMem != unit.room.name) || (roomNameMem == null || roomNameMem == 'changeRouteFromDeadEnd')) && 
+		(unit.room.name == usingSourceId || (usingSourceId == null || usingSourceId == 'changeRouteFromDeadEnd')) && 
 		scoutsInAllPreviousRooms)// && 
 		//((Game.getUsedCpu() < 10 && scoutsSeen == 0) || scoutsSeen != 0) )
 	{
 		//Visited all exits from this room, we need to find another room, hopefully down this path
 		//and go to that room to continue exploring
-		if(unit.memory.roomName != null)
+		if(roomNameMem != null)
 		{
 			//Look for scouts here when regressively creating paths
 			//By design is empty when in first room (mine) as it's checked for to trigger effects later
-			unit.memory.previousRoom = unit.memory.roomName;
+			unit.memory.previousRoom = roomNameMem;
 		}
+		roomNameMem = unit.room.name;
 		unit.memory.startPos = unit.pos;
-		unit.memory.roomName = unit.room.name;
+		unit.memory.roomName = roomNameMem;
 		
 		var scoutNewRoomInit = Game.getUsedCpu() - initialize - scoutInit - searchRoom;
 		//This will mess up if the scout bounces back and forth between rooms for any length of time
@@ -1275,7 +1279,7 @@
 		{
 			//Find and assign how many exits are in this room
 			currentRoom.memory.exitsVisited = 0;
-			var roomExits = Game.map.describeExits(unit.room.name);
+			var roomExits = Game.map.describeExits(currentRoom.name);
 			var countExits = 0;
 			for(var i in roomExits)
 			{
@@ -1345,7 +1349,7 @@
 			var foundFlag = followFlagForward.findFlag(unit, newExit)
 			if(newExit == null)
 			{
-				console.log('Cant find exit: ' + newExit + ', or flag: ' + foundFlag + ', or spawn: ' + useSpawn + ', for scout: ' + unit.name + ', in room: ' + unit.room.name);
+				console.log('Cant find exit: ' + newExit + ', or flag: ' + foundFlag + ', or spawn: ' + useSpawn + ', for scout: ' + unit.name + ', in room: ' + currentRoom.name);
 				//TO DO: Suicide point for scout?
 				//var report = removeScout(unit);
 				//return(report);
@@ -1354,6 +1358,7 @@
 			{
 				//console.log(unit.name + ' found flag with path: ' + newExit + ' move to this flag and follow it.');
 				//Found a existing flag for this path, follow it instead of creating a new one.
+				usingSourceId = newExit;
 				unit.memory.usingSourceId = newExit;
 				//This flag may have more up to date information then what we have saved, save it before updating in the next function
 				unit.memory.pathLength = foundFlag.memory.pathLength;
@@ -1369,7 +1374,7 @@
 				if(currentRoom.controller != null && currentRoom.controller.owner != null && 
 					currentRoom.controller.owner.username != 'RaskVann')
 				{
-					console.log(unit.name + ' entered ' + unit.room.name + ' of user: ' + currentRoom.controller.owner.username + ' aborting scout.');
+					console.log(unit.name + ' entered ' + currentRoom.name + ' of user: ' + currentRoom.controller.owner.username + ' aborting scout.');
 					useSpawn.memory.requestScout = 1;
 					var report = removeScout(unit);
 					return(report);
@@ -1390,6 +1395,7 @@
 					}
 					
 					updateDistanceMoved(unit);
+					usingSourceId = newExit;
 					unit.memory.usingSourceId = newExit;
 					delete unit.memory.direction;	//Attach self to new route
 					
@@ -1397,17 +1403,24 @@
 					{
 						for(var nextScout = scoutFromRoomName(unit.memory.previousRoom); nextScout != null; nextScout = scoutFromRoomName(nextScout.memory.previousRoom))
 						{
-							console.log(unit.name + ' creating path in room ' + unit.room.name + '. ' + nextScout + ' now creating ' + newExit + ' in ' + nextScout.room);
+							console.log(unit.name + ' creating path in room ' + currentRoom.name + '. ' + nextScout + ' now creating ' + newExit + ' in ' + nextScout.room);
 							//TO DO: Should be able to append information or place new flags onto all places in this room where 
 							//		nextScout.memory.usingSourceId is found on flags since a route was previously laid out.
 							//nextSourceId = createPathToExit(nextScout, nextScout.room, newExit);
 							storeRoute(nextScout, newExit, false, true);
 						}
-						console.log(unit.name + ' creating path in room ' + unit.room.name);
+						console.log(unit.name + ' creating path in room ' + currentRoom.name);
+					}
+					else if(currentRoom.controller != null &&
+							currentRoom.controller.owner != null && 
+							currentRoom.controller.owner.username == 'RaskVann')
+					{
+						//This is a potential home so it's fine if there is no previousRoom, another way is to check spawnId.room.name == currentRoom.name but
+						//that's a lot of cpu for this checker code.
 					}
 					else
 					{
-						console.log(unit.name + ' was going to create a new path but no found previousRoom. If ' + unit.room.name + ' is home? then fine');
+						console.log(unit.name + ' was going to create a new path but no found previousRoom. If ' + currentRoom.name + ' is home? then fine');
 					}
 					
 					//TO DO: New code for 'we are creating paths'?
@@ -1420,8 +1433,8 @@
 	//found that there isn't scouts in all the rooms we need, the spawn isn't spawning 
 	//anything (not needed, but this ensures it will react within 1 tick), and there 
 	//isn't a scout in the spawn room, spawn a scout
-	else if(unit.memory.roomName != unit.room.name && 
-			(unit.room.name == unit.memory.usingSourceId || unit.memory.usingSourceId == null) && 
+	else if(roomNameMem != currentRoom.name && 
+			(currentRoom.name == usingSourceId || usingSourceId == null) && 
 			scoutsInAllPreviousRooms == false && useSpawn != null && useSpawn.spawning == null && 
 			scoutFromRoomName(useSpawn.room.name) == null)
 	{
@@ -1505,15 +1518,15 @@
 						{
 							//TO DO: Should be able to append information or place new flags onto all places in this room where 
 							//		nextScout.memory.usingSourceId is found on flags since a route was previously laid out.
-							console.log(unit.name + ' creating path in room ' + unit.room.name + '. ' + nextScout + ' now creating ' + newExit + ' in ' + nextScout.room);
+							console.log(unit.name + ' creating path in room ' + currentRoom.name + '. ' + nextScout + ' now creating ' + newExit + ' in ' + nextScout.room);
 							//nextSourceId = createPathToExit(nextScout, nextScout.room, sources[x].id);
 							storeRoute(nextScout, sources[x].id, false, false);
 						}
-						console.log(unit.name + ' creating path in room ' + unit.room.name);
+						console.log(unit.name + ' creating path in room ' + currentRoom.name);
 					}
 					else
 					{
-						//console.log(unit.name + ' was going to create a new path but no found previousRoom. If ' + unit.room.name + ' is home? then fine');
+						//console.log(unit.name + ' was going to create a new path but no found previousRoom. If ' + currentRoom.name + ' is home? then fine');
 					}
 					
 					return('travel');	//Creating path, may want another code
@@ -1562,38 +1575,47 @@
 	else if(currentRoom.controller == null)
 	{		//Is evaluated once when a 'no controller' room is entered and defines the threat value and again in the next tick
 			//to find if there is a source defined and populates that if needed (more CPU effective this way)
-		var bank = unit.room.find(STRUCTURE_POWER_BANK);
+		var bank = currentRoom.find(STRUCTURE_POWER_BANK);
 		//If less then 1500 we're deeming this impossible to gather
-		if(bank.length > 0 && (bank[0].ticksToDecay > 1500 || bank[0].hits < bank[0].hitsMax))
+		if(bank.length > 0 && (bank[0].ticksToDecay > 2000 || bank[0].hits < bank[0].hitsMax))
 		{
 			console.log('Found Power Bank ' + bank[0] + ' in ' + bank[0].room + ' power: ' + bank[0].power + ' (' + bank[0].hits + '/' + bank[0].hitsMax + ')');
-			
-			//Can get how long until death by deathTime-Game.time. If negative, already dead
-			var timeTillDeath = bank[0].ticksToDecay + Game.time;
-			var healthRatio = bank[0].hits / bank[0].hitsMax;
-			
-			//When these entries are found, spawn 2 power, 2 heal and send them to the roomName, when they have identical room names, go to id
-			unit.room.memory.bank = { id: bank[0].id, power: bank[0].power, deathTime: timeTillDeath, roomName: bank[0].room.name, health: healthRatio };
-			//unit.room.memory.bank = [ id: bank[0].id, power: bank[0].power, deathTime: timeTillDeath, roomName: bank[0].room.name, health: healthRatio ];
-			//unit.room.memory.bank = [ { id: bank[0].id, power: bank[0].power, deathTime: timeTillDeath, roomName: bank[0].room.name, health: healthRatio } ];
-			
-			//If the controller advanced to level 8. See if we can spawn 
-			if(useSpawn.room.controller != null &&
-				useSpawn.room.controller.owner != null &&
-				useSpawn.room.controller.owner.username == 'RaskVann' &&
-				useSpawn.room.controller.level >= 8)
+			if(currentRoom.memory.bank == null || (currentRoom.memory.bank != null && currentRoom.memory.bank.id != bank[0].id))
 			{
-				var role = 'attackPower';
-				var memoryForTempUnit = {'role': role, 'usingSourceId': currentRoom.name, 'spawnID': useSpawn.id, 'bankId': bank[0].id};
-				//We need 3 attackPower units for each bank (at 2M hit points)
-				spawnTempUnit(role, useSpawn, memoryForTempUnit);
-				spawnTempUnit(role, useSpawn, memoryForTempUnit);
-				spawnTempUnit(role, useSpawn, memoryForTempUnit);
+				if(currentRoom.memory.bank != null)
+					console.log(unit.name + ' found bank ' + bank[0].id + ' match memory: ' + currentRoom.memory.bank.id + '<- shouldnt be null');
+				
+				//Can get how long until death by deathTime-Game.time. If negative, already dead
+				var timeTillDeath = bank[0].ticksToDecay + Game.time;
+				var healthRatio = bank[0].hits / bank[0].hitsMax;
+				
+				//When these entries are found, spawn 2 power, 2 heal and send them to the roomName, when they have identical room names, go to id
+				currentRoom.memory.bank = { id: bank[0].id, power: bank[0].power, deathTime: timeTillDeath, roomName: bank[0].room.name, health: healthRatio };
+				//currentRoom.memory.bank = [ id: bank[0].id, power: bank[0].power, deathTime: timeTillDeath, roomName: bank[0].room.name, health: healthRatio ];
+				//currentRoom.memory.bank = [ { id: bank[0].id, power: bank[0].power, deathTime: timeTillDeath, roomName: bank[0].room.name, health: healthRatio } ];
+				
+				//If the controller advanced to level 8. See if we can spawn 
+				if(useSpawn.room.controller != null &&
+					useSpawn.room.controller.owner != null &&
+					useSpawn.room.controller.owner.username == 'RaskVann' &&
+					useSpawn.room.controller.level >= 8)
+				{
+					var role = 'attackPower';
+					var memoryForTempUnit = {'role': role, 'usingSourceId': currentRoom.name, 'spawnID': useSpawn.id, 'bankId': bank[0].id};
+					//We need 3 attackPower units for each bank (at 2M hit points)
+					spawnTempUnit(role, useSpawn, memoryForTempUnit);
+					spawnTempUnit(role, useSpawn, memoryForTempUnit);
+					spawnTempUnit(role, useSpawn, memoryForTempUnit);
+				}
+			}
+			else
+			{
+				console.log(unit.name + ' found bank but had matching id ' + currentRoom.memory.bank.id + ' skipping logic for spawn powerSpawn');
 			}
 		}
-		else if(unit.room.memory.bank != null)	//bank exists and no bank found
+		else if(currentRoom.memory.bank != null)	//bank exists and no bank found
 		{
-			delete unit.room.memory.bank;
+			delete currentRoom.memory.bank;
 		}
 		
 		if(currentRoom.memory.sources == null)
@@ -1615,8 +1637,8 @@
 					Game.notify('Scout-Room: ' + currentRoom.name + ' AI Room with sources: ' + sources.length, 10);
 					currentRoom.memory.sources = sources.length;
 					
-					//var threat = evaluateThreat(unit.room);
-					//unit.room.memory.threat = threat;
+					//var threat = evaluateThreat(currentRoom);
+					//currentRoom.memory.threat = threat;
 					//if(threat > 4)	//Enemy units with attacking body found, we could try to outrun them but we'll skip to the next scout instead
 					//{
 						//var report = removeScout(unit);
@@ -1625,14 +1647,14 @@
 				}
 				else
 				{
-					console.log(unit.name + ' no sources found in ' + unit.room.name);
+					console.log(unit.name + ' no sources found in ' + currentRoom.name);
 					currentRoom.memory.sources = 0;
 				}
 			}
 		}
 		else
 		{
-			//console.log(unit.name + ' already recorded sources in room ' + unit.room.name + ' skipping logic to assign this.');
+			//console.log(unit.name + ' already recorded sources in room ' + currentRoom.name + ' skipping logic to assign this.');
 			//TO DO: Save this room, when have plenty of resources continually send attackers to this room until can explore past it.
 		}
 	}
@@ -1670,10 +1692,10 @@
 		if(unit.memory.startPos != null)
 		{
 			//If startPos hasn't been updated yet, use the current pos just so other units can pass through.
-			if(unit.memory.startPos.roomName != unit.room.name)
+			if(unit.memory.startPos.roomName != currentRoom.name)
 			{
 				//Note: This will invalidate the given startPos, when it appears
-				rangePosition = new RoomPosition(unit.pos.x, unit.pos.y, unit.room.roomName);
+				rangePosition = new RoomPosition(unit.pos.x, unit.pos.y, currentRoom.roomName);
 			}
 			else
 			{
@@ -1737,17 +1759,20 @@
  ////This isn't used anywhere but followFlagForward but it was so unweildly I seperated into its own function
  function canScoutMove(unit, useSpawn, scoutsSeen)
  {
+	var unitRoomName = unit.memory.roomName;
 	var edgeOfMap = (1 > unit.pos.x || unit.pos.x > 48 || 1 > unit.pos.y || unit.pos.y > 48);
 	var harvestEmptyAndRoomUpdated = (harvestEmpty(useSpawn) && 
-									unit.memory.roomName != null && unit.memory.roomName == unit.room.name);
+									unitRoomName != null && unitRoomName == unit.room.name);
 	var nextRoomMove;
+	var scoutsAlive = useSpawn.memory.scoutsAlive;
+	var roomsMoved = unit.memory.roomsMoved;
 	if(scoutsSeen == 0)	//If the leader
 	{
-		nextRoomMove = useSpawn.memory.scoutsAlive != null && unit.memory.roomsMoved != null && (useSpawn.memory.scoutsAlive-unit.memory.roomsMoved > scoutsSeen);
+		nextRoomMove = scoutsAlive != null && roomsMoved != null && (scoutsAlive-roomsMoved > scoutsSeen);
 	}
 	else
 	{
-		nextRoomMove = useSpawn.memory.scoutsAlive != null && unit.memory.roomsMoved != null && (useSpawn.memory.scoutsAlive-unit.memory.roomsMoved > scoutsSeen+1);
+		nextRoomMove = scoutsAlive != null && roomsMoved != null && (scoutsAlive-roomsMoved > scoutsSeen+1);
 	}
 	//console.log(unit.name + '[' + scoutsSeen + '] harvest: ' + harvestEmptyAndRoomUpdated + ' nextRoom: ' + nextRoomMove);
 	return(edgeOfMap || (harvestEmptyAndRoomUpdated && nextRoomMove));
