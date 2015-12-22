@@ -438,7 +438,7 @@
     }
 	else if(role == 'scout')
 	{
-		newBody = upgradeBody(availableEnergy, scoutBody);
+		//newBody = upgradeBody(availableEnergy, scoutBody);
 	}
 	else if(role == 'healPower')
 	{

@@ -719,9 +719,12 @@
 	//TODO:	12 threat enemy attacking body >= 20, grows during watch
 	var targetCreep = currentRoom.find(FIND_HOSTILE_CREEPS, {
 		filter: function(object) {
-			return(object.getActiveBodyparts(ATTACK) > 0 || object.getActiveBodyparts(RANGED_ATTACK) > 0 || object.getActiveBodyparts(HEAL) > 0);
+			return((object.getActiveBodyparts(ATTACK) > 0 || object.getActiveBodyparts(RANGED_ATTACK) > 0 || object.getActiveBodyparts(HEAL) > 0) &&
+					object.owner.username != 'Source Keeper');
 		}
 	});
+	//TO DO: When we attack source keeper later, this will be a problem. we're leaving him out because
+	//observer keeps reporting his creeps/rooms
 	if(targetCreep != null && targetCreep.length > 0)
 	{
 		var totalHostileBody = 0;
@@ -2428,19 +2431,21 @@
 		northSouth = nextRoomName.indexOf("S");
 	}
 	var eastWestLetter = nextRoomName.substring(0, 1);
-	var eastWestNum = nextRoomName.substring(1, northSouth);
+	var eastWestNum = (nextRoomName.substring(1, northSouth))*1;
 	var northSouthLetter = nextRoomName.substring(northSouth, northSouth+1);
-	var northSouthNum = nextRoomName.substring(northSouth+1);
+	var northSouthNum = (nextRoomName.substring(northSouth+1))*1;
 	
-	console.log(eastWestLetter + '-' + eastWestNum + '-' + northSouthLetter + '-' + northSouthNum);
+	//console.log(eastWestLetter + '-' + eastWestNum + '-' + northSouthLetter + '-' + northSouthNum);
 	
 	//All rooms within range 5 are accessible (11x11 grid) = 121 rooms
 	//6th row, 6th column is the starting room (5*11+6) = Room 61
 	var roomRow = Math.floor(1.0*accessRoom/observerLength);
 	var columnRow = accessRoom - (roomRow*observerLength);
 	//The numbers we retrieve below need to move by the mod amount
-	var modRowFromStart = roomRow - (observerRange+1);
-	var modColumnFromStart = columnRow - (observerRange+1);
+	var modRowFromStart = roomRow - (observerRange);
+	var modColumnFromStart = columnRow - (observerRange);
+	
+	//console.log(accessRoom + ' Add to row: ' + modRowFromStart + ' add to column ' + modColumnFromStart);
 	
 	//Modify the Num values by the mod values we just found
 	eastWestNum += modRowFromStart;
@@ -2478,7 +2483,7 @@
 		northSouthNum = Math.abs(northSouthNum)-1;
 	}
 	
-	console.log('After modding, looking at:' + eastWestLetter + '-' + eastWestNum + '-' + northSouthLetter + '-' + northSouthNum);
+	//console.log('After modding, looking at:' + eastWestLetter + '-' + eastWestNum + '-' + northSouthLetter + '-' + northSouthNum);
 	return(eastWestLetter + eastWestNum + northSouthLetter + northSouthNum);
  }
  
@@ -2493,11 +2498,10 @@ module.exports.observe = function(nextRoom)
 		
 		if(observers.length > 0)
 		{
-			console.log(Memory.rooms.length + ' length of rooms stored in memory? If can get this, only run when have less then observerSize entries');
 			var observer = observers[0];
 			var observerRange = 5;
 			var observerLength = observerRange*2 + 1;
-			var observerSize = observerLength*2;
+			var observerSize = Math.pow(observerLength, 2);
 			
 			var accessRoom = Game.time % observerSize;
 			var previousRoom = accessRoom-1;
@@ -2531,16 +2535,16 @@ module.exports.observe = function(nextRoom)
 				
 				//Store owner of room and notify of changes in ownership
 				if(analyzeRoomObject.controller != null && analyzeRoomObject.controller.owner != null &&
-					analyzeRoomObject.controller.controller.owner != "RaskVann")
+					analyzeRoomObject.controller.owner != "RaskVann")
 				{
 					if(Memory.rooms[analyzeRoom] == null)
 					{
-						Memory.rooms[analyzeRoom] = { owner: analyzeRoomObject.controller.controller.owner };
+						Memory.rooms[analyzeRoom] = { owner: analyzeRoomObject.controller.owner };
 					}
-					else if(Memory.rooms[analyzeRoom].owner != analyzeRoomObject.controller.controller.owner)
+					else if(Memory.rooms[analyzeRoom].owner != analyzeRoomObject.controller.owner)
 					{
-						Game.notify('Room: ' + analyzeRoom + ' used to have owner ' + Memory.rooms[analyzeRoom].owner + ' now has owner ' + analyzeRoomObject.controller.controller.owner, 720);
-						Memory.rooms[analyzeRoom].owner = analyzeRoomObject.controller.controller.owner;
+						Game.notify('Room: ' + analyzeRoom + ' used to have owner ' + Memory.rooms[analyzeRoom].owner + ' now has owner ' + analyzeRoomObject.controller.owner, 720);
+						Memory.rooms[analyzeRoom].owner = analyzeRoomObject.controller.owner;
 					}
 				}
 			}

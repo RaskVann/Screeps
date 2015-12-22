@@ -942,7 +942,11 @@
  {
     var returnResources = findSpawn(unit);
 	var unitEnergy = unit.carry.energy;
-	var unitPower = unit.carry.power;
+	var unitPower;
+	if(unit.carry.power != null)
+		unitPower = unit.carry.power;
+	else
+		unitPower = 0;
 	var unitEnergyCapacity = unit.carryCapacity;
 	//Going to try to grab any energy the unit can and immediately try a drop off instead of waiting for it to fill up
 	//since it seems like all energy sits in the gatherers if I wait until they are full.
