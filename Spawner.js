@@ -23,10 +23,14 @@
 									   RANGED_ATTACK,RANGED_ATTACK,RANGED_ATTACK,RANGED_ATTACK,RANGED_ATTACK,RANGED_ATTACK,RANGED_ATTACK,RANGED_ATTACK,RANGED_ATTACK,RANGED_ATTACK,
 									   RANGED_ATTACK,RANGED_ATTACK,RANGED_ATTACK,RANGED_ATTACK,RANGED_ATTACK,RANGED_ATTACK,RANGED_ATTACK,RANGED_ATTACK,RANGED_ATTACK,RANGED_ATTACK,
 									   HEAL, HEAL, HEAL, HEAL, HEAL, HEAL] } ];	//Used to take out Keepers and heal self between battles, functions alone within 75 tick intervals between fights, on roads
- var attackPower = [ { cost: 2990, body: [MOVE, MOVE, MOVE, MOVE, MOVE, MOVE, MOVE, MOVE, MOVE, MOVE, MOVE, MOVE, MOVE, MOVE, MOVE, MOVE, MOVE, MOVE, MOVE, MOVE, MOVE, MOVE, MOVE,
-										  ATTACK,ATTACK,ATTACK,ATTACK,ATTACK,ATTACK,ATTACK,ATTACK,ATTACK,ATTACK,ATTACK,ATTACK,ATTACK,ATTACK,ATTACK,ATTACK,ATTACK,ATTACK,ATTACK,ATTACK,ATTACK,ATTACK,ATTACK] } ];
- var healPower = [ { cost: 4500, body: [MOVE, MOVE, MOVE, MOVE, MOVE, MOVE, MOVE, MOVE, MOVE, MOVE, MOVE, MOVE, MOVE, MOVE, MOVE,
-										HEAL, HEAL, HEAL, HEAL, HEAL, HEAL, HEAL, HEAL, HEAL, HEAL, HEAL, HEAL, HEAL, HEAL, HEAL] } ];
+ var attackPower = [ { cost: 2470, body: [MOVE, MOVE, MOVE, MOVE, MOVE, MOVE, MOVE, MOVE, MOVE, MOVE, MOVE, MOVE, MOVE, MOVE, MOVE, MOVE, MOVE, MOVE, MOVE,
+										  ATTACK,ATTACK,ATTACK,ATTACK,ATTACK,ATTACK,ATTACK,ATTACK,ATTACK,ATTACK,ATTACK,ATTACK,ATTACK,ATTACK,ATTACK,ATTACK,ATTACK,ATTACK,ATTACK] } ];
+ var healPower = [ { cost: 7200, body: [MOVE, MOVE, MOVE, MOVE, MOVE, MOVE, MOVE, MOVE, MOVE, MOVE, MOVE, MOVE, MOVE, MOVE, MOVE, MOVE, MOVE, MOVE, MOVE, MOVE, MOVE, MOVE, MOVE, MOVE,
+										HEAL, HEAL, HEAL, HEAL, HEAL, HEAL, HEAL, HEAL, HEAL, HEAL, HEAL, HEAL, HEAL, HEAL, HEAL, HEAL, HEAL, HEAL, HEAL, HEAL, HEAL, HEAL, HEAL, HEAL] } ];
+ var rangedPower = [ { cost: 5800, body: [MOVE, MOVE, MOVE, MOVE, MOVE, MOVE, MOVE, MOVE, MOVE, MOVE, MOVE, MOVE, MOVE, MOVE, MOVE, MOVE, MOVE, MOVE, MOVE, MOVE, MOVE, MOVE, MOVE, MOVE, MOVE,
+										  RANGED_ATTACK,RANGED_ATTACK,RANGED_ATTACK,RANGED_ATTACK,RANGED_ATTACK,RANGED_ATTACK,RANGED_ATTACK,RANGED_ATTACK,RANGED_ATTACK,RANGED_ATTACK,
+										  RANGED_ATTACK,RANGED_ATTACK,RANGED_ATTACK,RANGED_ATTACK,RANGED_ATTACK,RANGED_ATTACK,RANGED_ATTACK,
+										  HEAL, HEAL, HEAL, HEAL, HEAL, HEAL, HEAL, HEAL] } ];
  var rangedBody = [ { cost: 200, body: [MOVE, RANGED_ATTACK] },
                       { cost: 400, body: [MOVE, MOVE, RANGED_ATTACK, RANGED_ATTACK] },
                       { cost: 600, body: [MOVE, MOVE, MOVE, RANGED_ATTACK, RANGED_ATTACK, RANGED_ATTACK] },
@@ -345,7 +349,7 @@
 			if(findRoadsIn == null)
 			{
 				//Don't have access to this location or sourceId doesn't exist as an object
-				console.log(spawner.name + ' no id for: ' + Memory.creeps[unitName].usingSourceId + ' found ' + findRoadsIn + ', spawn expensive gather, wants ' + availableEnergy + '/' + modEnergy + ' in ' + spawner.room.name + ' for ' + unitName);
+				//console.log(spawner.name + ' no id for: ' + Memory.creeps[unitName].usingSourceId + ' found ' + findRoadsIn + ', spawn expensive gather, wants ' + availableEnergy + '/' + modEnergy + ' in ' + spawner.room.name + ' for ' + unitName);
 				newBody = upgradeBodyWithin(spawner.room.energyAvailable, availableEnergy, gatherBody);
 				return(newBody);
 			}
@@ -444,6 +448,10 @@
 	{
 		newBody = upgradeBody(availableEnergy, healPower);
 	}
+	else if(role == 'rangedPower')
+	{
+		newBody = upgradeBody(availableEnergy, rangedPower);
+	}
     else if(role != 'empty')
     {
         //console.log("Can't find body for role: " + role);
@@ -538,9 +546,53 @@
 	}
 	else if(spawner.memory.scoutsAlive <= 0 || spawner.memory.requestScout > 0)
 	{
-		return('scout');
+		if(spawner.room.memory.exitVisited == null || 
+			spawner.room.memory.exitVisited != null && spawner.room.memory.exitVisited < spawner.room.memory.exitMax)
+		{
+			return('scout');
+		}
+		else
+		{
+			console.log('We want to create scouts but wont since ' + spawner.name + ' is a dead end (' + spawner.room.name + '). Check if all spawner rooms are this way in which delete exit data and scout again.');
+			removeExitData();
+		}
 	}
 	return(null);   //Nothing else to spawn, look to expand buildings or territory
+ }
+ 
+ //Resets scout information in rooms so they can go scout 
+ function removeExitData()
+ {
+	for(var spawn in Game.spawns)
+	{
+		var spawner = Game.spawns[spawn];
+		if(spawner.room.memory.exitVisited == null || 
+			spawner.room.memory.exitVisited != null && spawner.room.memory.exitVisited < spawner.room.memory.exitMax)
+		{
+			console.log(spawner.name + ' doesnt have a dead end in its room. ' + spawner.room.name);
+			return(false);
+		}
+	}
+	
+	for(var room in Memory.rooms)
+	{
+		if(Memory.rooms[room].exitVisited < Memory.rooms[room].exitMax)
+		{
+			Game.notify(room + ' was never scouted completely, exits: ' + Memory.rooms[room].exitVisited + ' of ' + Memory.rooms[room].exitMax + ' but spawns all reported dead ends.', 720);
+		}
+		
+		//We should be able to freely skip known owned rooms in the next scout pass
+		if(Memory.rooms[room].owner == null || Memory.rooms[room].owner == 'RaskVann')// || (Memory.rooms[room].owner == null && Memory.rooms[room].exitMax == 1)
+		{
+			delete Memory.rooms[room].exitVisited;
+			delete Memory.rooms[room].exitMax;
+		}
+		else
+		{
+			console.log('Skipping deleting scout info in room ' + room + ' for ' + Memory.rooms[room].owner);
+		}
+	}
+	return(true);
  }
  
  function findRoleWithinName(nextName)
@@ -925,24 +977,29 @@
         var respawnName = spawner.memory.respawnName;
         var nextName;
 		var consideredNames = "";
+		var memorySource;
+		var findComma;
 		do
 		{
-			nextName = respawnName.substring(0, respawnName.indexOf(","));
-			respawnName = respawnName.substring(respawnName.indexOf(",")+1);
+			findComma = respawnName.indexOf(",");
+			nextName = respawnName.substring(0, findComma);
+			respawnName = respawnName.substring(findComma+1);
+			memorySource = Memory.creeps[nextName].usingSourceId;
 			if(Memory.creeps[nextName] != null &&
-				((Memory.creeps[nextName].usingSourceId == null || replaceSourceId == null || 
-				(Memory.creeps[nextName].usingSourceId != null && Memory.creeps[nextName].usingSourceId == replaceSourceId)) && 
-				findRoleWithinName(nextName) == checkRole && findNameIsLiving(nextName) == false))
+				((memorySource == null || replaceSourceId == null || 
+				(memorySource != null && memorySource == replaceSourceId)) && 
+				findRoleWithinName(nextName) == checkRole && Game.creeps[nextName] == null))
 			{
 				//Cut name we're spawning out of the list and add it to end
 				var newRespawnList = consideredNames + respawnName + nextName + ",";
+				//console.log('nextName: ' + nextName + '\n fromCurrent: ' + respawnName + '\n considered: ' + consideredNames);
 				//console.log('Trying to find dead ' + checkRole + ' found dead unit ' + nextName + ' from list ' + spawner.memory.respawnName + ' making new list ' + newRespawnList);
-				//spawner.memory.respawnName = newRespawnList;
+				spawner.memory.respawnName = newRespawnList;
 				return(nextName);
 			}
 			else
 			{
-				consideredNames += nextName + ","
+				consideredNames += nextName + ",";
 			}
 		} while (respawnName.length > 1);
     }
@@ -1199,7 +1256,7 @@
 		}
 		else if(returnRole == 'gather' || returnRole == 'worker' || returnRole == null) 
 		{
-			console.log(unit.name + ' needs replacement but cant find name: ' + replaceWithName + ' role: ' + returnRole + ' or body: ' + returnBody + ' to replace him in ' + unit.ticksToLive + ' ticks.');
+			//console.log(unit.name + ' needs replacement but cant find name: ' + replaceWithName + ' role: ' + returnRole + ' or body: ' + returnBody + ' to replace him in ' + unit.ticksToLive + ' ticks.');
 		}
 	}
 	return(false);
@@ -1415,7 +1472,7 @@
  function respawnPreexisting(spawner, chosenSpawn, role, sourceId)
  {
 	var replaceWithName = nextDeadRoleName(spawner, role, sourceId);	//Gets next available respawnable unit matching this role and id
-	var returnRole = findRoleWithinName(replaceWithName);	//Usually interchangable with role above, but just to be safe
+	var returnRole = findRoleWithinName(replaceWithName);	//Usually interchangeable with role above, but just to be safe
 	var returnBody = retrieveBodyMod(returnRole, spawner, replaceWithName);		//Gets body to match this role, given how much available energy we have.
 	if(replaceWithName != null && returnRole != null && returnBody != null)
 	{
@@ -1613,33 +1670,29 @@
 	return(false);
  }
  
- module.exports.createSpawn = function()
+ module.exports.createSpawn = function(nextRoom)
  {
 	//Look through all the rooms we have access to
-	for(var eachRoom in Game.rooms)
+	//If the room is mine and has access to links, look for applicable link locations
+	if(nextRoom.controller != null &&
+		nextRoom.controller.owner != null &&
+		nextRoom.controller.owner.username == 'RaskVann')
 	{
-		var nextRoom = Game.rooms[eachRoom];
-		//If the room is mine and has access to links, look for applicable link locations
-		if(nextRoom.controller != null &&
-			nextRoom.controller.owner != null &&
-			nextRoom.controller.owner.username == 'RaskVann')
+		//If we are at controller level 7 we can have 2 spawns, at level 8 we can have 3 in a room
+		var findSpawns = nextRoom.find(FIND_MY_SPAWNS);
+		var radius = 10;
+		
+		if(findSpawns.length > 0)
 		{
-			//If we are at controller level 7 we can have 2 spawns, at level 8 we can have 3 in a room
-			var findSpawns = nextRoom.find(FIND_MY_SPAWNS);
-			var radius = 10;
-			
-			if(findSpawns.length > 0)
+			if(nextRoom.controller.level == 7)
 			{
-				if(nextRoom.controller.level == 7)
-				{
-					constructIfFoundLessThen(STRUCTURE_SPAWN, findSpawns[0], radius, 2);
-				}
-				else if(nextRoom.controller.level == 8)
-				{
-					constructIfFoundLessThen(STRUCTURE_SPAWN, findSpawns[0], radius, 3);
-					constructIfFoundLessThen(STRUCTURE_POWER_SPAWN, findSpawns[0], radius, 1);
-					constructIfFoundLessThen(STRUCTURE_OBSERVER, findSpawns[0], radius, 1);
-				}
+				constructIfFoundLessThen(STRUCTURE_SPAWN, findSpawns[0], radius, 2);
+			}
+			else if(nextRoom.controller.level == 8)
+			{
+				constructIfFoundLessThen(STRUCTURE_SPAWN, findSpawns[0], radius, 3);
+				constructIfFoundLessThen(STRUCTURE_POWER_SPAWN, findSpawns[0], radius, 1);
+				constructIfFoundLessThen(STRUCTURE_OBSERVER, findSpawns[0], radius, 1);
 			}
 		}
 	}

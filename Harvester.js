@@ -846,19 +846,53 @@
 		else if(returnResources.room.energyAvailable >= returnResources.room.energyCapacityAvailable)
 		{
 			var transferStorage = unit.room.storage;
+			var needyStruct = unit.pos.findClosestByRange(FIND_MY_STRUCTURES, {
+				filter: function(object) {
+					return(object.energy < object.energyCapacity && 
+						(object.structureType == STRUCTURE_POWER_SPAWN || object.structureType == STRUCTURE_TOWER));
+				}
+			});
 			
-			if(transferStorage != null)
+			if(transferStorage != null || needyStruct.length > 0)
 			{		//If we're in a room with a storage go over and transfer to the storage
-				unit.moveByPath(unit.pos.findPathTo(transferStorage), {maxOps: 100});//, ignoreCreeps: false
-				var transferCode = unit.transferEnergy(transferStorage);
-				
-				if(unitDirection != null)
-					delete unit.memory.direction;
+				if(transferStorage != null && (transferStorage.store.energy < 5000 || needyStruct.length <= 0))
+				{
+					unit.moveByPath(unit.pos.findPathTo(transferStorage), {maxOps: 100});//, ignoreCreeps: false
+					var transferCode = unit.transferEnergy(transferStorage);
+					
+					if(unitDirection != null)
+						delete unit.memory.direction;
+				}
+				else if(needyStruct.length > 0)
+				{
+					unit.moveByPath(unit.pos.findPathTo(needyStruct[0]), {maxOps: 100});//, ignoreCreeps: false
+					var transferCode = unit.transferEnergy(needyStruct[0]);
+					
+					if(unitDirection != null)
+						delete unit.memory.direction;
+				}
 			}
 			else	//If room is full and no storage found, send back to retrieve what energy they can, until full.
 			{
 				followFlagForward(unit, unit.carry.energy < unit.carryCapacity);
 			}
+		}
+	}
+	else if(unit.carry.power > 0 && returnResources.room.name == unit.room.name)
+	{
+		var powerSpawn = unit.room.find(FIND_MY_STRUCTURES, {
+			filter: { structureType: STRUCTURE_POWER_SPAWN }
+		});
+		
+		if(powerSpawn.length > 0)
+		{
+			unit.moveTo(powerSpawn[0]);
+			unit.transfer(powerSpawn[0], RESOURCE_POWER);
+		}
+		else
+		{
+			console.log(unit.name + ' has power but no found STRUCTURE_POWER_SPAWN in ' + unit.room.name);
+			Game.notify('Have power but cant find STRUCTURE_POWER_SPAWN', 10);
 		}
 	}
 	else if(transferEnergyReturn == ERR_NOT_IN_RANGE)
@@ -908,6 +942,7 @@
  {
     var returnResources = findSpawn(unit);
 	var unitEnergy = unit.carry.energy;
+	var unitPower = unit.carry.power;
 	var unitEnergyCapacity = unit.carryCapacity;
 	//Going to try to grab any energy the unit can and immediately try a drop off instead of waiting for it to fill up
 	//since it seems like all energy sits in the gatherers if I wait until they are full.
@@ -938,9 +973,31 @@
 				links[0].transferEnergy(unit);
 			}
 		}
+		
+		//Look for power
+		if(returnResources.room.name != unit.room.name)
+		{
+			if(unitEnergy > 0)
+				unit.drop(RESOURCE_ENERGY);
+			
+			var powerDrop = unit.room.find(FIND_DROPPED_RESOURCES, {
+				filter: { resourceType: RESOURCE_POWER }
+			});
+			
+			if(powerDrop.length > 0)
+			{
+				unit.moveTo(powerDrop[0]);
+				unit.pickup(powerDrop[0]);
+			}
+			//If can't find power and already contains power, force go home
+			else if(unitPower > 0)
+			{
+				unitPower = unitEnergyCapacity;
+			}
+		}
 
 		findRoadOrCreate(unit);
-		followFlagForward(unit, unitEnergy < unitEnergyCapacity);
+		followFlagForward(unit, (unitEnergy+unitPower) < unitEnergyCapacity);
     }
     else if(returnResources != null)
     {
@@ -1167,62 +1224,58 @@
 	return(success);	//Send back last attempted createConstructionSite error, if any was attempted
  }
  
-module.exports.link = function()
+module.exports.link = function(nextRoom)
 {
+	//Look through all the rooms we have access to (passed in from main)
 	if(Game.getUsedCpu() < 5)
 	{
-		//Look through all the rooms we have access to
-		for(var eachRoom in Game.rooms)
+		//If the room is mine and has access to links, look for applicable link locations
+		if(nextRoom.controller != null &&
+			nextRoom.controller.owner != null &&
+			nextRoom.controller.owner.username == 'RaskVann')
 		{
-			var nextRoom = Game.rooms[eachRoom];
-			//If the room is mine and has access to links, look for applicable link locations
-			if(nextRoom.controller != null &&
-				nextRoom.controller.owner != null &&
-				nextRoom.controller.owner.username == 'RaskVann')
+			if(nextRoom.controller.level >= 5)
 			{
-				if(nextRoom.controller.level >= 5)
+				var sources = nextRoom.find(FIND_SOURCES);
+				//Make sure there is a link within 2 spaces of every source, and create one if there isn't.
+				for(var i in sources)
 				{
-					var sources = nextRoom.find(FIND_SOURCES);
-					//Make sure there is a link within 2 spaces of every source, and create one if there isn't.
-					for(var i in sources)
+					var allLinks = sources[i].pos.findInRange(FIND_MY_STRUCTURES, 2, {
+						filter: { structureType: STRUCTURE_LINK }
+					});
+					
+					if(allLinks.length <= 0)
 					{
-						var allLinks = sources[i].pos.findInRange(FIND_MY_STRUCTURES, 2, {
+						var allConstructLinks = sources[i].pos.findInRange(FIND_MY_CONSTRUCTION_SITES, 2, {
 							filter: { structureType: STRUCTURE_LINK }
 						});
-						
-						if(allLinks.length <= 0)
+						//No link within 2 spaces, create one.
+						if(allConstructLinks.length <= 0)
 						{
-							var allConstructLinks = sources[i].pos.findInRange(FIND_MY_CONSTRUCTION_SITES, 2, {
-								filter: { structureType: STRUCTURE_LINK }
-							});
-							//No link within 2 spaces, create one.
-							if(allConstructLinks.length <= 0)
-							{
-								//Construct link, nothing exists.
-								constructStructure(sources[i], STRUCTURE_LINK);
-							}
+							//Construct link, nothing exists.
+							constructStructure(sources[i], STRUCTURE_LINK);
 						}
 					}
 				}
+			}
+			
+			if(nextRoom.controller.level >= 4)
+			{
+				//Look at the controller and make sure there is a link within 2 spaces of it
+				var controllerStorage = nextRoom.controller.pos.findInRange(FIND_MY_STRUCTURES, 2, {
+					filter: { structureType: STRUCTURE_STORAGE }
+				});
 				
-				if(nextRoom.controller.level >= 4)
+				if(controllerStorage.length <= 0)
 				{
-					//Look at the controller and make sure there is a link within 2 spaces of it
-					var controllerStorage = nextRoom.controller.pos.findInRange(FIND_MY_STRUCTURES, 2, {
+					var controllerConstructStorage = nextRoom.controller.pos.findInRange(FIND_MY_CONSTRUCTION_SITES, 2, {
 						filter: { structureType: STRUCTURE_STORAGE }
 					});
-					
-					if(controllerStorage.length <= 0)
+					//No link within 2 spaces, create one.
+					if(controllerConstructStorage.length <= 0)
 					{
-						var controllerConstructStorage = nextRoom.controller.pos.findInRange(FIND_MY_CONSTRUCTION_SITES, 2, {
-							filter: { structureType: STRUCTURE_STORAGE }
-						});
-						//No link within 2 spaces, create one.
-						if(controllerConstructStorage.length <= 0)
-						{
-							//Construct link, nothing exists.
-							constructStructure(nextRoom.controller, STRUCTURE_STORAGE);
-						}
+						//Construct link, nothing exists.
+						constructStructure(nextRoom.controller, STRUCTURE_STORAGE);
 					}
 				}
 			}

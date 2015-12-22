@@ -167,23 +167,14 @@
 	if(spawn.memory.CpuLimitShrink != null && spawn.memory.CpuLimitShrinkTotal != null &&
 		spawn.memory.CpuLimitGrow != null && spawn.memory.CpuLimitGrowTotal != null)
 	{
-		spawn.memory.CpuLimitAvg = (spawn.memory.CpuLimitGrowTotal + spawn.memory.CpuLimitShrinkTotal)  / (spawn.memory.CpuLimitGrow + spawn.memory.CpuLimitShrink);
+		spawn.memory.CpuLimitAvg = (spawn.memory.CpuLimitGrowTotal + spawn.memory.CpuLimitShrinkTotal) / (spawn.memory.CpuLimitGrow + spawn.memory.CpuLimitShrink);
 	}
  }
 
- function measureCPU()
+ function measureCPU(spawn0)
  {
-    var spawn0;
-    if(Game.spawns != null)
+    if(spawn0 != null)
     {
-		//Stores data in last found spawn, which means after more then 1 spawn is generated I'll
-		//be able to compare the previous stats with the older ones, since the oldest will be the
-		//only one that is recording anything
-        for(var x in Game.spawns)
-        {
-            spawn0 = Game.spawns[x];
-        }
-		
 		var currentCpuUsage = cpuAverage(spawn0);
 		standardDeviation(spawn0, currentCpuUsage);
 		
@@ -194,19 +185,10 @@
     }
  }
  
- function cleanMeasureCPU()
+ function cleanMeasureCPU(spawn0)
  {
-	var spawn0;
-    if(Game.spawns != null)
+    if(spawn0 != null)
     {
-		//Stores data in last found spawn, which means after more then 1 spawn is generated I'll
-		//be able to compare the previous stats with the older ones, since the oldest will be the
-		//only one that is recording anything
-        for(var x in Game.spawns)
-        {
-            spawn0 = Game.spawns[x];
-        }
-
 		//Cleans average calculations
 		var usedCPU = Game.getUsedCpu();
 		spawn0.memory.gameTicks = 1;
@@ -234,6 +216,21 @@
 	
  module.exports = function()
  {
-    measureCPU();
-	//cleanMeasureCPU();
+	var spawn0;
+	//Stores data in last found spawn, which means after more then 1 spawn is generated I'll
+	//be able to compare the previous stats with the older ones, since the oldest will be the
+	//only one that is recording anything
+	for(var x in Game.spawns)
+	{
+		spawn0 = Game.spawns[x];
+	}
+		
+    measureCPU(spawn0);
+	
+	//Report to me cpu stats every 10,000 ticks (grouped every 12 hours)
+	if(Game.time % 10000 == 0)
+	{
+		Game.notify('CPU-Average: ' + spawn0.memory.averageCPU + '+/-' + spawn0.memory.standardDeviation + ', CpuLimitAvg: ' + spawn0.memory.CpuLimitAvg, 720);
+		cleanMeasureCPU(spawn0);
+	}
  }	
