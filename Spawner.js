@@ -334,7 +334,7 @@
 		//Monitor requests where we divide or requesting units higher then we support
 		if(divideBy > 1)
 		{
-			console.log(role + ' wants ' + modEnergy + ' cost and room has max of ' + maxEnergy + ' assuming sending ' + divideBy + ' units.');
+			//console.log(role + ' wants ' + modEnergy + ' cost and room has max of ' + maxEnergy + ' assuming sending ' + divideBy + ' units.');
 		}
 		
 		availableEnergy = Math.min(availableEnergy, modEnergy/divideBy);
@@ -438,7 +438,7 @@
     }
 	else if(role == 'scout')
 	{
-		//newBody = upgradeBody(availableEnergy, scoutBody);
+		newBody = upgradeBody(availableEnergy, scoutBody);
 	}
 	else if(role == 'healPower')
 	{

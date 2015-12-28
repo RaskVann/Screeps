@@ -595,7 +595,7 @@
 		else
 		{
 			delete unit.memory.usingSourceId;
-			console.log(unit.name + ' can not upgrade controller, code: ' + errorController);
+			//console.log(unit.name + ' can not upgrade controller, code: ' + errorController);
 		}
 	}
 	else if(Math.abs(unit.pos.getRangeTo(structure)) > 3 || unit.carry.energy == 0)	//check for energy should never be reached

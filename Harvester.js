@@ -853,9 +853,9 @@
 				}
 			});
 			
-			if(transferStorage != null || needyStruct.length > 0)
+			if(transferStorage != null || needyStruct != null)
 			{		//If we're in a room with a storage go over and transfer to the storage
-				if(transferStorage != null && (transferStorage.store.energy < 5000 || needyStruct.length <= 0))
+				if(transferStorage != null && (transferStorage.store.energy < 5000 || needyStruct == null))
 				{
 					unit.moveByPath(unit.pos.findPathTo(transferStorage), {maxOps: 100});//, ignoreCreeps: false
 					var transferCode = unit.transferEnergy(transferStorage);
@@ -863,10 +863,10 @@
 					if(unitDirection != null)
 						delete unit.memory.direction;
 				}
-				else if(needyStruct.length > 0)
+				else if(needyStruct != null)
 				{
-					unit.moveByPath(unit.pos.findPathTo(needyStruct[0]), {maxOps: 100});//, ignoreCreeps: false
-					var transferCode = unit.transferEnergy(needyStruct[0]);
+					unit.moveByPath(unit.pos.findPathTo(needyStruct), {maxOps: 100});//, ignoreCreeps: false
+					var transferCode = unit.transferEnergy(needyStruct);
 					
 					if(unitDirection != null)
 						delete unit.memory.direction;
@@ -878,21 +878,32 @@
 			}
 		}
 	}
-	else if(unit.carry.power > 0 && returnResources.room.name == unit.room.name)
+	else if(unit.carry.power != null && unit.carry.power > 0)
 	{
-		var powerSpawn = unit.room.find(FIND_MY_STRUCTURES, {
-			filter: { structureType: STRUCTURE_POWER_SPAWN }
-		});
-		
-		if(powerSpawn.length > 0)
+		//If out of the spawn room, follow path back to spawn
+		if(returnResources.room.name != unit.room.name)
 		{
-			unit.moveTo(powerSpawn[0]);
-			unit.transfer(powerSpawn[0], RESOURCE_POWER);
+			followFlagForward(unit, false);
 		}
-		else
+		else	//Otherwise we're in spawn and need to move and transfer energy into power bank
 		{
-			console.log(unit.name + ' has power but no found STRUCTURE_POWER_SPAWN in ' + unit.room.name);
-			Game.notify('Have power but cant find STRUCTURE_POWER_SPAWN', 10);
+			var powerSpawn = unit.room.find(FIND_MY_STRUCTURES, {
+				filter: { structureType: STRUCTURE_POWER_SPAWN }
+			});
+			
+			if(powerSpawn.length > 0)
+			{
+				//TO DO: Check if power spawn is > .5 of power, if unit has room, pickup energy from storage or equivalent
+				//and dump in power spawn.
+				//else
+				unit.moveTo(powerSpawn[0]);
+				unit.transfer(powerSpawn[0], RESOURCE_POWER);
+			}
+			else
+			{
+				console.log(unit.name + ' has power but no found STRUCTURE_POWER_SPAWN in ' + unit.room.name);
+				Game.notify('Have power but cant find STRUCTURE_POWER_SPAWN', 10);
+			}
 		}
 	}
 	else if(transferEnergyReturn == ERR_NOT_IN_RANGE)
@@ -951,7 +962,7 @@
 	//Going to try to grab any energy the unit can and immediately try a drop off instead of waiting for it to fill up
 	//since it seems like all energy sits in the gatherers if I wait until they are full.
     //if(unit.carry.energy < unit.carryCapacity)
-	if(unitEnergy == 0 && returnResources != null)
+	if(unitEnergy == 0 && unitPower == 0 && returnResources != null)
     {
         var activeSource;
 		if(unit.memory.usingSourceId != null)
@@ -978,6 +989,9 @@
 			}
 		}
 		
+		findRoadOrCreate(unit);
+		followFlagForward(unit, (unitEnergy+unitPower) < unitEnergyCapacity);
+		
 		//Look for power
 		if(returnResources.room.name != unit.room.name)
 		{
@@ -991,17 +1005,13 @@
 			if(powerDrop.length > 0)
 			{
 				unit.moveTo(powerDrop[0]);
-				unit.pickup(powerDrop[0]);
-			}
-			//If can't find power and already contains power, force go home
-			else if(unitPower > 0)
-			{
-				unitPower = unitEnergyCapacity;
+				//If already contains power, force go home
+				if(unit.pickup(powerDrop[0]) == 0)
+				{
+					unitPower = unitEnergyCapacity;
+				}
 			}
 		}
-
-		findRoadOrCreate(unit);
-		followFlagForward(unit, (unitEnergy+unitPower) < unitEnergyCapacity);
     }
     else if(returnResources != null)
     {

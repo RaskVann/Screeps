@@ -431,6 +431,7 @@
 			{
 				//If what we'd return is a room that is already found to be a dead end this room
 				//isn't valid and we should try the next one
+				console.log(unit.name + ' this exit is a dead end. Try to find next room in ' + unit.room.name);
 				Memory.rooms[unit.room.name].exitVisited++;	//Can cause unit to turn back.
 				return(findNextRoom(unit, unit.room));
 				
@@ -447,12 +448,12 @@
 			}
 			else
 			{
-				//console.log('retrieving exit: ' + roomExits[x]);
+				console.log('retrieving exit: ' + roomExits[x]);
 				return(roomExits[x]);
 			}
 		}
 	}
-		
+	console.log(unit.name + ' ran out of exits to look at in ' + unit.room.name);
 	return(null);
  }
 
@@ -503,6 +504,7 @@
 			else if(Memory.rooms[newExit] == null || Memory.rooms[newExit].exitsVisited == null)// ||
 				//(Memory.rooms[newExit] != null && Memory.rooms[newExit].exitsVisited < Memory.rooms[newExit].exitMax))
 			{
+				console.log(unit.name + ' scout is retrieving exit: ' + newExit + ' in room: ' + currentRoom.name);
 				return(newExit);
 			}
 			//As long as we have more exits to visit, go to the next exit and try again
@@ -551,7 +553,7 @@
 	{
 		console.log(unit.name + ' in ' + currentRoom + ' looking for next room was given null values. SHOULD NEVER HAPPEN');
 	}
-	
+	console.log(unit.name + ' All exits lead to rooms weve been to, end of path reached.');
 	return(null);	//All exits lead to rooms we've been to, end of path reached.
 	//return(getRoomForExit(unit, currentRoom.memory.exitsVisited));
  }
@@ -699,6 +701,72 @@
 		console.log(unit.name + ' in room ' + unit.room.name + ' trying to create path to exit but previous flag exists so canceling creation.');
 	}
 	return(null);
+ }
+ 
+ function threatString(threat)
+ {
+	var threatString;
+	if(threat != null)
+	{
+		if(threat < 0)
+		{
+			threatString = 'friendly room, no enemy creeps';
+		}
+		else if(threat == 0)
+		{
+			threatString = 'no enemy creeps, uncontrolled room';
+		}
+		else if(threat == 1)
+		{
+			threatString = 'no enemy creeps, controlled room';
+		}
+		else if(threat == 2)
+		{
+			threatString = 'no enemy attacking body, no spawning capacity';
+		}
+		else if(threat == 3)
+		{
+			threatString = 'no enemy attacking body found, spawning capacity';
+		}
+		else if(threat == 4)
+		{
+			threatString = 'enemy attacking body found in past, room is in alert';
+		}
+		else if(threat == 5)
+		{
+			threatString = 'enemy attacking body < 5, does not grow during watch';
+		}
+		else if(threat == 6)
+		{
+			threatString = 'enemy attacking body < 10, does not grow during watch';
+		}
+		else if(threat == 7)
+		{
+			threatString = 'enemy attacking body < 20, does not grow during watch';
+		}
+		else if(threat == 8)
+		{
+			threatString = 'enemy attacking body >= 20, does not grow during watch';
+		}
+		else if(threat == 9)
+		{
+			threatString = 'enemy attacking body < 5, grows during watch';
+		}
+		else if(threat == 10)
+		{
+			threatString = 'enemy attacking body < 10, grows during watch';
+		}
+		else if(threat == 11)
+		{
+			threatString = 'enemy attacking body < 20, grows during watch';
+		}
+		else if(threat >= 12)
+		{
+			threatString = 'enemy attacking body >= 20, grows during watch';
+		}
+	}
+	
+	return(threatString);
  }
 
  function evaluateThreat(currentRoom)
@@ -1288,6 +1356,66 @@
 	}
 	return(false);
  }
+ 
+ function storeBank(unit, currentRoom, useSpawn)
+ {
+	if(currentRoom.controller == null)
+	{
+		var bank = currentRoom.find(STRUCTURE_POWER_BANK);
+		//If less then 1500 we're deeming this impossible to gather
+		if(bank.length > 0 && (bank[0].ticksToDecay > 2000 || bank[0].hits < bank[0].hitsMax))
+		{
+			console.log('Found Power Bank ' + bank[0] + ' in ' + bank[0].room + ' power: ' + bank[0].power + ' (' + bank[0].hits + '/' + bank[0].hitsMax + ')');
+			if(currentRoom.memory.bank == null || (currentRoom.memory.bank != null && currentRoom.memory.bank.id != bank[0].id))
+			{
+				if(currentRoom.memory.bank != null)
+					console.log('found bank ' + bank[0].id + ' match memory: ' + currentRoom.memory.bank.id + '<- shouldnt be null');
+				
+				//Can get how long until death by deathTime-Game.time. If negative, already dead
+				var timeTillDeath = bank[0].ticksToDecay + Game.time;
+				var healthRatio = bank[0].hits / bank[0].hitsMax;
+				
+				//When these entries are found, spawn 2 power, 2 heal and send them to the roomName, when they have identical room names, go to id
+				currentRoom.memory.bank = { id: bank[0].id, power: bank[0].power, deathTime: timeTillDeath, roomName: bank[0].room.name, health: healthRatio };
+				//currentRoom.memory.bank = [ id: bank[0].id, power: bank[0].power, deathTime: timeTillDeath, roomName: bank[0].room.name, health: healthRatio ];
+				//currentRoom.memory.bank = [ { id: bank[0].id, power: bank[0].power, deathTime: timeTillDeath, roomName: bank[0].room.name, health: healthRatio } ];
+				
+				//If the controller advanced to level 8. See if we can spawn 
+				if(useSpawn.room.controller != null &&
+					useSpawn.room.controller.owner != null &&
+					useSpawn.room.controller.owner.username == 'RaskVann' &&
+					useSpawn.room.controller.level >= 8)
+				{
+					//var role = 'attackPower';
+					var role = 'rangedPower';
+					//var memoryForTempUnit = {'role': role, 'usingSourceId': currentRoom.name, 'spawnID': useSpawn.id, 'bankId': bank[0].id};
+					var memoryForTempUnit = {'role': role, 'usingSourceId': unit.memory.usingSourceId, 'spawnID': useSpawn.id, 'bankId': bank[0].id};
+					//We need 3 attackPower units for each bank (at 2M hit points)
+					//Need 8 ranged to clear each bank
+					/**
+					spawnTempUnit(role, useSpawn, memoryForTempUnit);
+					spawnTempUnit(role, useSpawn, memoryForTempUnit);
+					spawnTempUnit(role, useSpawn, memoryForTempUnit);
+					spawnTempUnit(role, useSpawn, memoryForTempUnit);
+					spawnTempUnit(role, useSpawn, memoryForTempUnit);
+					spawnTempUnit(role, useSpawn, memoryForTempUnit);
+					spawnTempUnit(role, useSpawn, memoryForTempUnit);
+					spawnTempUnit(role, useSpawn, memoryForTempUnit);
+					**/
+					console.log('found bank but ive disabled ' + role + ' units. Would have had mem: ' + memoryForTempUnit);
+				}
+			}
+			else
+			{
+				console.log('found bank but had matching id ' + currentRoom.memory.bank.id + ' skipping logic for spawn powerSpawn');
+			}
+		}
+		else if(currentRoom.memory.bank != null)	//bank exists and no bank found
+		{
+			delete currentRoom.memory.bank;
+		}
+	}
+ }
 
  function scout(unit, scoutsSeen, previousScoutState)
  {
@@ -1536,7 +1664,7 @@
 					{
 						//var nextSourceId = 1;
 						//WARNING: There is a danger this is cyclical if a previousRoom points to a room we've already created a path in
-						//TO DO: Validate first by going through the path, ensuring the last one points at controller.owner.name = 'RaskVann'
+						//TO DO: Validate first by going through the path, ensuring the last one points at controller.owner.username = 'RaskVann'
 						//and isn't endless (end after a few dozen checks)
 						for(var nextScout = scoutFromRoomName(unit.memory.previousRoom); nextScout != null; nextScout = scoutFromRoomName(nextScout.memory.previousRoom))
 						{
@@ -1595,69 +1723,19 @@
 		}
 	}
 	else if(currentRoom.controller == null)
-	{		//Is evaluated once when a 'no controller' room is entered and defines the threat value and again in the next tick
-			//to find if there is a source defined and populates that if needed (more CPU effective this way)
-		var bank = currentRoom.find(STRUCTURE_POWER_BANK);
-		//If less then 1500 we're deeming this impossible to gather
-		if(bank.length > 0 && (bank[0].ticksToDecay > 2000 || bank[0].hits < bank[0].hitsMax))
-		{
-			console.log('Found Power Bank ' + bank[0] + ' in ' + bank[0].room + ' power: ' + bank[0].power + ' (' + bank[0].hits + '/' + bank[0].hitsMax + ')');
-			if(currentRoom.memory.bank == null || (currentRoom.memory.bank != null && currentRoom.memory.bank.id != bank[0].id))
-			{
-				if(currentRoom.memory.bank != null)
-					console.log(unit.name + ' found bank ' + bank[0].id + ' match memory: ' + currentRoom.memory.bank.id + '<- shouldnt be null');
-				
-				//Can get how long until death by deathTime-Game.time. If negative, already dead
-				var timeTillDeath = bank[0].ticksToDecay + Game.time;
-				var healthRatio = bank[0].hits / bank[0].hitsMax;
-				
-				//When these entries are found, spawn 2 power, 2 heal and send them to the roomName, when they have identical room names, go to id
-				currentRoom.memory.bank = { id: bank[0].id, power: bank[0].power, deathTime: timeTillDeath, roomName: bank[0].room.name, health: healthRatio };
-				//currentRoom.memory.bank = [ id: bank[0].id, power: bank[0].power, deathTime: timeTillDeath, roomName: bank[0].room.name, health: healthRatio ];
-				//currentRoom.memory.bank = [ { id: bank[0].id, power: bank[0].power, deathTime: timeTillDeath, roomName: bank[0].room.name, health: healthRatio } ];
-				
-				//If the controller advanced to level 8. See if we can spawn 
-				if(useSpawn.room.controller != null &&
-					useSpawn.room.controller.owner != null &&
-					useSpawn.room.controller.owner.username == 'RaskVann' &&
-					useSpawn.room.controller.level >= 8)
-				{
-					//var role = 'attackPower';
-					var role = 'rangedPower';
-					var memoryForTempUnit = {'role': role, 'usingSourceId': currentRoom.name, 'spawnID': useSpawn.id, 'bankId': bank[0].id};
-					//We need 3 attackPower units for each bank (at 2M hit points)
-					//Need 8 ranged to clear each bank
-					/**
-					spawnTempUnit(role, useSpawn, memoryForTempUnit);
-					spawnTempUnit(role, useSpawn, memoryForTempUnit);
-					spawnTempUnit(role, useSpawn, memoryForTempUnit);
-					spawnTempUnit(role, useSpawn, memoryForTempUnit);
-					spawnTempUnit(role, useSpawn, memoryForTempUnit);
-					spawnTempUnit(role, useSpawn, memoryForTempUnit);
-					spawnTempUnit(role, useSpawn, memoryForTempUnit);
-					spawnTempUnit(role, useSpawn, memoryForTempUnit);
-					**/
-					console.log(unit.name + ' found bank but ive disabled ' + role + ' units. Would have had mem: ' + memoryForTempUnit);
-				}
-			}
-			else
-			{
-				console.log(unit.name + ' found bank but had matching id ' + currentRoom.memory.bank.id + ' skipping logic for spawn powerSpawn');
-			}
-		}
-		else if(currentRoom.memory.bank != null)	//bank exists and no bank found
-		{
-			delete currentRoom.memory.bank;
-		}
+	{
+		storeBank(unit, currentRoom, useSpawn);
 		
+		//Is evaluated once when a 'no controller' room is entered and defines the threat value and again in the next tick
+		//to find if there is a source defined and populates that if needed (more CPU effective this way)
 		if(currentRoom.memory.sources == null)
 		{
 			if(currentRoom.memory.threat == null)
 			{
 				var threat = evaluateThreat(currentRoom);
 				
-				//console.log('Scout-Room: ' + currentRoom.name + ' no controller in this room with threat: ' + threat);
-				Game.notify('Scout-Room: ' + currentRoom.name + ' no controller in this room with threat: ' + threat, 10);
+				//console.log('Scout-Room: ' + currentRoom.name + ' threat: ' + threatString(threat));
+				Game.notify('Scout-Room: ' + currentRoom.name + ' threat: ' + threatString(threat), 10);
 				currentRoom.memory.threat = threat;
 			}
 			else
@@ -2060,16 +2138,15 @@
  {
 	removeUnitNearDeath(unit);
 	var useSpawn = getSpawnId(unit);
+	var bank = Game.getObjectById(unit.memory.bankId);
 	
-	if(unit.room.name != unit.memory.usingSourceId)
+	if(unit.room.name != bank.room.name)
 	{
 		followFlagForward(unit, true);
 	}
 	else
 	{
 		//Once we are in the right room, move with range of the bank and wait for a pairing unit to show up.
-		var bank = Game.getObjectById(unit.memory.bankId);
-		
 		if(bank != null && unit.pos.getRangeTo(bank) > 2)
 		{
 			unit.moveTo(bank);
@@ -2178,10 +2255,11 @@
 	}
 	else
 	{
+		bank = Game.getObjectById(unit.memory.bankId);
 		var attack = unit.getActiveComponents(RANGED_ATTACK);
 		
 		//As long as we aren't in the right room yet, just follow the path to the appropriate room
-		if(unit.room.name != unit.memory.usingSourceId)
+		if(unit.room.name != bank.room.name)
 		{	//WARNING: Move out of border first? In check above?
 			if(unit.hits < unit.hitsMax)
 			{
@@ -2193,7 +2271,6 @@
 		else
 		{
 			//Once we are in the right room, move with range of the bank and wait for a pairing unit to show up.
-			bank = Game.getObjectById(unit.memory.bankId);
 			var rangeToBank = unit.pos.getRangeTo(bank);
 			if(unit.hits < unit.hitsMax)
 			{
@@ -2303,9 +2380,10 @@
 	else
 	{
 		var attack = unit.getActiveComponents(ATTACK);
+		bank = Game.getObjectById(unit.memory.bankId);
 		
 		//As long as we aren't in the right room yet, just follow the path to the appropriate room
-		if(unit.room.name != unit.memory.usingSourceId)
+		if(unit.room.name != bank.room.name)
 		{	//WARNING: Move out of border first? In check above?
 			//Keep track of how many units we've spawned to heal this attacker, spawn temp healers until we hit 3 of them
 			if(attack > 0)
@@ -2332,7 +2410,6 @@
 		else
 		{
 			//Once we are in the right room, move with range of the bank and wait for a pairing unit to show up.
-			bank = Game.getObjectById(unit.memory.bankId);
 			var rangeToBank = unit.pos.getRangeTo(bank);
 			
 			if(bank != null && rangeToBank > 2)
@@ -2487,6 +2564,44 @@
 	return(eastWestLetter + eastWestNum + northSouthLetter + northSouthNum);
  }
  
+module.exports.tower = function(nextRoom, enemyInSpawn)
+{
+	if(enemyInSpawn != null && 
+		nextRoom.controller != null && nextRoom.controller.owner != null && 
+		nextRoom.controller.owner.username == 'RaskVann' && nextRoom.controller.level >= 3)
+	{
+		//Level 3-5: 1 Tower, Level 6-7: 2 Towers, Level 8: 4 Towers
+		var towers = nextRoom.find(FIND_MY_STRUCTURES, {
+			filter: function(object) {
+				return(object.structureType == STRUCTURE_TOWER && object.energy >= 10);
+			}
+		});
+		
+		if(towers.length > 0)
+		{
+			//tower.energy
+			//tower.energyCapacity
+			//tower.attack()
+			//tower.heal()
+			//tower.repair()
+			
+			//var enemyInSpawn = towers[0].findClosestByRange(FIND_HOSTILE_CREEPS, {
+			//	filter: function(object) {
+			//		return(object.getActiveBodyparts(ATTACK) > 0 || object.getActiveBodyparts(RANGED_ATTACK) > 0 || object.getActiveBodyparts(HEAL) > 0);
+			//	}
+			//});
+			
+			if(enemyInSpawn != null && enemyInSpawn.room.name == towers[0].room.name)
+			{
+				for(var tow in towers)
+				{
+					towers[tow].attack(enemyInSpawn);
+				}
+			}
+		}
+	}
+}
+ 
 module.exports.observe = function(nextRoom)
 {
 	if(nextRoom.controller != null && nextRoom.controller.owner != null && 
@@ -2529,23 +2644,28 @@ module.exports.observe = function(nextRoom)
 				}
 				else if(threatVal != Memory.rooms[analyzeRoom].threat)
 				{
-					Game.notify('Room: ' + analyzeRoom + ' used to have threat ' + Memory.rooms[analyzeRoom].threat + ' now has threat ' + threatVal, 720);
+					Game.notify('Room: ' + analyzeRoom + ' PrevThreat: ' + threatString(Memory.rooms[analyzeRoom].threat) + ' CurrThreat ' + threatString(threatVal), 720);
 					Memory.rooms[analyzeRoom].threat = threatVal;
 				}
 				
 				//Store owner of room and notify of changes in ownership
 				if(analyzeRoomObject.controller != null && analyzeRoomObject.controller.owner != null &&
-					analyzeRoomObject.controller.owner != "RaskVann")
+					analyzeRoomObject.controller.owner.username != "RaskVann")
 				{
 					if(Memory.rooms[analyzeRoom] == null)
 					{
-						Memory.rooms[analyzeRoom] = { owner: analyzeRoomObject.controller.owner };
+						Memory.rooms[analyzeRoom] = { owner: analyzeRoomObject.controller.owner.username };
 					}
-					else if(Memory.rooms[analyzeRoom].owner != analyzeRoomObject.controller.owner)
+					else if(Memory.rooms[analyzeRoom].owner != analyzeRoomObject.controller.owner.username)
 					{
-						Game.notify('Room: ' + analyzeRoom + ' used to have owner ' + Memory.rooms[analyzeRoom].owner + ' now has owner ' + analyzeRoomObject.controller.owner, 720);
-						Memory.rooms[analyzeRoom].owner = analyzeRoomObject.controller.owner;
+						Game.notify('Room: ' + analyzeRoom + ' used to have owner ' + Memory.rooms[analyzeRoom].owner + ' now has owner ' + analyzeRoomObject.controller.owner.username, 720);
+						Memory.rooms[analyzeRoom].owner = analyzeRoomObject.controller.owner.username;
 					}
+				}
+				else if(analyzeRoomObject.controller == null)
+				{
+					//TO DO: Retrieve master spawn in observers room and pass it in, find way to correctly set usingSourceId without unit's input.
+					//storeBank(unit, analyzeRoomObject, useSpawn);
 				}
 			}
 			else
