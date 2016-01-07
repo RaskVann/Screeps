@@ -397,19 +397,22 @@
 		newExit = findNextRoom(unit, currentRoom);
 		if(newExit == null)	//All remaining rooms have been visited, end of this route
 		{
+			console.log(unit.name + ' cant find exit when no exitMax exists so requesting new unit.');
 			return(requestScout(unit, useSpawn));
 		}
 	}
-	else if(currentRoom.memory.exitVisited < currentRoom.memory.exitMax)
+	else if(currentRoom.memory.exitsVisited < currentRoom.memory.exitMax)
 	{
 		newExit = getRoomForExit(unit, currentRoom.memory.exitsVisited);
 		if(newExit == null)	//All remaining rooms have been visited, end of this route
 		{
+			console.log(unit.name + ' cant find exit when visit < max so requesting new unit.');
 			return(requestScout(unit, useSpawn));
 		}
 	}
 	else
 	{
+		console.log(unit.name + ' visit is greater or equal then max. ' + currentRoom.memory.exitsVisited + ' of ' + currentRoom.memory.exitMax);
 		return(requestScout(unit, useSpawn));
 	}
 	
@@ -426,16 +429,16 @@
 		if(roomExits[x] != null && count++ == value)
 		{
 			if(Memory.rooms[roomExits[x]] != null &&
-				Memory.rooms[roomExits[x]].exitVisited != null &&
-				Memory.rooms[roomExits[x]].exitVisited >= Memory.rooms[roomExits[x]].exitMax)
+				Memory.rooms[roomExits[x]].exitsVisited != null &&
+				Memory.rooms[roomExits[x]].exitsVisited >= Memory.rooms[roomExits[x]].exitMax)
 			{
 				//If what we'd return is a room that is already found to be a dead end this room
 				//isn't valid and we should try the next one
 				console.log(unit.name + ' this exit is a dead end. Try to find next room in ' + unit.room.name);
-				Memory.rooms[unit.room.name].exitVisited++;	//Can cause unit to turn back.
+				Memory.rooms[unit.room.name].exitsVisited++;	//Can cause unit to turn back.
 				return(findNextRoom(unit, unit.room));
 				
-				//if(Memory.rooms[unit.room.name].exitVisited >= Memory.rooms[unit.room.name].exitMax)
+				//if(Memory.rooms[unit.room.name].exitsVisited >= Memory.rooms[unit.room.name].exitMax)
 				//{
 				//	if(unit.memory.previousRoom != null)
 				//		Memory.rooms[unit.memory.previousRoom].exitsVisited++;
@@ -484,7 +487,7 @@
  //		or other 'scouted' status has been triggered in each room.
  //TO DO: Check room memory instead of or in addition to accessible rooms for more accurate results?
  //Checks the current exitsVisited to see if we're already present there, we don't want to scout a place we've already
- //been and so we denote this room as a invalid candiate to scout and skip to the next exitVisited if this is the case.
+ //been and so we denote this room as a invalid candiate to scout and skip to the next exitsVisited if this is the case.
  //We should be returning either a valid room name to go to or null
  function findNextRoom(unit, currentRoom)
  {

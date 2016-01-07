@@ -259,38 +259,6 @@
 	}
  }
  
-  module.exports.measure = function(value)
- {
-	var spawn0;
-	//Stores data in last found spawn, which means after more then 1 spawn is generated I'll
-	//be able to compare the previous stats with the older ones, since the oldest will be the
-	//only one that is recording anything
-	for(var x in Game.spawns)
-	{
-		spawn0 = Game.spawns[x];
-	}
-	
-	//Measure how many times we've recorded this cpu value
-	if(spawn0.memory.measureTicks == null)
-	{
-		spawn0.memory.measureTicks = 1;
-	}
-	else
-	{
-		spawn0.memory.measureTicks += 1;
-	}
-	
-	//Add the current value to the total to get the average later
-	if(spawn0.memory.measureCpu == null)
-	{
-		spawn0.memory.measureCpu = value;
-	}
-	else
-	{
-		spawn0.memory.measureCpu += value;
-	}
- }
- 
  module.exports.measure1 = function(value)
  {
 	var spawn0;
@@ -423,9 +391,10 @@
 			var unitSeenAvg2 = spawn0.memory.unitSeen2/spawn0.memory.seenTicks;
 			var avgPerTick1 = averageMeasure1 * unitSeenAvg1;
 			var avgPerTick2 = averageMeasure2 * unitSeenAvg2;
-			Game.notify('Creep average: ' + averageMeasure + ', gather(' + unitSeenAvg1 + ') average: ' + averageMeasure1 ' of ' + avgPerTick1 + ', builder(' + unitSeenAvg2 + ') average: ' + averageMeasure2 + ' of ' + avgPerTick2, 720);
+			Game.notify('Creep average: ' + averageMeasure + ', gather(' + unitSeenAvg1 + ') average: ' + averageMeasure1 + ' of ' + avgPerTick1 + ', builder(' + unitSeenAvg2 + ') average: ' + averageMeasure2 + ' of ' + avgPerTick2, 720);
 		}
 		
 		cleanMeasureCPU(spawn0);
 	}
- }	
+ }
+ 
