@@ -1268,6 +1268,7 @@
     var name = findDeadUnitName(spawner);
     var body = findDeadUnitBody(spawner, name);
     var role = null;
+	
     //If no found dead units need to respawn, attempt to spawn new unit
     if(name == null)
     {
@@ -1909,6 +1910,10 @@
 					}
 				}
 			}
+		}
+		else
+		{
+			//console.log('all spawns occupied');
 		}
 	}
  }

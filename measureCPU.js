@@ -202,19 +202,202 @@
 		spawn0.memory.standardDeviation = 0; 
 		
 		//Cleans CPU Limit
-		spawn0.memory.CpuLimitGrow = 1;
+		spawn0.memory.CpuLimitGrow = 0;
 		spawn0.memory.CpuLimitGrowTotal = 0;
 		spawn0.memory.CpuLimitGrowAvg = 0;
-		spawn0.memory.CpuLimitShrink = 1;
+		spawn0.memory.CpuLimitShrink = 0;
 		spawn0.memory.CpuLimitShrinkTotal = 0;
 		spawn0.memory.CpuLimitShrinkAvg = 0;
 		spawn0.memory.previousCpuLimit = Game.cpuLimit;
-		spawn0.memory.CpuLimitCappedTicks = 1;
+		spawn0.memory.CpuLimitCappedTicks = 0;
 		spawn0.memory.CpuLimitAvg = 0;
+		
+		//Cleans average cpu of various functions
+		spawn0.memory.measureTicks = 0;
+		spawn0.memory.measureCpu = 0;
+		//Cpu amount we've seen this round
+		spawn0.memory.measureTicks1 = 0;
+		spawn0.memory.measureCpu1 = 0;
+		spawn0.memory.measureTicks2 = 0;
+		spawn0.memory.measureCpu2 = 0;
+		//How many units we've seen this round
+		spawn0.memory.seenTicks = 0;
+		spawn0.memory.unitSeen1 = 0;
+		spawn0.memory.unitSeen2 = 0;
+	}
+ }
+ 
+ module.exports.measure = function(value)
+ {
+	var spawn0;
+	//Stores data in last found spawn, which means after more then 1 spawn is generated I'll
+	//be able to compare the previous stats with the older ones, since the oldest will be the
+	//only one that is recording anything
+	for(var x in Game.spawns)
+	{
+		spawn0 = Game.spawns[x];
+	}
+	
+	//Measure how many times we've recorded this cpu value
+	if(spawn0.memory.measureTicks == null)
+	{
+		spawn0.memory.measureTicks = 1;
+	}
+	else
+	{
+		spawn0.memory.measureTicks += 1;
+	}
+	
+	//Add the current value to the total to get the average later
+	if(spawn0.memory.measureCpu == null)
+	{
+		spawn0.memory.measureCpu = value;
+	}
+	else
+	{
+		spawn0.memory.measureCpu += value;
+	}
+ }
+ 
+  module.exports.measure = function(value)
+ {
+	var spawn0;
+	//Stores data in last found spawn, which means after more then 1 spawn is generated I'll
+	//be able to compare the previous stats with the older ones, since the oldest will be the
+	//only one that is recording anything
+	for(var x in Game.spawns)
+	{
+		spawn0 = Game.spawns[x];
+	}
+	
+	//Measure how many times we've recorded this cpu value
+	if(spawn0.memory.measureTicks == null)
+	{
+		spawn0.memory.measureTicks = 1;
+	}
+	else
+	{
+		spawn0.memory.measureTicks += 1;
+	}
+	
+	//Add the current value to the total to get the average later
+	if(spawn0.memory.measureCpu == null)
+	{
+		spawn0.memory.measureCpu = value;
+	}
+	else
+	{
+		spawn0.memory.measureCpu += value;
+	}
+ }
+ 
+ module.exports.measure1 = function(value)
+ {
+	var spawn0;
+	//Stores data in last found spawn, which means after more then 1 spawn is generated I'll
+	//be able to compare the previous stats with the older ones, since the oldest will be the
+	//only one that is recording anything
+	for(var x in Game.spawns)
+	{
+		spawn0 = Game.spawns[x];
+	}
+	
+	//Measure how many times we've recorded this cpu value
+	if(spawn0.memory.measureTicks1 == null)
+	{
+		spawn0.memory.measureTicks1 = 1;
+	}
+	else
+	{
+		spawn0.memory.measureTicks1 += 1;
+	}
+	
+	//Add the current value to the total to get the average later
+	if(spawn0.memory.measureCpu1 == null)
+	{
+		spawn0.memory.measureCpu1 = value;
+	}
+	else
+	{
+		spawn0.memory.measureCpu1 += value;
+	}
+ }
+ 
+ module.exports.measure2 = function(value)
+ {
+	var spawn0;
+	//Stores data in last found spawn, which means after more then 1 spawn is generated I'll
+	//be able to compare the previous stats with the older ones, since the oldest will be the
+	//only one that is recording anything
+	for(var x in Game.spawns)
+	{
+		spawn0 = Game.spawns[x];
+	}
+	
+	//Measure how many times we've recorded this cpu value
+	if(spawn0.memory.measureTicks2 == null)
+	{
+		spawn0.memory.measureTicks2 = 1;
+	}
+	else
+	{
+		spawn0.memory.measureTicks2 += 1;
+	}
+	
+	//Add the current value to the total to get the average later
+	if(spawn0.memory.measureCpu2 == null)
+	{
+		spawn0.memory.measureCpu2 = value;
+	}
+	else
+	{
+		spawn0.memory.measureCpu2 += value;
+	}
+ }
+
+ module.exports.seen = function(unitSeen1, unitSeen2)
+ {
+	var spawn0;
+	//Stores data in last found spawn, which means after more then 1 spawn is generated I'll
+	//be able to compare the previous stats with the older ones, since the oldest will be the
+	//only one that is recording anything
+	for(var x in Game.spawns)
+	{
+		spawn0 = Game.spawns[x];
+	}
+	
+	//Measure how many times we've recorded this cpu value
+	if(spawn0.memory.seenTicks == null)
+	{
+		spawn0.memory.seenTicks = 1;
+	}
+	else
+	{
+		spawn0.memory.seenTicks += 1;
+	}
+	
+	//How many of <X> unit was alive this tick
+	if(spawn0.memory.unitSeen1 == null)
+	{
+		spawn0.memory.unitSeen1 = unitSeen1;
+	}
+	else
+	{
+		spawn0.memory.unitSeen1 += unitSeen1;
+	}
+	
+	//How many of <Y> unit was alive this tick
+	if(spawn0.memory.unitSeen2 == null)
+	{
+		spawn0.memory.unitSeen2 = unitSeen2;
+	}
+	else
+	{
+		spawn0.memory.unitSeen2 += unitSeen2;
 	}
  }
 	
- module.exports = function()
+ module.exports.cpu = function()
  {
 	var spawn0;
 	//Stores data in last found spawn, which means after more then 1 spawn is generated I'll
@@ -231,6 +414,18 @@
 	if(Game.time % 10000 == 0)
 	{
 		Game.notify('CPU-Average: ' + spawn0.memory.averageCPU + '+/-' + spawn0.memory.standardDeviation + ', CpuLimitAvg: ' + spawn0.memory.CpuLimitAvg, 720);
+		if(spawn0.memory.measureCpu != null)
+		{
+			var averageMeasure = spawn0.memory.measureCpu/spawn0.memory.measureTicks;
+			var averageMeasure1 = spawn0.memory.measureCpu1/spawn0.memory.measureTicks1;
+			var averageMeasure2 = spawn0.memory.measureCpu2/spawn0.memory.measureTicks2;
+			var unitSeenAvg1 = spawn0.memory.unitSeen1/spawn0.memory.seenTicks;
+			var unitSeenAvg2 = spawn0.memory.unitSeen2/spawn0.memory.seenTicks;
+			var avgPerTick1 = averageMeasure1 * unitSeenAvg1;
+			var avgPerTick2 = averageMeasure2 * unitSeenAvg2;
+			Game.notify('Creep average: ' + averageMeasure + ', gather(' + unitSeenAvg1 + ') average: ' + averageMeasure1 ' of ' + avgPerTick1 + ', builder(' + unitSeenAvg2 + ') average: ' + averageMeasure2 + ' of ' + avgPerTick2, 720);
+		}
+		
 		cleanMeasureCPU(spawn0);
 	}
  }	

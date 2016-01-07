@@ -462,7 +462,7 @@
 	for(var i in Memory.creeps)
 	{
 		//Assuming the list displayed in memory cycles through the list in the same order on the webpage as
-		//in this array. The first found entry should be the oldest and therfore the one that needs deleted.
+		//in this array. The first found entry should be the oldest and therefore the one that needs deleted.
 		if(Memory.creeps[i].role == unit.memory.role && unit.memory.usingSourceId == Memory.creeps[i].usingSourceId)
 		{
 			//console.log(unit.name + ' attempted to remove memory before death.');
@@ -474,6 +474,7 @@
 			//console.log(unit.name + ' was found for deletion, but usingSourceId didnt match, my assumptions were wrong.');
 		}
 	}
+	console.log(unit.name + ' requested the scout be removed');
 	unit.suicide();
 	return('exploreEnd');
  }
@@ -1420,12 +1421,10 @@
  function scout(unit, scoutsSeen, previousScoutState)
  {
 	var initialize = Game.getUsedCpu();
-	if(unit.ticksToLive <= 2)
+	if(removeUnitNearDeath(unit) == 'death')
 	{	//Unit ran out of time, could still have more room to explore so we're not calling exploreEnd
 		//This should be fixed to call removeScout(unit) when the scouts are properly working
 		//console.log(unit.name + ' attempted to remove memory ' + Memory.creeps[unit.name] + ' before death.');
-		delete Memory.creeps[unit.name];
-		unit.suicide();
 		return('travel');
 	}
 	else
