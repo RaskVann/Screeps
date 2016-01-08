@@ -7,7 +7,7 @@
  */
 
  var followFlagForward = require('createPathFlags');
- var spawnFrom = require('Spawner');
+ //var spawnFrom = require('Spawner');
 
  //Recorded by how many units we've assigned a harvest spot to in this room.
  function getNeedHarvest(spawn)
@@ -356,16 +356,10 @@
 	return(report);
  }
  
- function nextRoomManager(unit, currentRoom, useSpawn)
+ function populateExitMax(currentRoom)
  {
-	var newExit;
-	//The first time the room is entered by a scout. Populate the exit information and if a dead end
-	//go ahead and kill the scout here otherwise move on to existing exit logic
-	//This will mess up if the scout bounces back and forth between rooms for any length of time
-	if(currentRoom.memory.exitMax == null)
+	if(currentRoom != null && currentRoom.memory.exitMax == null)
 	{
-		//Find and assign how many exits are in this room
-		currentRoom.memory.exitsVisited = 0;
 		var roomExits = Game.map.describeExits(currentRoom.name);
 		var countExits = 0;
 		for(var i in roomExits)
@@ -376,6 +370,22 @@
 			}
 		}
 		currentRoom.memory.exitMax = countExits;
+		return(true);
+	}
+	return(false);
+ }
+ 
+ function nextRoomManager(unit, currentRoom, useSpawn)
+ {
+	var newExit;
+	//The first time the room is entered by a scout. Populate the exit information and if a dead end
+	//go ahead and kill the scout here otherwise move on to existing exit logic
+	//This will mess up if the scout bounces back and forth between rooms for any length of time
+	if(currentRoom.memory.exitMax == null)
+	{
+		//Find and assign how many exits are in this room
+		currentRoom.memory.exitsVisited = 0;
+		populateExitMax(currentRoom);
 		
 		//If found another user owned room. Remove unit and update previous room to look at next room
 		if(currentRoom.controller != null && currentRoom.controller.owner != null && 
@@ -1057,7 +1067,28 @@
 	}
 	else
 	{
-		//console.log(unit.name + ' in ' + unit.room.name + ' trying to find scout in ' + getPreviousRoom(unit) + ' failed in ' + unit.memory.previousRoom + ' or in subsequent room.');
+		var lookAtRoom = Game.rooms[getPreviousRoom(unit)];
+		if(lookAtRoom != null &&
+			lookAtRoom.controller != null &&
+			lookAtRoom.controller.owner != null &&
+			lookAtRoom.controller.owner.username == 'RaskVann')
+		{
+			//console.log(unit.name + ' found home but no scout.');
+			var allSpawns = lookAtRoom.find(FIND_MY_SPAWNS);
+			for(var spawns in allSpawns)
+			{
+				var selectSpawn = allSpawns[spawns];
+				if(selectSpawn.memory.master == null || selectSpawn.memory.master == true)
+				{
+					//console.log(selectSpawn + ' requesting new scout');
+					selectSpawn.memory.requestScout = 1;
+				}
+			}
+		}
+		else
+		{
+			//console.log(unit.name + ' in ' + unit.room.name + ' trying to find scout in ' + getPreviousRoom(unit) + ' failed in ' + unit.memory.previousRoom + ' or in subsequent room.');
+		}
 	}
 	
 	if(count+1 >= limit)
@@ -1724,6 +1755,17 @@
 			console.log('Scout abandoned creating paths, most likely cpu is to high or is traveling');
 		}
 	}
+	//Here to catch when a scout finds a populated room, don't bother waiting for units to catch up in previous
+	//rooms, just mark this as a dead end, get what information we can and kill the unit.
+	else if(currentRoom.controller != null && currentRoom.controller.owner != null && 
+			currentRoom.controller.owner.username != 'RaskVann')
+	{
+		currentRoom.memory.owner = currentRoom.controller.owner.username;
+		currentRoom.memory.threat = evaluateThreat(currentRoom);
+		populateExitMax(currentRoom);
+		currentRoom.memory.exitsVisited = currentRoom.memory.exitMax;
+		return(requestScout(unit, useSpawn));
+	}
 	else if(currentRoom.controller == null)
 	{
 		storeBank(unit, currentRoom, useSpawn);
@@ -1954,6 +1996,7 @@
 			{
 				targetCreep = findEnemy[0];
 				reportRoom = findEnemy[0].room;
+				//TO DO: Only request if don't already exceed the amount of attacking body
 				reportRoom.memory.requestDefender = 1;
 			}
 			else
@@ -1965,13 +2008,14 @@
 	 
 	if(targetCreep != null && reportRoom != null)
 	{
+		//TO DO: Only request if don't already exceed the amount of attacking body
 		reportRoom.memory.requestDefender = 1;
 
 		var rangedAttack = targetCreep.getActiveBodyparts(RANGED_ATTACK);
 		var attack = targetCreep.getActiveBodyparts(ATTACK);
 		if(rangedAttack > 0 || attack > 0)	//If this unit has offensive capabilities, report in 10 minutes
 		{
-			Game.notify('owner: ' + targetCreep.owner.username + ', has OFFENSIVE creep, has body length: ' + targetCreep.body.length + ' in room ' + unit.room.name, 10);
+			Game.notify('owner: ' + targetCreep.owner.username + ', has OFFENSIVE creep, has body length: ' + targetCreep.body.length + ' in room ' + targetCreep.room.name, 10);
 			Game.notify('OFFENSIVE target has active MOVE: ' + targetCreep.getActiveBodyparts(MOVE) + ', WORK: ' + targetCreep.getActiveBodyparts(WORK) +
 						', CARRY: ' + targetCreep.getActiveBodyparts(CARRY) + ', ATTACK: ' + attack + ', RANGED_ATTACK: ' +
 						rangedAttack + ', HEAL: ' + targetCreep.getActiveBodyparts(HEAL) + ', TOUGH: ' +
@@ -1979,7 +2023,7 @@
 		}
 		else	//If this is a passive unit, report every 24 hours
 		{
-			Game.notify('owner: ' + targetCreep.owner.username + ', has passive creep, has body length: ' + targetCreep.body.length + ' in room ' + unit.room.name, 1440);
+			Game.notify('owner: ' + targetCreep.owner.username + ', has passive creep, has body length: ' + targetCreep.body.length + ' in room ' + targetCreep.room.name, 1440);
 			Game.notify('Passive target has active MOVE: ' + targetCreep.getActiveBodyparts(MOVE) + ', WORK: ' + targetCreep.getActiveBodyparts(WORK) +
 						', CARRY: ' + targetCreep.getActiveBodyparts(CARRY) + ', HEAL: ' + targetCreep.getActiveBodyparts(HEAL) + 
 						', TOUGH: ' + targetCreep.getActiveBodyparts(TOUGH), 1440);
@@ -2019,10 +2063,26 @@
 	 
     if(Game.flags.Attack != null)
     {
-        if(unit.attack(Game.flags.Attack) < 0 && Math.abs(unit.pos.getRangeTo(Game.flags.Attack)) > 1)
+        if(Math.abs(unit.pos.getRangeTo(Game.flags.Attack)) > 1)
         {
 			unit.moveTo(Game.flags.Attack);
         }
+		else
+		{
+			var attackCreep = Game.flags.Attack.pos.lookFor('creep');
+			var attackStruct = Game.flags.Attack.pos.lookFor('structure');
+			var attackAt;
+			if(attackCreep.length > 0 && attackCreep[0].my == false)
+			{
+				attackAt = attackCreep[0];
+				var attackCode = unit.attack(attackAt);
+			}
+			else if(attackStruct.length > 0 && attackStruct[0].my == false)
+			{
+				attackAt = attackStruct[0];
+				var attackCode = unit.attack(attackAt);
+			}
+		}
     }
    
     if(unit.getActiveBodyparts(RANGED_ATTACK) > 0)
@@ -2055,10 +2115,14 @@
 		
 		if(targetCreep != null)
 		{
-			if(unit.attack(targetCreep) == ERR_NOT_IN_RANGE)
+			if(unit.pos.getRangeTo(targetCreep) > 1)
 			{
 				unit.moveTo(targetCreep);
 				return('travel');
+			}
+			else
+			{
+				unit.attack(targetCreep);
 			}
 		}
 		else
@@ -2599,6 +2663,45 @@ module.exports.tower = function(nextRoom, enemyInSpawn)
 				{
 					towers[tow].attack(enemyInSpawn);
 				}
+			}
+			//Towers can repair but not build. Repair from the towers starting from whoever has the least amount of hits
+			else if(towers[0].room.memory.buildRatio != null)
+			{
+				var repairThis;
+				var buildRatio = towers[0].room.memory.buildRatio;
+				//var repairTargets = towers[0].room.find(FIND_MY_STRUCTURES, {
+				//	filter: function(object) {
+				//		return(object.hits < object.hitsMax && object.hits < object.hitsMax*buildRatio);
+				//	}
+				//});
+				var findStructure = towers[0].room.find(FIND_STRUCTURES, {
+					filter: function(object) {
+						return(object.hits < object.hitsMax && object.hits < object.hitsMax*buildRatio && object.structureType != STRUCTURE_ROAD);
+					}
+				}); 
+				
+				if(findStructure.length > 0)
+				{
+					repairThis = _.min(findStructure, 'hits');
+					//repairThis = _.min(findStructure, function(str) {
+					//	return str.hits;
+					//});
+
+					for(var tow in towers)
+					{
+						towers[tow].repair(repairThis);
+					}
+				}
+				else
+				{
+					console.log('Towers unable to find new structure to repair. Raising build ratio.');
+					towers[0].room.memory.buildRatio += .01;
+				}
+			}
+			else
+			{
+				console.log('Towers unable to find build ratio?');
+				//towers[0].room.memory.buildRatio = .01;
 			}
 		}
 	}

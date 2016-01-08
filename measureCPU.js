@@ -214,7 +214,10 @@
 		
 		//Cleans average cpu of various functions
 		spawn0.memory.measureTicks = 0;
-		spawn0.memory.measureCpu = 0;
+		spawn0.memory.measureInitCpu = 0;
+		spawn0.memory.measurePeriodicCpu = 0;
+		spawn0.memory.measureRoomCpu = 0;
+		spawn0.memory.measureCreepCpu = 0;
 		//Cpu amount we've seen this round
 		spawn0.memory.measureTicks1 = 0;
 		spawn0.memory.measureCpu1 = 0;
@@ -224,10 +227,14 @@
 		spawn0.memory.seenTicks = 0;
 		spawn0.memory.unitSeen1 = 0;
 		spawn0.memory.unitSeen2 = 0;
+		spawn0.memory.unitSeen3 = 0;
+		spawn0.memory.unitSeen4 = 0;
+		spawn0.memory.unitSeen5 = 0;
 	}
  }
  
- module.exports.measure = function(value)
+ //reportInitializeCpuUsed, reportPeriodic, reportLookThroughRooms, reportCreepCpuUsed
+ module.exports.measure = function(reportInitializeCpuUsed, reportPeriodic, reportLookThroughRooms, reportCreepCpuUsed)
  {
 	var spawn0;
 	//Stores data in last found spawn, which means after more then 1 spawn is generated I'll
@@ -239,23 +246,53 @@
 	}
 	
 	//Measure how many times we've recorded this cpu value
-	if(spawn0.memory.measureTicks == null)
+	//if(spawn0.memory.measureTicks == null)
+	//{
+	//	spawn0.memory.measureTicks = 1;
+	//}
+	//else
+	//{
+	//	spawn0.memory.measureTicks += 1;
+	//}
+	
+	//Add the current value to the total to get the average later
+	if(spawn0.memory.measureInitCpu == null)
 	{
-		spawn0.memory.measureTicks = 1;
+		spawn0.memory.measureInitCpu = reportInitializeCpuUsed/reportEvery;
 	}
 	else
 	{
-		spawn0.memory.measureTicks += 1;
+		spawn0.memory.measureInitCpu += reportInitializeCpuUsed/reportEvery;
 	}
 	
 	//Add the current value to the total to get the average later
-	if(spawn0.memory.measureCpu == null)
+	if(spawn0.memory.measurePeriodicCpu == null)
 	{
-		spawn0.memory.measureCpu = value;
+		spawn0.memory.measurePeriodicCpu = reportPeriodic/reportEvery;
 	}
 	else
 	{
-		spawn0.memory.measureCpu += value;
+		spawn0.memory.measurePeriodicCpu += reportPeriodic/reportEvery;
+	}
+	
+	//Add the current value to the total to get the average later
+	if(spawn0.memory.measureRoomCpu == null)
+	{
+		spawn0.memory.measureRoomCpu = reportLookThroughRooms/reportEvery;
+	}
+	else
+	{
+		spawn0.memory.measureRoomCpu += reportLookThroughRooms/reportEvery;
+	}
+	
+	//Add the current value to the total to get the average later
+	if(spawn0.memory.measureCreepCpu == null)
+	{
+		spawn0.memory.measureCreepCpu = reportCreepCpuUsed/reportEvery;
+	}
+	else
+	{
+		spawn0.memory.measureCreepCpu += reportCreepCpuUsed/reportEvery;
 	}
  }
  
@@ -323,7 +360,8 @@
 	}
  }
 
- module.exports.seen = function(unitSeen1, unitSeen2)
+ //gatherersSeen, buildersSeen, harvestersSeen, attackersSeen, scoutsSeen
+ module.exports.seen = function(unitSeen1, unitSeen2, unitSeen3, unitSeen4, unitSeen5)
  {
 	var spawn0;
 	//Stores data in last found spawn, which means after more then 1 spawn is generated I'll
@@ -335,36 +373,68 @@
 	}
 	
 	//Measure how many times we've recorded this cpu value
-	if(spawn0.memory.seenTicks == null)
-	{
-		spawn0.memory.seenTicks = 1;
-	}
-	else
-	{
-		spawn0.memory.seenTicks += 1;
-	}
+	//if(spawn0.memory.seenTicks == null)
+	//{
+	//	spawn0.memory.seenTicks = 1;
+	//}
+	//else
+	//{
+	//	spawn0.memory.seenTicks += 1;
+	//}
 	
 	//How many of <X> unit was alive this tick
 	if(spawn0.memory.unitSeen1 == null)
 	{
-		spawn0.memory.unitSeen1 = unitSeen1;
+		spawn0.memory.unitSeen1 = unitSeen1/reportEvery;
 	}
 	else
 	{
-		spawn0.memory.unitSeen1 += unitSeen1;
+		spawn0.memory.unitSeen1 += unitSeen1/reportEvery;
 	}
 	
 	//How many of <Y> unit was alive this tick
 	if(spawn0.memory.unitSeen2 == null)
 	{
-		spawn0.memory.unitSeen2 = unitSeen2;
+		spawn0.memory.unitSeen2 = unitSeen2/reportEvery;
 	}
 	else
 	{
-		spawn0.memory.unitSeen2 += unitSeen2;
+		spawn0.memory.unitSeen2 += unitSeen2/reportEvery;
+	}
+	
+	//How many of <Z> unit was alive this tick
+	if(spawn0.memory.unitSeen3 == null)
+	{
+		spawn0.memory.unitSeen3 = unitSeen3/reportEvery;
+	}
+	else
+	{
+		spawn0.memory.unitSeen3 += unitSeen3/reportEvery;
+	}
+	
+	//How many of <W> unit was alive this tick
+	if(spawn0.memory.unitSeen4 == null)
+	{
+		spawn0.memory.unitSeen4 = unitSeen4/reportEvery;
+	}
+	else
+	{
+		spawn0.memory.unitSeen4 += unitSeen4/reportEvery;
+	}
+	
+	//How many of <U> unit was alive this tick
+	if(spawn0.memory.unitSeen5 == null)
+	{
+		spawn0.memory.unitSeen5 = unitSeen5/reportEvery;
+	}
+	else
+	{
+		spawn0.memory.unitSeen5 += unitSeen5/reportEvery;
 	}
  }
-	
+
+ var reportEvery = 10000;
+ 
  module.exports.cpu = function()
  {
 	var spawn0;
@@ -379,19 +449,29 @@
     measureCPU(spawn0);
 	
 	//Report to me cpu stats every 10,000 ticks (grouped every 12 hours)
-	if(Game.time % 10000 == 0)
+	if(Game.time % reportEvery == 0)
 	{
 		Game.notify('CPU-Average: ' + spawn0.memory.averageCPU + '+/-' + spawn0.memory.standardDeviation + ', CpuLimitAvg: ' + spawn0.memory.CpuLimitAvg, 720);
-		if(spawn0.memory.measureCpu != null)
+		if(spawn0.memory.measureCreepCpu != null && spawn0.memory.measureCreepCpu > 0)
 		{
-			var averageMeasure = spawn0.memory.measureCpu/spawn0.memory.measureTicks;
+			var avgInit = spawn0.memory.measureInitCpu;// /spawn0.memory.measureTicks;
+			var avgPeriodic = spawn0.memory.measurePeriodicCpu;// /spawn0.memory.measureTicks;
+			var avgRoom = spawn0.memory.measureRoomCpu;// /spawn0.memory.measureTicks;
+			Game.notify('Initialize Average: ' + avgInit + ', Periodic Average: ' + avgPeriodic + ', Room Average: ' + avgRoom, 720);
+			
+			var averageMeasure = spawn0.memory.measureCreepCpu/spawn0.memory.measureTicks;
 			var averageMeasure1 = spawn0.memory.measureCpu1/spawn0.memory.measureTicks1;
 			var averageMeasure2 = spawn0.memory.measureCpu2/spawn0.memory.measureTicks2;
-			var unitSeenAvg1 = spawn0.memory.unitSeen1/spawn0.memory.seenTicks;
-			var unitSeenAvg2 = spawn0.memory.unitSeen2/spawn0.memory.seenTicks;
+			var unitSeenAvg1 = spawn0.memory.unitSeen1;// /spawn0.memory.seenTicks;
+			var unitSeenAvg2 = spawn0.memory.unitSeen2;// /spawn0.memory.seenTicks;
+			var unitSeenAvg3 = spawn0.memory.unitSeen3;// /spawn0.memory.seenTicks;
+			var unitSeenAvg4 = spawn0.memory.unitSeen4;// /spawn0.memory.seenTicks;
+			var unitSeenAvg5 = spawn0.memory.unitSeen5;// /spawn0.memory.seenTicks;
 			var avgPerTick1 = averageMeasure1 * unitSeenAvg1;
 			var avgPerTick2 = averageMeasure2 * unitSeenAvg2;
-			Game.notify('Creep average: ' + averageMeasure + ', gather(' + unitSeenAvg1 + ') average: ' + averageMeasure1 + ' of ' + avgPerTick1 + ', builder(' + unitSeenAvg2 + ') average: ' + averageMeasure2 + ' of ' + avgPerTick2, 720);
+			Game.notify('Creep average: ' + averageMeasure + ', gather(' + unitSeenAvg1 + ') average: ' + averageMeasure1 + ' of ' + avgPerTick1 + 
+			', builder(' + unitSeenAvg2 + ') average: ' + averageMeasure2 + ' of ' + avgPerTick2 + ' harvest(' + unitSeenAvg3 + '), attack (' + 
+			unitSeenAvg4 + '), scout(' + unitSeenAvg5 + ')', 720);
 		}
 		
 		cleanMeasureCPU(spawn0);

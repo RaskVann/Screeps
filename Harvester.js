@@ -6,7 +6,7 @@
  * var mod = require('Harvester'); // -> 'a thing'
  */
  
- var viewFlags = require('previewRoute');
+ //var viewFlags = require('previewRoute');
  var followFlagForward = require('createPathFlags');
  
  //TO DO: Use the spawn that this unit came from. This currently just sends back the first
@@ -35,31 +35,31 @@
  //Reassign the unit to be role = 'to' with the flags To and From created.
  //This will clear and create the first route and move automatically to
  //use ressignFrom
- function reassignTo(unit)
- {
-    if(Game.flags.To != null && Game.flags.From != null )
-    {
-        //This clears (and thus needs to recreate) a new path
-        unit.memory.pathTo = null;
-        saveAndPathToNew(unit, Game.flags.From.pos, Game.flags.To.pos);
-        unit.memory.role = 'from';
-        viewFlags(unit);
-    }
- }
+// function reassignTo(unit)
+// {
+//    if(Game.flags.To != null && Game.flags.From != null )
+//    {
+//        //This clears (and thus needs to recreate) a new path
+//        unit.memory.pathTo = null;
+//        saveAndPathToNew(unit, Game.flags.From.pos, Game.flags.To.pos);
+//        unit.memory.role = 'from';
+//        viewFlags(unit);
+//    }
+// }
  
  //Let reassignTo use this, don't call directly. Clears the pathFrom and assigns
  //it a new one, gives the new 'idle' role once complete.
- function reassignFrom(unit)
- {
-    if(Game.flags.From != null && Game.flags.To != null)
-    {
-        //This clears (and thus needs to recreate) a new path
-        unit.memory.pathFrom = null;
-        saveAndPathFromNew(unit, Game.flags.From.pos, Game.flags.To.pos);
-        unit.memory.role = 'idle';
-        viewFlags(unit);
-    }
- }
+// function reassignFrom(unit)
+// {
+//    if(Game.flags.From != null && Game.flags.To != null)
+//    {
+//        //This clears (and thus needs to recreate) a new path
+//        unit.memory.pathFrom = null;
+//        saveAndPathFromNew(unit, Game.flags.From.pos, Game.flags.To.pos);
+//        unit.memory.role = 'idle';
+//        viewFlags(unit);
+//    }
+// }
  
  function moveToFlag(unit)
  {
