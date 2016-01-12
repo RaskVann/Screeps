@@ -2638,13 +2638,20 @@
 	//console.log('After modding, looking at:' + eastWestLetter + '-' + eastWestNum + '-' + northSouthLetter + '-' + northSouthNum);
 	return(eastWestLetter + eastWestNum + northSouthLetter + northSouthNum);
  }
- 
+
 module.exports.tower = function(nextRoom, enemyInSpawn)
 {
-	if(enemyInSpawn != null && 
-		nextRoom.controller != null && nextRoom.controller.owner != null && 
-		nextRoom.controller.owner.username == 'RaskVann' && nextRoom.controller.level >= 3)
+	if(nextRoom.controller != null &&
+		nextRoom.controller.level >= 3 &&
+		nextRoom.controller.owner != null && 
+		nextRoom.controller.owner.username == 'RaskVann')
 	{
+		//tower.energy
+		//tower.energyCapacity
+		//tower.attack()
+		//tower.heal()
+		//tower.repair()
+				
 		//Level 3-5: 1 Tower, Level 6-7: 2 Towers, Level 8: 4 Towers
 		var towers = nextRoom.find(FIND_MY_STRUCTURES, {
 			filter: function(object) {
@@ -2654,26 +2661,20 @@ module.exports.tower = function(nextRoom, enemyInSpawn)
 		
 		if(towers.length > 0)
 		{
-			//tower.energy
-			//tower.energyCapacity
-			//tower.attack()
-			//tower.heal()
-			//tower.repair()
-			
-			//var enemyInSpawn = towers[0].findClosestByRange(FIND_HOSTILE_CREEPS, {
-			//	filter: function(object) {
-			//		return(object.getActiveBodyparts(ATTACK) > 0 || object.getActiveBodyparts(RANGED_ATTACK) > 0 || object.getActiveBodyparts(HEAL) > 0);
-			//	}
-			//});
-			
+			//if(enemyInSpawn == null || (enemyInSpawn != null && enemyInSpawn.room.name == towers[0].room.name))
 			if(enemyInSpawn != null && enemyInSpawn.room.name == towers[0].room.name)
 			{
+				//var enemyInSpawn = towers[0].findClosestByRange(FIND_HOSTILE_CREEPS, {
+				//	filter: function(object) {
+				//		return(object.getActiveBodyparts(ATTACK) > 0 || object.getActiveBodyparts(RANGED_ATTACK) > 0 || object.getActiveBodyparts(HEAL) > 0);
+				//	}
+				//});
+				
 				for(var tow in towers)
 				{
 					towers[tow].attack(enemyInSpawn);
 				}
 			}
-			//Towers can repair but not build. Repair from the towers starting from whoever has the least amount of hits
 			else if(towers[0].room.memory.buildRatio != null)
 			{
 				var repairThis;
@@ -2700,7 +2701,7 @@ module.exports.tower = function(nextRoom, enemyInSpawn)
 					for(var tow in towers)
 					{
 						repairCode = towers[tow].repair(repairThis);
-						console.log('Tower[' + towers[tow].id + '] repair code: ' + repairCode + ', repairing: ' + repairThis);
+						//console.log('Tower[' + towers[tow].id + '] repair code: ' + repairCode + ', repairing: ' + repairThis);
 					}
 				}
 				else
