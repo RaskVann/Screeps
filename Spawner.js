@@ -1152,11 +1152,24 @@
 	else if(role == 'builder' && 
 			(Math.min(harvestersSeen*seenMod, gatherersSeen*seenMod) <= buildersSeen+1))// && 
 			//spawner.room.energyAvailable < spawner.room.energyCapacityAvailable))
-			
 	{
-		moveRespawnToEnd(spawner);
-		//console.log('adding ' + name + ' to end of respawn list.');
-		return(true);
+		if(spawner.room.controller.level > 3 && 
+			buildersSeen > 1 &&
+			spawner.room.find(FIND_MY_CONSTRUCTION_SITES, { filter: function(object) { return(object.structureType != STRUCTURE_ROAD); } }).length <= 0)
+		{
+			//Towers to take over all repairing unless there is a construction site to be built. Ignore builder production as long as there is over 2
+			//and no construction sites that the towers can't handle
+			moveRespawnToEnd(spawner);
+			console.log('adding ' + name + ' to end of respawn list. Tower probably exists, we have no construction sites(that arent roads) and we have more then 1 builder.');
+			return(true);
+		}
+		else
+		{
+			//There is no towers or there is a construction site, use typical builder production we've already established with the previous check
+			moveRespawnToEnd(spawner);
+			console.log('adding ' + name + ' to end of respawn list. Have construction site or no towers present.');
+			return(true);
+		}
 	}
 	return(false);
  }
@@ -1688,7 +1701,15 @@
 		
 		if(findSpawns.length > 0)
 		{
-			if(nextRoom.controller.level == 7)
+			if(nextRoom.controller.level == 3)
+			{
+				constructIfFoundLessThen(STRUCTURE_TOWER, findSpawns[0], radius, 1);
+			}
+			else if(nextRoom.controller.level == 6)
+			{
+				constructIfFoundLessThen(STRUCTURE_TOWER, findSpawns[0], radius, 2);
+			}
+			else if(nextRoom.controller.level == 7)
 			{
 				constructIfFoundLessThen(STRUCTURE_SPAWN, findSpawns[0], radius, 2);
 			}
@@ -1697,6 +1718,7 @@
 				constructIfFoundLessThen(STRUCTURE_SPAWN, findSpawns[0], radius, 3);
 				constructIfFoundLessThen(STRUCTURE_POWER_SPAWN, findSpawns[0], radius, 1);
 				constructIfFoundLessThen(STRUCTURE_OBSERVER, findSpawns[0], radius, 1);
+				constructIfFoundLessThen(STRUCTURE_TOWER, findSpawns[0], radius, 4);
 			}
 		}
 	}

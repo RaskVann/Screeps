@@ -372,6 +372,7 @@
 		currentRoom.memory.exitMax = countExits;
 		return(true);
 	}
+	console.log('populate exit got a null room: ' + currentRoom);
 	return(false);
  }
  
@@ -805,6 +806,7 @@
 					object.owner.username != 'Source Keeper');
 		}
 	});
+	var reportTime = 720;
 	//TO DO: When we attack source keeper later, this will be a problem. we're leaving him out because
 	//observer keeps reporting his creeps/rooms
 	if(targetCreep != null && targetCreep.length > 0)
@@ -827,20 +829,20 @@
 			else if(targetSpawns.length <= 0)
 			{
 				//console.log(currentRoom + ' has ' + targetCreep.length + ' creeps with 0 hostile body, no enemy spawns found');
-				//Game.notify(currentRoom + ' has ' + targetCreep.length + ' creeps with 0 hostile body, no enemy spawns found', 10);
+				//Game.notify(currentRoom + ' has ' + targetCreep.length + ' creeps with 0 hostile body, no enemy spawns found', reportTime);
 				return(2);
 			}
 			else
 			{
 				//console.log(currentRoom + ' has ' + targetCreep.length + ' creeps with 0 hostile body, ' + targetSpawns.length + ' spawns found, owned by ' + targetSpawns[0].owner.username);
-				//Game.notify(currentRoom + ' has ' + targetCreep.length + ' creeps with 0 hostile body, ' + targetSpawns.length + ' spawns found, owned by ' + targetSpawns[0].owner.username, 10);
+				//Game.notify(currentRoom + ' has ' + targetCreep.length + ' creeps with 0 hostile body, ' + targetSpawns.length + ' spawns found, owned by ' + targetSpawns[0].owner.username, reportTime);
 				return(3);
 			}
 		}
 		else if(totalHostileBody < 5)
 		{
 			console.log(currentRoom + ' has ' + targetCreep.length + ' creeps with ' + totalHostileBody + ' hostile body, first unit owned by ' + targetCreep[0].owner.username);
-			Game.notify(currentRoom + ' has ' + targetCreep.length + ' creeps with ' + totalHostileBody + ' hostile body, first unit owned by ' + targetCreep[0].owner.username, 10);
+			Game.notify(currentRoom + ' has ' + targetCreep.length + ' creeps with ' + totalHostileBody + ' hostile body, first unit owned by ' + targetCreep[0].owner.username, reportTime);
 			if(currentRoom.memory.threat != null && currentRoom.memory.threat < 5)
 			{
 				if(currentRoom.memory.threat <= 4)
@@ -854,7 +856,7 @@
 		else if(totalHostileBody < 10)
 		{
 			console.log(currentRoom + ' has ' + targetCreep.length + ' creeps with ' + totalHostileBody + ' hostile body, first unit owned by ' + targetCreep[0].owner.username);
-			Game.notify(currentRoom + ' has ' + targetCreep.length + ' creeps with ' + totalHostileBody + ' hostile body, first unit owned by ' + targetCreep[0].owner.username, 10);
+			Game.notify(currentRoom + ' has ' + targetCreep.length + ' creeps with ' + totalHostileBody + ' hostile body, first unit owned by ' + targetCreep[0].owner.username, reportTime);
 			if(currentRoom.memory.threat != null && currentRoom.memory.threat < 6)
 			{
 				if(currentRoom.memory.threat <= 4)
@@ -872,7 +874,7 @@
 		else if(totalHostileBody < 20)
 		{
 			console.log(currentRoom + ' has ' + targetCreep.length + ' creeps with ' + totalHostileBody + ' hostile body, first unit owned by ' + targetCreep[0].owner.username);
-			Game.notify(currentRoom + ' has ' + targetCreep.length + ' creeps with ' + totalHostileBody + ' hostile body, first unit owned by ' + targetCreep[0].owner.username, 10);
+			Game.notify(currentRoom + ' has ' + targetCreep.length + ' creeps with ' + totalHostileBody + ' hostile body, first unit owned by ' + targetCreep[0].owner.username, reportTime);
 			if(currentRoom.memory.threat != null && currentRoom.memory.threat < 7)
 			{
 				if(currentRoom.memory.threat <= 4)
@@ -894,7 +896,7 @@
 		else
 		{
 			console.log(currentRoom + ' has ' + targetCreep.length + ' creeps with ' + totalHostileBody + ' hostile body, first unit owned by ' + targetCreep[0].owner.username);
-			Game.notify(currentRoom + ' has ' + targetCreep.length + ' creeps with ' + totalHostileBody + ' hostile body, first unit owned by ' + targetCreep[0].owner.username, 10);
+			Game.notify(currentRoom + ' has ' + targetCreep.length + ' creeps with ' + totalHostileBody + ' hostile body, first unit owned by ' + targetCreep[0].owner.username, reportTime);
 			if(currentRoom.memory.threat != null && currentRoom.memory.threat < 8)
 			{
 				if(currentRoom.memory.threat <= 4)
@@ -923,19 +925,19 @@
 		if(currentRoom.controller != null && currentRoom.controller.owner != null && currentRoom.controller.owner.username == 'RaskVann')
 		{
 			//console.log(currentRoom + ' Room controlled by me, no enemy creeps found');
-			//Game.notify(currentRoom + ' Room controlled by me, no enemy creeps found', 10);
+			//Game.notify(currentRoom + ' Room controlled by me, no enemy creeps found', reportTime);
 			return(-1);	//Room controlled by me, no enemy creeps found
 		}
 		else if(currentRoom.controller == null || (currentRoom.controller != null && currentRoom.controller.owner == null))
 		{
 			//console.log(currentRoom + ' No enemy creeps found, not controlled');
-			//Game.notify(currentRoom + ' No enemy creeps found, not controlled', 10);
+			//Game.notify(currentRoom + ' No enemy creeps found, not controlled', reportTime);
 			return(0);	//No enemy creeps found, not controlled, threat 0
 		}
 		else if(currentRoom.controller.owner != null && currentRoom.controller.owner.username != 'RaskVann')
 		{
 			//console.log(currentRoom + ' No enemy creeps found, controlled by: ' + currentRoom.controller.owner.username);
-			//Game.notify(currentRoom + ' No enemy creeps found, controlled by: ' + currentRoom.controller.owner.username, 10);
+			//Game.notify(currentRoom + ' No enemy creeps found, controlled by: ' + currentRoom.controller.owner.username, reportTime);
 			return(1);	//No enemy creeps found, controlled by someone else, threat 1
 		}
 	}
@@ -959,6 +961,7 @@
 	{
 		//Report was attacked (and they couldn't insta-kill with damage)
 		var rangedTargets = unit.pos.findInRange(FIND_HOSTILE_CREEPS, 5);
+		var reportTime = 720;
 		if(rangedTargets.length > 0)
 		{
 			var owners = '';
@@ -966,11 +969,11 @@
 			{
 				owners += rangedTargets[x].owner.username + ', ';
 			}
-            Game.notify('Enemy found after injuring: ' + unit.name + ' of owners: ' + owners + ' in room: ' + unit.room.name, 10);
+            Game.notify('Enemy found after injuring: ' + unit.name + ' of owners: ' + owners + ' in room: ' + unit.room.name, reportTime);
 		}
 		else
 		{
-			Game.notify('No enemy found after injuring: ' + unit.name + ' in room: ' + unit.room.name + ' at time: ' + Game.time, 10);
+			Game.notify('No enemy found after injuring: ' + unit.name + ' in room: ' + unit.room.name + ' at time: ' + Game.time, reportTime);
 		}
 	}
  }
@@ -1503,6 +1506,7 @@
 	var scoutsInAllPreviousRooms = scoutsInEachRoom(unit);
 	var roomNameMem = unit.memory.roomName;
 	var usingSourceId = unit.memory.usingSourceId;
+	var reportTime = 720;
 
 	var searchRoom = Game.getUsedCpu() - initialize - scoutInit;
 	//When entering a new room and if the room is the room we intended and there are scouts
@@ -1529,6 +1533,10 @@
 		var scoutNewRoomInit = Game.getUsedCpu() - initialize - scoutInit - searchRoom;
 		var updateRoom = Game.getUsedCpu() - initialize - scoutInit - searchRoom - scoutNewRoomInit;
 		
+		var newExit = nextRoomManager(unit, currentRoom, useSpawn);
+		if(newExit == 'exploreEnd')
+			return(newExit);	//Dead - End found. Stop here
+		
 		if(currentRoom.memory.exitsVisited < currentRoom.memory.exitMax)
 		{
 			if(unit.memory.roomsMoved == null)
@@ -1540,9 +1548,7 @@
 				unit.memory.roomsMoved++;
 			}
 
-			var newExit = nextRoomManager(unit, currentRoom, useSpawn);
-			if(newExit == 'exploreEnd')
-				return(newExit);	//Dead - End found. Stop here
+			//Where newExit was
 			
 			//All following scouts should find a flag underneath to follow, TO DO: error if not
 			var foundFlag = followFlagForward.findFlag(unit, newExit)
@@ -1630,7 +1636,7 @@
 	if(scoutInit + searchRoom + newRoom > 15)
 	{
 		//console.log(unit.name + ' scoutInit: ' + scoutInit + 'searchRooms: ' + searchRoom + ' newRoom: ' + newRoom);
-		//Game.notify(unit.name + ' scoutInit: ' + scoutInit + 'searchRooms: ' + searchRoom + ' newRoom: ' + newRoom, 480);
+		//Game.notify(unit.name + ' scoutInit: ' + scoutInit + 'searchRooms: ' + searchRoom + ' newRoom: ' + newRoom, reportTime);
 	}
 	
 	//This unit shouldn't be created until the spawner has the chance to set everything it needs in the core room. This is for every other room the scout visits.
@@ -1740,7 +1746,7 @@
 		else if(currentRoom.controller.owner != null)
 		{
 			//console.log('Scout-Room: ' + currentRoom.name + ' with owner: ' + currentRoom.controller.owner.username + ', ignoring it for harvesting.');
-			Game.notify('Scout-Room: ' + currentRoom.name + ' with owner: ' + currentRoom.controller.owner.username + ', send message to user about expansion.', 10);
+			Game.notify('Scout-Room: ' + currentRoom.name + ' with owner: ' + currentRoom.controller.owner.username + ', send message to user about expansion.', reportTime);
 			
 			//TO DO: Create another unit type after all exploration is done, he moves to all the stored user occupied rooms and sits there
 			//		for a certain amount of time looking for attackers and auto spawning attackers (potentially add a attack/ranged/heal
@@ -1779,7 +1785,7 @@
 				var threat = evaluateThreat(currentRoom);
 				
 				//console.log('Scout-Room: ' + currentRoom.name + ' threat: ' + threatString(threat));
-				Game.notify('Scout-Room: ' + currentRoom.name + ' threat: ' + threatString(threat), 10);
+				Game.notify('Scout-Room: ' + currentRoom.name + ' threat: ' + threatString(threat), reportTime);
 				currentRoom.memory.threat = threat;
 			}
 			else
@@ -1788,7 +1794,7 @@
 				if(sources != null)
 				{
 					//console.log('Scout-Room: ' + currentRoom.name + ' AI Room with sources: ' + sources.length);
-					Game.notify('Scout-Room: ' + currentRoom.name + ' AI Room with sources: ' + sources.length, 10);
+					Game.notify('Scout-Room: ' + currentRoom.name + ' AI Room with sources: ' + sources.length, reportTime);
 					currentRoom.memory.sources = sources.length;
 					
 					//var threat = evaluateThreat(currentRoom);
@@ -1817,7 +1823,7 @@
 	if(scoutInit + searchRoom + newRoom + newSource > 15)
 	{
 		//console.log(unit.name + ' scoutInit: ' + scoutInit + ' searchRoom: ' + searchRoom +  ' newRoom: ' + newRoom + ' newSource: ' + newSource);
-		//Game.notify(unit.name + ' scoutInit: ' + scoutInit + ' searchRoom: ' + searchRoom +  ' newRoom: ' + newRoom + ' newSource: ' + newSource, 480);
+		//Game.notify(unit.name + ' scoutInit: ' + scoutInit + ' searchRoom: ' + searchRoom +  ' newRoom: ' + newRoom + ' newSource: ' + newSource, reportTime);
 	}
 	
 	//If at edge of map, move until off of edge, 
@@ -1836,7 +1842,7 @@
 		if(scoutInit + searchRoom + newRoom + newSource + move > 15)
 		{
 			//console.log(unit.name + ' scoutInit: ' + scoutInit + ' searchRoom: ' + searchRoom +  ' newRoom: ' + newRoom + ' newSource: ' + newSource + ' FlagMove: ' + move);
-			//Game.notify(unit.name + ' scoutInit: ' + scoutInit + ' searchRoom: ' + searchRoom +  ' newRoom: ' + newRoom + ' newSource: ' + newSource + ' FlagMove: ' + move, 480);
+			//Game.notify(unit.name + ' scoutInit: ' + scoutInit + ' searchRoom: ' + searchRoom +  ' newRoom: ' + newRoom + ' newSource: ' + newSource + ' FlagMove: ' + move, reportTime);
 		}
 		return('travel');
 	}
@@ -1895,7 +1901,7 @@
 		if(scoutInit + searchRoom + newRoom + newSource + move > 15)
 		{
 			//console.log(unit.name + ' scoutInit: ' + scoutInit + ' searchRoom: ' + searchRoom +  ' newRoom: ' + newRoom + ' newSource: ' + newSource + ' moveBack: ' + move);
-			//Game.notify(unit.name + ' scoutInit: ' + scoutInit + ' searchRoom: ' + searchRoom +  ' newRoom: ' + newRoom + ' newSource: ' + newSource + ' moveBack: ' + move, 480);
+			//Game.notify(unit.name + ' scoutInit: ' + scoutInit + ' searchRoom: ' + searchRoom +  ' newRoom: ' + newRoom + ' newSource: ' + newSource + ' moveBack: ' + move, reportTime);
 		}
 		return('ready');
 	}
@@ -1953,11 +1959,14 @@
 	{
 		nextRoomMove = scoutsAlive != null && roomsMoved != null && (scoutsAlive-roomsMoved > scoutsSeen+1);
 	}
+	//if((edgeOfMap || (harvestEmptyAndRoomUpdated && nextRoomMove)) == false)
+		//console.log(unit.name + '[' + scoutsSeen + '] room: ' + unit.room.name + ', scouts>Seen: ' + (scoutsAlive-roomsMoved) + '>' + scoutsSeen + '=' + ((scoutsAlive-roomsMoved)>scoutsSeen));
 	//TO DO: Fix, should have 1 unit behind(unless at spawn) but don't want to move to next room if the unit ahead hasn't made it out yet (unless its lead)
 	//Possibly move if more then 1 unit in the room, failing that move if have unit in previous room (unless in spawn, just move)
 	//nextRoomMove = scoutInPreviousRoom(unit);	//Move if can find a scout in the room this unit just came from (or just spawned)
 	
-	//console.log(unit.name + '[' + scoutsSeen + '] harvest: ' + harvestEmptyAndRoomUpdated + ' nextRoom: ' + nextRoomMove);
+	//if((edgeOfMap || (harvestEmptyAndRoomUpdated && nextRoomMove)) == false)
+		//console.log(unit.name + '[' + scoutsSeen + '] harvest: ' + harvestEmptyAndRoomUpdated + ' nextRoom: ' + nextRoomMove + '=' + (edgeOfMap || (harvestEmptyAndRoomUpdated && nextRoomMove)));
 	return(edgeOfMap || (harvestEmptyAndRoomUpdated && nextRoomMove));
  }
  
@@ -2686,10 +2695,12 @@ module.exports.tower = function(nextRoom, enemyInSpawn)
 					//repairThis = _.min(findStructure, function(str) {
 					//	return str.hits;
 					//});
+					var repairCode;
 
 					for(var tow in towers)
 					{
-						towers[tow].repair(repairThis);
+						repairCode = towers[tow].repair(repairThis);
+						console.log('Tower[' + towers[tow].id + '] repair code: ' + repairCode + ', repairing: ' + repairThis);
 					}
 				}
 				else
@@ -2725,6 +2736,7 @@ module.exports.observe = function(nextRoom)
 			
 			var accessRoom = Game.time % observerSize;
 			var previousRoom = accessRoom-1;
+			var reportTime = 720;
 			//Look at the last position in this array if we went just returned from there
 			if(previousRoom < 0)
 			{
@@ -2749,7 +2761,7 @@ module.exports.observe = function(nextRoom)
 				}
 				else if(threatVal != Memory.rooms[analyzeRoom].threat)
 				{
-					Game.notify('Room: ' + analyzeRoom + ' PrevThreat: ' + threatString(Memory.rooms[analyzeRoom].threat) + ' CurrThreat ' + threatString(threatVal), 720);
+					Game.notify('Room: ' + analyzeRoom + ' PrevThreat: ' + threatString(Memory.rooms[analyzeRoom].threat) + ' CurrThreat ' + threatString(threatVal), reportTime);
 					Memory.rooms[analyzeRoom].threat = threatVal;
 				}
 				
@@ -2763,7 +2775,7 @@ module.exports.observe = function(nextRoom)
 					}
 					else if(Memory.rooms[analyzeRoom].owner != analyzeRoomObject.controller.owner.username)
 					{
-						Game.notify('Room: ' + analyzeRoom + ' used to have owner ' + Memory.rooms[analyzeRoom].owner + ' now has owner ' + analyzeRoomObject.controller.owner.username, 720);
+						Game.notify('Room: ' + analyzeRoom + ' used to have owner ' + Memory.rooms[analyzeRoom].owner + ' now has owner ' + analyzeRoomObject.controller.owner.username, reportTime);
 						Memory.rooms[analyzeRoom].owner = analyzeRoomObject.controller.owner.username;
 					}
 				}

@@ -846,9 +846,11 @@
 		else if(returnResources.room.energyAvailable >= returnResources.room.energyCapacityAvailable)
 		{
 			var transferStorage = unit.room.storage;
+			//gathers carry 1350-1650 energy when with road, Tower takes 1000, Power takes 5000. If dropping near full (1350)
+			//into the highest of these we only want to drop energy if they are under .73 capacity.
 			var needyStruct = unit.pos.findClosestByRange(FIND_MY_STRUCTURES, {
 				filter: function(object) {
-					return(object.energy < object.energyCapacity && 
+					return(object.energy < (object.energyCapacity*.73) && 
 						(object.structureType == STRUCTURE_POWER_SPAWN || object.structureType == STRUCTURE_TOWER));
 				}
 			});

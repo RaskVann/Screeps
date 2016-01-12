@@ -498,44 +498,138 @@
 	return(currentPos.x <= 1 || currentPos.x >= 48 || currentPos.y <= 1 || currentPos.y >= 48);
  }
  
+ //When we're checking the edge of the map we don't always have the edge of the map straight
+ //RIGHT, LEFT, TOP, BOTTOM from where we end up. Search from that spot for a adjacent
+ //clear spot to move into and point there instead of there is a problem.
+ //Specifically we're looking for 'plain' or 'swamp' spaces, not walls
+ function clearSpot(currentPos)
+ {
+	var findTerrain = currentPos.lookFor('terrain', x, y);
+	if(findTerrain.length > 0 && findTerrain[0] == 'plain' || findTerrain[0] == 'swamp')
+	{
+		return(true);
+	}
+	
+	if(findTerrain.length > 0)
+		console.log(currentPos + ', room: ' + currentPos.roomName + ' was found to have ' + findTerrain[0] + ' instead of swamp or plain');
+	else
+		console.log(currentPos + ', room: ' + currentPos.roomName + ' couldnt find swamp or plain');
+	
+	return(false);
+ }
+ 
+ //Returns direction needs to go to get to or come from the edge of the map if it is on the edge of the map
+ //Otherwise it returns the defaultDirection it was going to use anyway
  function edgeOfMapDirection(currentPos, defaultDirection, movingInside)
  {
 	if(onEdgeOfMap(currentPos) && movingInside == true)
 	{
 		if(currentPos.x <= 1)
 		{
-			return(RIGHT);
+			if(clearSpot(new RoomPosition(0, currentPos.y, currentPos.roomName)))
+				return(RIGHT);
+			else if(clearSpot(new RoomPosition(0, currentPos.y-1, currentPos.roomName)))
+				return(BOTTOM_RIGHT);
+			else if(clearSpot(new RoomPosition(0, currentPos.y+1, currentPos.roomName)))
+				return(TOP_RIGHT);
+			else
+			{
+				console.log(movingInside + ', Trying to find RIGHT edge of map failed.');
+			}
 		}
 		else if(currentPos.x >= 48)
 		{
-			return(LEFT);
+			if(clearSpot(new RoomPosition(49, currentPos.y, currentPos.roomName)))
+				return(LEFT);
+			else if(clearSpot(new RoomPosition(49, currentPos.y-1, currentPos.roomName)))
+				return(BOTTOM_LEFT);
+			else if(clearSpot(new RoomPosition(49, currentPos.y+1, currentPos.roomName)))
+				return(TOP_LEFT);
+			else
+			{
+				console.log(movingInside + ', Trying to find LEFT edge of map failed.');
+			}
 		}
 		if(currentPos.y <= 1)
 		{
-			return(BOTTOM);
+			if(clearSpot(new RoomPosition(currentPos.x, 0, currentPos.roomName)))
+				return(BOTTOM);
+			else if(clearSpot(new RoomPosition(currentPos.x-1, 0, currentPos.roomName)))
+				return(BOTTOM_RIGHT);
+			else if(clearSpot(new RoomPosition(currentPos.x+1, 0, currentPos.roomName)))
+				return(BOTTOM_LEFT);
+			else
+			{
+				console.log(movingInside + ', Trying to find BOTTOM edge of map failed.');
+			}
 		}
 		else if(currentPos.y >= 48)
 		{
-			return(TOP);
+			if(clearSpot(new RoomPosition(currentPos.x, 49, currentPos.roomName)))
+				return(TOP);
+			else if(clearSpot(new RoomPosition(currentPos.x-1, 49, currentPos.roomName)))
+				return(TOP_RIGHT);
+			else if(clearSpot(new RoomPosition(currentPos.x+1, 49, currentPos.roomName)))
+				return(TOP_LEFT);
+			else
+			{
+				console.log(movingInside + ', Trying to find TOP edge of map failed.');
+			}
 		}
 	}
 	else if(onEdgeOfMap(currentPos) && movingInside == false)
 	{
 		if(currentPos.x <= 1)
 		{
-			return(LEFT);
+			if(clearSpot(new RoomPosition(0, currentPos.y, currentPos.roomName)))
+				return(LEFT);
+			else if(clearSpot(new RoomPosition(0, currentPos.y-1, currentPos.roomName)))
+				return(TOP_LEFT);
+			else if(clearSpot(new RoomPosition(0, currentPos.y+1, currentPos.roomName)))
+				return(BOTTOM_LEFT);
+			else
+			{
+				console.log(movingInside + ', Trying to find LEFT edge of map failed.');
+			}
 		}
 		else if(currentPos.x >= 48)
 		{
-			return(RIGHT);
+			if(clearSpot(new RoomPosition(49, currentPos.y, currentPos.roomName)))
+				return(RIGHT);
+			else if(clearSpot(new RoomPosition(49, currentPos.y-1, currentPos.roomName)))
+				return(TOP_RIGHT);
+			else if(clearSpot(new RoomPosition(49, currentPos.y+1, currentPos.roomName)))
+				return(BOTTOM_RIGHT);
+			else
+			{
+				console.log(movingInside + ', Trying to find RIGHT edge of map failed.');
+			}
 		}
 		if(currentPos.y <= 1)
 		{
-			return(TOP);
+			if(clearSpot(new RoomPosition(currentPos.x, 0, currentPos.roomName)))
+				return(TOP);
+			else if(clearSpot(new RoomPosition(currentPos.x-1, 0, currentPos.roomName)))
+				return(TOP_LEFT);
+			else if(clearSpot(new RoomPosition(currentPos.x+1, 0, currentPos.roomName)))
+				return(TOP_RIGHT);
+			else
+			{
+				console.log(movingInside + ', Trying to find TOP edge of map failed.');
+			}
 		}
 		else if(currentPos.y >= 48)
 		{
-			return(BOTTOM);
+			if(clearSpot(new RoomPosition(currentPos.x, 49, currentPos.roomName)))
+				return(BOTTOM);
+			else if(clearSpot(new RoomPosition(currentPos.x-1, 49, currentPos.roomName)))
+				return(BOTTOM_LEFT);
+			else if(clearSpot(new RoomPosition(currentPos.x+1, 49, currentPos.roomName)))
+				return(BOTTOM_RIGHT);
+			else
+			{
+				console.log(movingInside + ', Trying to find BOTTOM edge of map failed.');
+			}
 		}
 	}
 	return(defaultDirection);
