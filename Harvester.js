@@ -793,53 +793,56 @@
 	//the drop off it finds the start of the path again and resumes the path.
 	if(unit.carry.energy > 0 && (transferEnergyReturn == ERR_FULL || unitDirection == null))
 	{
-		//var cpu2 = Game.getUsedCpu();
-		var transferExtension = unit.pos.findClosestByRange(FIND_MY_STRUCTURES, {
-			filter: function(object) {
-				return(object.energy < object.energyCapacity && 
-						(object.structureType == STRUCTURE_SPAWN || object.structureType == STRUCTURE_EXTENSION));
-			}
-		});
-		
-		//cpu2 = Game.getUsedCpu()-cpu2;
-		//console.log(unit.name + ' finding closest (need filled) ' + transferExtension + ' costs: ' + cpu2);
-		
-		if(transferExtension != null)//transferExtension.length > 0
+		if(returnResources.room.energyAvailable < returnResources.room.energyCapacityAvailable)
 		{
-			var transferTarget = transferExtension;
-			var transferRange = unit.pos.getRangeTo(transferTarget);
+			//var cpu2 = Game.getUsedCpu();
+			var transferExtension = unit.pos.findClosestByRange(FIND_MY_STRUCTURES, {
+				filter: function(object) {
+					return(object.energy < object.energyCapacity && 
+							(object.structureType == STRUCTURE_SPAWN || object.structureType == STRUCTURE_EXTENSION));
+				}
+			});
+			
+			//cpu2 = Game.getUsedCpu()-cpu2;
+			//console.log(unit.name + ' finding closest (need filled) ' + transferExtension + ' costs: ' + cpu2);
+			
+			if(transferExtension != null)//transferExtension.length > 0
+			{
+				var transferTarget = transferExtension;
+				var transferRange = unit.pos.getRangeTo(transferTarget);
 
-			if(transferRange > 1)
-			{
-				if(unitDirection != null)
+				if(transferRange > 1)
 				{
-					//If you find a extension that needs energy, move to it. This takes you off the route the gatherer
-					//was on, so delete the direction now so it will search for the beginning of the route afterwards.
-					delete unit.memory.direction;
-				}
-				
-				findRoadOrCreate(unit);
-				if(transferTarget != null)
-				{	//As long as there is a target to go to and the room isn't full of energy, move to the target
-					var cpu = Game.getUsedCpu();
-					//unit.moveTo(transferTarget);
-					unit.moveByPath(unit.pos.findPathTo(transferTarget), {maxOps: 100});//, ignoreCreeps: false
+					if(unitDirection != null)
+					{
+						//If you find a extension that needs energy, move to it. This takes you off the route the gatherer
+						//was on, so delete the direction now so it will search for the beginning of the route afterwards.
+						delete unit.memory.direction;
+					}
 					
-					cpu = Game.getUsedCpu()-cpu;
-					//console.log(unit.name + ' moving to ' + transferTarget.name + ' costs: ' + cpu);
-				}
-			}
-			else
-			{
-				if(transferTarget.energy != null && 
-					transferTarget.energy < transferTarget.energyCapacity && 
-					unit.transferEnergy(transferTarget) == 0)
-				{
-					//Don't look for any more structures to transfer to, successfully filled one.
+					findRoadOrCreate(unit);
+					if(transferTarget != null)
+					{	//As long as there is a target to go to and the room isn't full of energy, move to the target
+						//var cpu = Game.getUsedCpu();
+						//unit.moveTo(transferTarget);
+						unit.moveByPath(unit.pos.findPathTo(transferTarget), {maxOps: 100});//, ignoreCreeps: false
+						
+						//cpu = Game.getUsedCpu()-cpu;
+						//console.log(unit.name + ' moving to ' + transferTarget.name + ' costs: ' + cpu);
+					}
 				}
 				else
 				{
-					console.log(unit.name + ' couldnt fill ' + transferTarget.name);
+					if(transferTarget.energy != null && 
+						transferTarget.energy < transferTarget.energyCapacity && 
+						unit.transferEnergy(transferTarget) == 0)
+					{
+						//Don't look for any more structures to transfer to, successfully filled one.
+					}
+					else
+					{
+						console.log(unit.name + ' couldnt fill ' + transferTarget.name);
+					}
 				}
 			}
 		}
@@ -859,7 +862,7 @@
 			{		//If we're in a room with a storage go over and transfer to the storage
 				if(transferStorage != null && (transferStorage.store.energy < 5000 || needyStruct == null))
 				{
-					unit.moveByPath(unit.pos.findPathTo(transferStorage), {maxOps: 100});//, ignoreCreeps: false
+					unit.moveByPath(unit.pos.findPathTo(transferStorage), {maxOps: 100}, ignoreCreeps: true);//, ignoreCreeps: false
 					var transferCode = unit.transferEnergy(transferStorage);
 					
 					if(unitDirection != null)
@@ -867,7 +870,7 @@
 				}
 				else if(needyStruct != null)
 				{
-					unit.moveByPath(unit.pos.findPathTo(needyStruct), {maxOps: 100});//, ignoreCreeps: false
+					unit.moveByPath(unit.pos.findPathTo(needyStruct), {maxOps: 100}, ignoreCreeps: true);//, ignoreCreeps: false
 					var transferCode = unit.transferEnergy(needyStruct);
 					
 					if(unitDirection != null)
@@ -878,6 +881,10 @@
 			{
 				followFlagForward(unit, unit.carry.energy < unit.carryCapacity);
 			}
+		}
+		else
+		{
+			console.log(unit.name + ' gather has null returnResource or equivalent that should never happen.');
 		}
 	}
 	else if(unit.carry.power != null && unit.carry.power > 0)

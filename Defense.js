@@ -2700,11 +2700,15 @@ module.exports.tower = function(nextRoom, enemyInSpawn)
 
 					for(var tow in towers)
 					{
-						repairCode = towers[tow].repair(repairThis);
-						//console.log('Tower[' + towers[tow].id + '] repair code: ' + repairCode + ', repairing: ' + repairThis);
+						//Keep some amount of energy in the towers for offence if needed.
+						if(towers[tow].energy > 100)
+						{
+							repairCode = towers[tow].repair(repairThis);
+							//console.log('Tower[' + towers[tow].id + '] repair code: ' + repairCode + ', repairing: ' + repairThis);
+						}
 					}
 				}
-				else
+				else if(towers[0].room.memory.buildRatio < 1)
 				{
 					console.log('Towers unable to find new structure to repair. Raising build ratio.');
 					towers[0].room.memory.buildRatio += .01;

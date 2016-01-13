@@ -604,11 +604,16 @@
 	}
 	else
 	{
-		var nextToCreep = unit.pos.findInRange(FIND_MY_CREEPS, 1);
-		//This search finds itself, if it finds more then that, move to get out of the way
-		if(nextToCreep.length > 1 || unit.pos.getRangeTo(structure) > 2)
-			followFlagForward(unit, unit.carry.energy > 0);	//Keep it moving so units can move through it.
-			
+		if(unit.pos.getRangeTo(structure) > 2)
+			followFlagForward(unit, unit.carry.energy > 0);	//Not close enough, move builder closer
+		else
+		{	//If it is within build/repair range, check if we need to move to potentially get out of a creeps way
+			var nextToCreep = unit.pos.findInRange(FIND_MY_CREEPS, 1);
+			//This search finds itself, if it finds more then that, move to get out of the way
+			if(nextToCreep.length > 1)
+				followFlagForward(unit, unit.carry.energy > 0);	//Keep it moving so units can move through it.
+		}
+		
 		if(structure.hits < structure.hitsMax)
 		{
 			var repairCode = unit.repair(structure);
@@ -706,6 +711,13 @@
 				//console.log(unit.name + ', upgrade source: ' + unit.memory.usingSourceId);
 				return(true);
 			}
+			
+			foundJob = buildClosest(unit, builderNumber);
+			if(foundJob)
+			{
+				//console.log(unit.name + ', build source: ' + unit.memory.usingSourceId);
+				return(true);
+			}
 		   
 			if(repairTargets == null)
 			{
@@ -728,13 +740,6 @@
 			if(foundJob)
 			{
 				//console.log(unit.name + ', repair2 source: ' + unit.memory.usingSourceId);
-				return(true);
-			}
-		   
-			foundJob = buildClosest(unit, builderNumber);
-			if(foundJob)
-			{
-				//console.log(unit.name + ', build source: ' + unit.memory.usingSourceId);
 				return(true);
 			}
 			

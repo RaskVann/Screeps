@@ -1167,7 +1167,7 @@
 		{
 			//There is no towers or there is a construction site, use typical builder production we've already established with the previous check
 			moveRespawnToEnd(spawner);
-			console.log('adding ' + name + ' to end of respawn list. Have construction site or no towers present.');
+			//console.log('adding ' + name + ' to end of respawn list. Have construction site or no towers present.');
 			return(true);
 		}
 	}
