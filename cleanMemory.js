@@ -17,7 +17,7 @@
 		
         for(var i in Memory.spawns)
 		{
-            if(!Game.spawns[i])
+            if(Memory.spawns[i] != null)
 			{
                 delete Memory.spawns[i];
             }
@@ -25,7 +25,7 @@
 		
         for(var i in Memory.rooms)
 		{
-            if(!Game.rooms[i])
+            if(Game.rooms[i] != null)
 			{
                 delete Memory.rooms[i];
             }

@@ -71,7 +71,10 @@
 					  { cost: 600, body: [WORK, WORK, WORK, CARRY, CARRY, CARRY, MOVE, MOVE, MOVE] },
                       { cost: 800, body: [WORK, WORK, WORK, WORK, CARRY, CARRY, CARRY, CARRY, MOVE, MOVE, MOVE, MOVE] },
  					  { cost: 1000, body: [WORK, WORK, WORK, WORK, WORK, CARRY, CARRY, CARRY, CARRY, CARRY, MOVE, MOVE, MOVE, MOVE, MOVE] },
+					  { cost: 1250, body: [WORK, WORK, WORK, WORK, WORK, WORK, WORK, CARRY, CARRY, CARRY, CARRY, CARRY, MOVE, MOVE, MOVE, MOVE, MOVE, MOVE] },
  					  { cost: 1450, body: [WORK, WORK, WORK, WORK, WORK, WORK, WORK, WORK, CARRY, CARRY, CARRY, CARRY, CARRY, CARRY, MOVE, MOVE, MOVE, MOVE, MOVE, MOVE, MOVE] },	//2 Needed. Hits 16 work instead of 15 for max controller
+					  { cost: 1700, body: [WORK, WORK, WORK, WORK, WORK, WORK, WORK, WORK, WORK, WORK, CARRY, CARRY, CARRY, CARRY, CARRY, CARRY, MOVE, MOVE, MOVE, MOVE, MOVE, MOVE, MOVE, MOVE] },
+					  { cost: 1950, body: [WORK, WORK, WORK, WORK, WORK, WORK, WORK, WORK, WORK, WORK, WORK, WORK, CARRY, CARRY, CARRY, CARRY, CARRY, CARRY, MOVE, MOVE, MOVE, MOVE, MOVE, MOVE, MOVE, MOVE, MOVE] },
  					  { cost: 2250, body: [WORK, WORK, WORK, WORK, WORK, WORK, WORK, WORK, WORK, WORK, WORK, WORK, WORK, WORK, WORK, CARRY, CARRY, CARRY, CARRY, CARRY, MOVE, MOVE, MOVE, MOVE, MOVE, MOVE, MOVE, MOVE, MOVE, MOVE] } ];	//Only 1 needed at controller at level 8 max
  var scoutBody =   [ { cost: 50, body: [MOVE] } ];
  
@@ -987,22 +990,28 @@
 			findComma = respawnName.indexOf(",");
 			nextName = respawnName.substring(0, findComma);
 			respawnName = respawnName.substring(findComma+1);
-			memorySource = Memory.creeps[nextName].usingSourceId;
-			if(Memory.creeps[nextName] != null &&
-				((memorySource == null || replaceSourceId == null || 
-				(memorySource != null && memorySource == replaceSourceId)) && 
-				findRoleWithinName(nextName) == checkRole && Game.creeps[nextName] == null))
+			if(Memory.creeps[nextName] != null)
 			{
-				//Cut name we're spawning out of the list and add it to end
-				var newRespawnList = consideredNames + respawnName + nextName + ",";
-				//console.log('nextName: ' + nextName + '\n fromCurrent: ' + respawnName + '\n considered: ' + consideredNames);
-				//console.log('Trying to find dead ' + checkRole + ' found dead unit ' + nextName + ' from list ' + spawner.memory.respawnName + ' making new list ' + newRespawnList);
-				spawner.memory.respawnName = newRespawnList;
-				return(nextName);
+				memorySource = Memory.creeps[nextName].usingSourceId;
+				if((memorySource == null || replaceSourceId == null || 
+					(memorySource != null && memorySource == replaceSourceId)) && 
+					findRoleWithinName(nextName) == checkRole && Game.creeps[nextName] == null)
+				{
+					//Cut name we're spawning out of the list and add it to end
+					var newRespawnList = consideredNames + respawnName + nextName + ",";
+					//console.log('nextName: ' + nextName + '\n fromCurrent: ' + respawnName + '\n considered: ' + consideredNames);
+					//console.log('Trying to find dead ' + checkRole + ' found dead unit ' + nextName + ' from list ' + spawner.memory.respawnName + ' making new list ' + newRespawnList);
+					spawner.memory.respawnName = newRespawnList;
+					return(nextName);
+				}
+				else
+				{
+					consideredNames += nextName + ",";
+				}
 			}
 			else
 			{
-				consideredNames += nextName + ",";
+				console.log(nextName + ' not found in spawner.nextDeadRoleName()');
 			}
 		} while (respawnName.length > 1);
     }
@@ -1070,15 +1079,20 @@
  //Adds the current name and time to the end of the respawnTime and respawnName
  function addRespawnEnd(spawner, name)
  {
-	var respawnName = spawner.memory.respawnName;
-	var found = respawnName.indexOf(name);
-	if(found >= 0)
+	if(spawner.memory.respawnName != null)
 	{
-		console.log('addRespawnEnd-Redundant ' + name + ' was found at ' + found);
-		Game.notify('addRespawnEnd-Redundant ' + name + ' was found at ' + found, 480);
+		var respawnName = spawner.memory.respawnName;
+		var found = respawnName.indexOf(name);
+		if(found >= 0)
+		{
+            //There is 1 or more of this object in the list already, adding it again would create a duplicate, don't add to end.
+			console.log('addRespawnEnd-Redundant ' + name + ' was found at ' + found);
+			Game.notify('addRespawnEnd-Redundant ' + name + ' was found at ' + found, 480);
+			return(false);
+		}
 	}
 	
-	if(spawner.memory.respawnTime == null)
+	if(spawner.memory.respawnName == null)
 	{
 		//spawner.memory.respawnTime = calculateRespawnTime(spawner, body).toString()+",";
 		spawner.memory.respawnName = name+",";
@@ -1111,21 +1125,21 @@
 		moveRespawnToEnd(spawner);
 	}
 	
-	var seenMod = 1;
+	var seenMod = .67;
 	
 	if(spawner.room.storage != null)
 	{
 		if(spawner.room.storage.store.energy > 10000)
 		{
-			seenMod = 1.25;
+			seenMod = 1;
 		}
 		else if(spawner.room.storage.store.energy > 50000)
 		{
-			seenMod = 1.5;
+			seenMod = 1.25;
 		}
 		else if(spawner.room.storage.store.energy > 100000)
 		{
-			seenMod = 2;
+			seenMod = 1.5;
 		}
 	}
 	
@@ -1141,7 +1155,7 @@
 		return(true);
 	}
 	//If there aren't harvesters and gatherers, skip over attackers
-	else if(role == 'attack' && Math.min(harvestersSeen*seenMod, gatherersSeen*seenMod) <= attackersSeen+1)
+	else if(role == 'attack')// && Math.min(harvestersSeen*seenMod, gatherersSeen*seenMod) <= attackersSeen+1)
 	{
 		moveRespawnToEnd(spawner);
 		//console.log('adding ' + name + ' to end of respawn list.');
@@ -1160,7 +1174,7 @@
 			//Towers to take over all repairing unless there is a construction site to be built. Ignore builder production as long as there is over 2
 			//and no construction sites that the towers can't handle
 			moveRespawnToEnd(spawner);
-			console.log('adding ' + name + ' to end of respawn list. Tower probably exists, we have no construction sites(that arent roads) and we have more then 1 builder.');
+			//console.log('adding ' + name + ' to end of respawn list. Tower probably exists, we have no construction sites(that arent roads) and we have more then 1 builder.');
 			return(true);
 		}
 		else
@@ -1528,18 +1542,17 @@
 		{
 			var worker;
 			var gather;
-			var roomSources = Game.rooms[eachRoom].find(FIND_SOURCES);
-			for(var eachSource in roomSources)
+			for(var eachSource in Game.rooms)
 			{
 				//If there is a link, there isn't a need for a gatherer at this source, this disables 
 				//generation of gathers at sources where a link is found
-				var findLinks = roomSources[eachSource].pos.findInRange(FIND_MY_STRUCTURES, 1, {
-					filter: { structureType: STRUCTURE_LINK }
-				});
+				//var findLinks = Game.rooms[eachSource].pos.findInRange(FIND_MY_STRUCTURES, 1, {
+				//	filter: { structureType: STRUCTURE_LINK }
+				//});
 				
 				worker = 0;
 				gather = 0;
-				var currentSourceId = roomSources[eachSource].id;
+				var currentSourceId = Game.rooms[eachSource].id;
 				for(var eachCreep in Game.creeps)
 				{
 					var roleWithinName = findRoleWithinName(Game.creeps[eachCreep].name);
@@ -1575,7 +1588,7 @@
 					}
 				}
 				//If can't find a gatherer and there isn't a link to take care of this source, replace the unit.
-				else if(gather <= 0 && (findLinks == null || findLinks.length <= 0))
+				else if(gather <= 0)// && (findLinks == null || findLinks.length <= 0))
 				{
 					//No gathers at this source, found a missed creep.
 					var replacementSuccess = respawnPreexisting(spawner, chosenSpawn, "gather", currentSourceId);
@@ -1815,9 +1828,9 @@
  //Designate the first spawn as the master and the other 2 as auxilliary to support the first as needed.
  //Only runs once when master is not found, unless the auxilliary can't find the master in which case
  //we have an error and it loops until one is found.
- function installAuxilliarySpawn(spawner)
+ function installAuxilliarySpawn(spawner, masterSpawner)
  {
-	if(spawner.room.controller.level >= 7 && spawner.memory.master == null)
+	if(masterSpawner == null)	//spawner.room.controller.level >= 7 && 
 	{
 		var findSpawns = spawner.room.find(FIND_MY_SPAWNS);
 		if(findSpawns.length == 1)
@@ -1852,8 +1865,9 @@
 			}
 			else
 			{
-				console.log('ERROR: Spawn: ' + spawner + ' cant find master to link to');
-				delete spawner.memory.master;
+				spawner.memory.master = true;
+				console.log('Spawn: ' + spawner + ' cant find master to link to, becoming master.');
+				//delete spawner.memory.master;
 			}
 		}
 	}
@@ -1862,9 +1876,9 @@
  //If this is the master spawn, return the master spawn if it isn't spawning
  //Otherwise look at the auxilliary spawns if they exist and send them back if
  //they aren't spawning anything. Otherwise return null (can't spawn anything)
- function spawnNotSpawning(spawner)
+ function spawnNotSpawning(spawner, masterSpawner)
  {
-	if(spawner.memory.master == true)
+	if(masterSpawner == true)
 	{
 		//If spawner is spawning something, this returns that creep's information, if null it is ready to spawn something
 		//new. Only then do we go through the spawning logic to save processing time.
@@ -1874,18 +1888,19 @@
 		}
 		else
 		{
-			if(spawner.memory.auxilliary1 != null)
+			var auxilliary1 = spawner.memory.auxilliary1;
+			if(auxilliary1 != null)
 			{
-				var auxilliarySpawn1 = Game.getObjectById(spawner.memory.auxilliary1);
+				var auxilliarySpawn1 = Game.getObjectById(auxilliary1);
 				if(auxilliarySpawn1.spawning == null)
 				{
 					return(auxilliarySpawn1);
 				}
 			}
-			
-			if(spawner.memory.auxilliary2 != null)
+			var auxilliary2 = spawner.memory.auxilliary2;
+			if(auxilliary2 != null)
 			{
-				var auxilliarySpawn2 = Game.getObjectById(spawner.memory.auxilliary2);
+				var auxilliarySpawn2 = Game.getObjectById(auxilliary2);
 				if(auxilliarySpawn2.spawning == null)
 				{
 					return(auxilliarySpawn2);
@@ -1898,15 +1913,16 @@
  
  module.exports.spawn = function(spawner, harvestersSeen, gatherersSeen, buildersSeen, attackersSeen, scoutsSeen)
  {
-	installAuxilliarySpawn(spawner);	//Link spawns in the same room together
+	var masterSpawner = spawner.memory.master;
+	installAuxilliarySpawn(spawner, masterSpawner);	//Link spawns in the same room together
 	
 	//Only go into internal logic if this is the master, no need to triple the amount of spawning logic in each room.
-	if(spawner.memory.master == true)
+	if(masterSpawner == true)
 	{
 		spawner.memory.scoutsAlive = scoutsSeen;
 		
 		//Choose a spawn that isn't occupied with spawning (if null, all occupied and we can't spawn anything)
-		var chosenSpawn = spawnNotSpawning(spawner);
+		var chosenSpawn = spawnNotSpawning(spawner, masterSpawner);
 		if(chosenSpawn != null)
 		{
 			//We're still storing everything inside the master spawner but using the chosenSpawn to spawn the actual unit.

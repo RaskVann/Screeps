@@ -433,7 +433,9 @@
 	}
  }
 
- var reportEvery = 10000;
+ //10,000 ticks is roughly 12 hours (720 minutes) last time I checked. Cpu Limit is 500
+ var reportEvery = 500;
+ var reportMin = 36;
  
  module.exports.cpu = function()
  {
@@ -451,15 +453,20 @@
 	//Report to me cpu stats every 10,000 ticks (grouped every 12 hours)
 	if(Game.time % reportEvery == 0)
 	{
-		Game.notify('CPU-Average: ' + spawn0.memory.averageCPU + '+/-' + spawn0.memory.standardDeviation + ', CpuLimitAvg: ' + spawn0.memory.CpuLimitAvg, 720);
-		if(spawn0.memory.measureCreepCpu != null && spawn0.memory.measureCreepCpu > 0)
+		Game.notify('CPU-Average: ' + spawn0.memory.averageCPU + '+/-' + spawn0.memory.standardDeviation + ', CpuLimitAvg: ' + spawn0.memory.CpuLimitAvg, reportMin);
+		
+		//If measure() is called
+		if(spawn0.memory.measureInitCpu != null && spawn0.memory.measureInitCpu > 0)
 		{
 			var avgInit = spawn0.memory.measureInitCpu;// /spawn0.memory.measureTicks;
 			var avgPeriodic = spawn0.memory.measurePeriodicCpu;// /spawn0.memory.measureTicks;
 			var avgRoom = spawn0.memory.measureRoomCpu;// /spawn0.memory.measureTicks;
-			Game.notify('Initialize Average: ' + avgInit + ', Periodic Average: ' + avgPeriodic + ', Room Average: ' + avgRoom, 720);
-			
-			var averageMeasure = spawn0.memory.measureCreepCpu/spawn0.memory.measureTicks;
+			var avgCreep = spawn0.memory.measureCreepCpu;// /spawn0.memory.measureTicks;
+			Game.notify('Initialize Average: ' + avgInit + ', Periodic Average: ' + avgPeriodic + ', Room Average: ' + avgRoom + ', Creep Average: ' + avgCreep, reportMin);
+		}
+		//If seen(), measure1() and measure2() is called
+		if(spawn0.memory.unitSeen1 != null && spawn0.memory.unitSeen1 > 0)
+		{
 			var averageMeasure1 = spawn0.memory.measureCpu1/spawn0.memory.measureTicks1;
 			var averageMeasure2 = spawn0.memory.measureCpu2/spawn0.memory.measureTicks2;
 			var unitSeenAvg1 = spawn0.memory.unitSeen1;// /spawn0.memory.seenTicks;
@@ -469,9 +476,9 @@
 			var unitSeenAvg5 = spawn0.memory.unitSeen5;// /spawn0.memory.seenTicks;
 			var avgPerTick1 = averageMeasure1 * unitSeenAvg1;
 			var avgPerTick2 = averageMeasure2 * unitSeenAvg2;
-			Game.notify('Creep average: ' + averageMeasure + ', gather(' + unitSeenAvg1 + ') average: ' + averageMeasure1 + ' of ' + avgPerTick1 + 
+			Game.notify('Gather(' + unitSeenAvg1 + ') average: ' + averageMeasure1 + ' of ' + avgPerTick1 + 
 			', builder(' + unitSeenAvg2 + ') average: ' + averageMeasure2 + ' of ' + avgPerTick2 + ' harvest(' + unitSeenAvg3 + '), attack (' + 
-			unitSeenAvg4 + '), scout(' + unitSeenAvg5 + ')', 720);
+			unitSeenAvg4 + '), scout(' + unitSeenAvg5 + ')', reportMin);
 		}
 		
 		cleanMeasureCPU(spawn0);

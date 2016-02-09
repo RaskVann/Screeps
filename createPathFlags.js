@@ -111,22 +111,10 @@
 		if(groupedFlags[currentFlag].name.startsWith('dir'))
 		{
 			var usingDestinationId = groupedFlags[currentFlag].memory.usingDestinationId;
-			if(usingDestinationId != null && findSourceId != null)
+			if(findSourceId != null && usingDestinationId == findSourceId)
 			{
-				if(usingDestinationId != findSourceId)
-				{
-					//If usingDestinationId is populated, and it doesn't match the Id we're using, ignore it. If there
-					//is a diverging path, mark it with the matching ID. Anything that doesn't match will continue on
-					//the same path, if multiple paths change direction, stack flags with several relevant IDs.
-					//WARNING: This divergence is not used in the code, has to be manually entered if paths overlapped
-					//since no path knows of any other paths existing.
-					continue;
-				}
-				else
-				{
-					//console.log(unit.name + ' found flag ' + groupedFlags[currentFlag]);
-					return(groupedFlags[currentFlag]);
-				}
+				//console.log(unit.name + ' found flag ' + groupedFlags[currentFlag]);
+				return(groupedFlags[currentFlag]);
 			}
 			else
 			{
@@ -258,16 +246,14 @@
 			{
 				unitDirection = foundFlag.memory.returnDirection;
 				//console.log(unit.name + ' dir: ' + foundFlag.memory.returnDirection);
-				unit.memory.direction = unitDirection;
-				copyPathLength(unit, foundFlag);
 			}
 			else
 			{
 				unitDirection = foundFlag.memory.direction;
 				//console.log(unit.name + ' dir: ' + foundFlag.memory.direction);
-			    unit.memory.direction = unitDirection;
-				copyPathLength(unit, foundFlag);
 			}
+			copyPathLength(unit, foundFlag);
+			unit.memory.direction = unitDirection;
 		}
 		//Moves, unless running into walls or moving off screen
 		if(disableMovementEdgeOfMap(unit.pos, unitDirection) == false &&
@@ -504,7 +490,12 @@
  //Specifically we're looking for 'plain' or 'swamp' spaces, not walls
  function clearSpot(currentPos)
  {
-	var findTerrain = currentPos.lookFor('terrain', x, y);
+	if(currentPos == null)
+	{
+		console.log(currentPos + 'is null in clearSpot');
+		return(false);
+	}
+	var findTerrain = currentPos.lookFor('terrain');
 	if(findTerrain.length > 0 && findTerrain[0] == 'plain' || findTerrain[0] == 'swamp')
 	{
 		return(true);

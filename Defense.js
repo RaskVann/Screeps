@@ -802,7 +802,8 @@
 	//TODO:	12 threat enemy attacking body >= 20, grows during watch
 	var targetCreep = currentRoom.find(FIND_HOSTILE_CREEPS, {
 		filter: function(object) {
-			return((object.getActiveBodyparts(ATTACK) > 0 || object.getActiveBodyparts(RANGED_ATTACK) > 0 || object.getActiveBodyparts(HEAL) > 0) &&
+			return((object.getActiveBodyparts(ATTACK) > 0 || object.getActiveBodyparts(RANGED_ATTACK) > 0 || object.getActiveBodyparts(HEAL) > 0 ||
+					object.getActiveBodyparts(WORK) > 0 || object.getActiveBodyparts(CLAIM) > 0) &&
 					object.owner.username != 'Source Keeper');
 		}
 	});
@@ -842,7 +843,8 @@
 		else if(totalHostileBody < 5)
 		{
 			console.log(currentRoom + ' has ' + targetCreep.length + ' creeps with ' + totalHostileBody + ' hostile body, first unit owned by ' + targetCreep[0].owner.username);
-			Game.notify(currentRoom + ' has ' + targetCreep.length + ' creeps with ' + totalHostileBody + ' hostile body, first unit owned by ' + targetCreep[0].owner.username, reportTime);
+			if(currentRoom.controller != null)
+				Game.notify(currentRoom + ' has ' + targetCreep.length + ' creeps with ' + totalHostileBody + ' hostile body, first unit owned by ' + targetCreep[0].owner.username, reportTime);
 			if(currentRoom.memory.threat != null && currentRoom.memory.threat < 5)
 			{
 				if(currentRoom.memory.threat <= 4)
@@ -856,7 +858,8 @@
 		else if(totalHostileBody < 10)
 		{
 			console.log(currentRoom + ' has ' + targetCreep.length + ' creeps with ' + totalHostileBody + ' hostile body, first unit owned by ' + targetCreep[0].owner.username);
-			Game.notify(currentRoom + ' has ' + targetCreep.length + ' creeps with ' + totalHostileBody + ' hostile body, first unit owned by ' + targetCreep[0].owner.username, reportTime);
+			if(currentRoom.controller != null)
+				Game.notify(currentRoom + ' has ' + targetCreep.length + ' creeps with ' + totalHostileBody + ' hostile body, first unit owned by ' + targetCreep[0].owner.username, reportTime);
 			if(currentRoom.memory.threat != null && currentRoom.memory.threat < 6)
 			{
 				if(currentRoom.memory.threat <= 4)
@@ -874,7 +877,8 @@
 		else if(totalHostileBody < 20)
 		{
 			console.log(currentRoom + ' has ' + targetCreep.length + ' creeps with ' + totalHostileBody + ' hostile body, first unit owned by ' + targetCreep[0].owner.username);
-			Game.notify(currentRoom + ' has ' + targetCreep.length + ' creeps with ' + totalHostileBody + ' hostile body, first unit owned by ' + targetCreep[0].owner.username, reportTime);
+			if(currentRoom.controller != null)
+				Game.notify(currentRoom + ' has ' + targetCreep.length + ' creeps with ' + totalHostileBody + ' hostile body, first unit owned by ' + targetCreep[0].owner.username, reportTime);
 			if(currentRoom.memory.threat != null && currentRoom.memory.threat < 7)
 			{
 				if(currentRoom.memory.threat <= 4)
@@ -896,7 +900,8 @@
 		else
 		{
 			console.log(currentRoom + ' has ' + targetCreep.length + ' creeps with ' + totalHostileBody + ' hostile body, first unit owned by ' + targetCreep[0].owner.username);
-			Game.notify(currentRoom + ' has ' + targetCreep.length + ' creeps with ' + totalHostileBody + ' hostile body, first unit owned by ' + targetCreep[0].owner.username, reportTime);
+			if(currentRoom.controller != null)
+				Game.notify(currentRoom + ' has ' + targetCreep.length + ' creeps with ' + totalHostileBody + ' hostile body, first unit owned by ' + targetCreep[0].owner.username, reportTime);
 			if(currentRoom.memory.threat != null && currentRoom.memory.threat < 8)
 			{
 				if(currentRoom.memory.threat <= 4)
@@ -1981,7 +1986,7 @@
 		targetCreep = unit.pos.findClosestByRange(FIND_HOSTILE_CREEPS, {
 			filter: function(object) {
 				return(object.getActiveBodyparts(HEAL) > 0 ||
-						((object.getActiveBodyparts(ATTACK) > 0 || object.getActiveBodyparts(RANGED_ATTACK) > 0) &&
+						((object.getActiveBodyparts(ATTACK) > 0 || object.getActiveBodyparts(RANGED_ATTACK) > 0 || object.getActiveBodyparts(WORK) > 0 || object.getActiveBodyparts(CLAIM) > 0) &&
 						object.getActiveBodyparts(MOVE) > 0));
 			}
 		});
@@ -1996,7 +2001,7 @@
 			var findEnemy = Game.spawns[x].room.find(FIND_HOSTILE_CREEPS, {
 				filter: function(object) {
 					return(object.getActiveBodyparts(HEAL) > 0 ||
-						((object.getActiveBodyparts(ATTACK) > 0 || object.getActiveBodyparts(RANGED_ATTACK) > 0) &&
+						((object.getActiveBodyparts(ATTACK) > 0 || object.getActiveBodyparts(RANGED_ATTACK) > 0 || object.getActiveBodyparts(WORK) > 0 || object.getActiveBodyparts(CLAIM) > 0) &&
 						object.getActiveBodyparts(MOVE) > 0));
 				}
 			});
@@ -2100,7 +2105,7 @@
 		var rangedTargets = unit.pos.findInRange(FIND_HOSTILE_CREEPS, 3, {
 			filter: function(object) {
 				return(object.getActiveBodyparts(HEAL) > 0 ||
-						((object.getActiveBodyparts(ATTACK) > 0 || object.getActiveBodyparts(RANGED_ATTACK) > 0) &&
+						((object.getActiveBodyparts(ATTACK) > 0 || object.getActiveBodyparts(RANGED_ATTACK) > 0 || object.getActiveBodyparts(WORK) > 0 || object.getActiveBodyparts(CLAIM) > 0) &&
 						object.getActiveBodyparts(MOVE) > 0));
 			}
 		});
@@ -2666,7 +2671,8 @@ module.exports.tower = function(nextRoom, enemyInSpawn)
 			{
 				//var enemyInSpawn = towers[0].findClosestByRange(FIND_HOSTILE_CREEPS, {
 				//	filter: function(object) {
-				//		return(object.getActiveBodyparts(ATTACK) > 0 || object.getActiveBodyparts(RANGED_ATTACK) > 0 || object.getActiveBodyparts(HEAL) > 0);
+				//		return(object.getActiveBodyparts(ATTACK) > 0 || object.getActiveBodyparts(RANGED_ATTACK) > 0 || object.getActiveBodyparts(HEAL) > 0 || 
+				//				object.getActiveBodyparts(WORK) > 0 || object.getActiveBodyparts(CLAIM) > 0);
 				//	}
 				//});
 				
@@ -2766,7 +2772,8 @@ module.exports.observe = function(nextRoom)
 				}
 				else if(threatVal != Memory.rooms[analyzeRoom].threat)
 				{
-					Game.notify('Room: ' + analyzeRoom + ' PrevThreat: ' + threatString(Memory.rooms[analyzeRoom].threat) + ' CurrThreat ' + threatString(threatVal), reportTime);
+					if(analyzeRoomObject.controller != null)
+						Game.notify('Room: ' + analyzeRoom + ' PrevThreat: ' + threatString(Memory.rooms[analyzeRoom].threat) + ', CurrThreat: ' + threatString(threatVal), reportTime);
 					Memory.rooms[analyzeRoom].threat = threatVal;
 				}
 				
