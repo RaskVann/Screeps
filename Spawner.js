@@ -459,7 +459,7 @@
 	{
 		newBody = upgradeBody(availableEnergy, rangedPower);
 	}
-	else if(role.startsWith('claim'))
+	else if(role != null && role.startsWith('claim'))
 	{
 		newBody = upgradeBody(availableEnergy, claimBody);
 	}
@@ -1190,9 +1190,9 @@
 			return(true);
 		}
 	}
-	else if(role.startsWith('claim'))
+	else if(role != null && role.startsWith('claim'))
 	{
-		if((Memory.creeps[name] != null && Memory.creeps[name].usingSourceId != null &&
+		if(Memory.creeps[name] != null && Memory.creeps[name].usingSourceId != null &&
 			Game.rooms[Memory.creeps[name].usingSourceId] != null && 
 			Game.rooms[Memory.creeps[name].usingSourceId].reservation > 1000)
 		{

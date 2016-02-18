@@ -1217,7 +1217,8 @@
 		followFlagForward(unit, (unitEnergy+unitPower) < unitEnergyCapacity);
 		
 		//Look for power
-		if(returnResources.room.name != unit.room.name)
+		if(returnResources != null && returnResources.room != null &&
+			returnResources.room.name != unit.room.name)
 		{
 			if(unitEnergy > 0)
 				unit.drop(RESOURCE_ENERGY);
@@ -1591,8 +1592,8 @@ module.exports.gather = function(unit, gatherersSeen)
 
 module.exports.claim = function(unit, claimSeen)
 {
-	//role.contains('claim');
-	if(unit.memory.role.startsWith('claim'))
+	var role = unit.memory.role;
+	if(role != null && role.startsWith('claim'))
 	{
 		claimRoom(unit);
 	}

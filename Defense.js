@@ -2747,7 +2747,7 @@ module.exports.tower = function(nextRoom, enemyInSpawn)
 						if(towers[tow].energy > 100)
 						{
 							repairCode = towers[tow].repair(repairThis);
-							console.log('Tower[' + towers[tow].id + '] repair code: ' + repairCode + ', repairing: ' + repairThis);
+							//console.log('Tower[' + towers[tow].id + '] repair code: ' + repairCode + ', repairing: ' + repairThis);
 						}
 					}
 				}
