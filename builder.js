@@ -20,9 +20,9 @@
  function findSpawn(unit)
  {
 	var useSpawn;
-	if(unit.memory.spawnID != null)
+	if(unit.memory.spawnId != null)
 	{
-		useSpawn = Game.getObjectById(unit.memory.spawnID);	//A spawn this unit can dump resources to
+		useSpawn = Game.getObjectById(unit.memory.spawnId);	//A spawn this unit can dump resources to
 	}
 	else
 	{
@@ -31,7 +31,7 @@
 			if(unit.room.name == Game.spawns[x].room.name)
 			{
 				useSpawn = Game.spawns[x].id
-				unit.memory.spawnID = useSpawn;
+				unit.memory.spawnId = useSpawn;
 			}
 		}
 	}
@@ -320,7 +320,7 @@
 		newSourceId(unit, construction.id);
 		//newUniqueSourceId(unit, construction.id);
 	    //console.log('unit: ' + unit + ' is builder ' + builderNumber + ' and needs energy');
-		if(Math.abs(unit.pos.getRangeTo(construction)) <= 1 && unit.carry.energy > 0)
+		if(Math.abs(unit.pos.getRangeTo(construction)) <= 3 && unit.carry.energy > 0)
 		{
 			var buildError = unit.build(construction);
 			if(buildError < 0)
@@ -330,7 +330,7 @@
 			}
 		}
 		//Follows the path until it gets to the destination, continues the operation above until energy depleted and then returns
-		else if(Math.abs(unit.pos.getRangeTo(construction)) > 1 || unit.carry.energy == 0)
+		else if(Math.abs(unit.pos.getRangeTo(construction)) > 3 || unit.carry.energy == 0)
 		{
 			followFlagForward(unit, unit.carry.energy > 0);
 		}

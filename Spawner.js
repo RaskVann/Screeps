@@ -77,6 +77,7 @@
 					  { cost: 1950, body: [WORK, WORK, WORK, WORK, WORK, WORK, WORK, WORK, WORK, WORK, WORK, WORK, CARRY, CARRY, CARRY, CARRY, CARRY, CARRY, MOVE, MOVE, MOVE, MOVE, MOVE, MOVE, MOVE, MOVE, MOVE] },
  					  { cost: 2250, body: [WORK, WORK, WORK, WORK, WORK, WORK, WORK, WORK, WORK, WORK, WORK, WORK, WORK, WORK, WORK, CARRY, CARRY, CARRY, CARRY, CARRY, MOVE, MOVE, MOVE, MOVE, MOVE, MOVE, MOVE, MOVE, MOVE, MOVE] } ];	//Only 1 needed at controller at level 8 max
  var scoutBody =   [ { cost: 50, body: [MOVE] } ];
+ var claimBody =   [ { cost: 1300, body: [MOVE, MOVE, CLAIM, CLAIM] } ];
  
  function getHarvestId(spawn)
  {
@@ -457,6 +458,10 @@
 	else if(role == 'rangedPower')
 	{
 		newBody = upgradeBody(availableEnergy, rangedPower);
+	}
+	else if(role.startsWith('claim'))
+	{
+		newBody = upgradeBody(availableEnergy, claimBody);
 	}
     else if(role != 'empty')
     {
@@ -1185,6 +1190,15 @@
 			return(true);
 		}
 	}
+	else if(role.startsWith('claim'))
+	{
+		if((Memory.creeps[name] != null && Memory.creeps[name].usingSourceId != null &&
+			Game.rooms[Memory.creeps[name].usingSourceId] != null && 
+			Game.rooms[Memory.creeps[name].usingSourceId].reservation > 1000)
+		{
+			return(true);
+		}
+	}
 	return(false);
  }
  
@@ -1377,8 +1391,11 @@
 		{
 			badSpawn = chosenSpawn.createCreep(body, name, {'role' : role});
 		}
+		
 		if(_.isString(badSpawn))
 		{
+			badSpawn.notifyWhenAttacked(false);
+			
 			//If successfully spawn a new X
 			if(role != null)
 			{
@@ -1435,7 +1452,7 @@
 		}
 		else 
 		{
-			console.log('Spawn error: ' + badSpawn + ' \n name: ' + name + ' bodyLength: ' + body.length + ' spawner: ' + spawner.name);
+			console.log('Spawn error: ' + badSpawn + '\n name: ' + name + ' bodyLength: ' + body.length + ' spawner: ' + spawner.name);
 		}
 	}
 	//Theoretically this could cause a problem if the capacity is low enough that we haven't spawned all the units we need yet and we're simply

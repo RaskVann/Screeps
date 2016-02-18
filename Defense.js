@@ -243,6 +243,17 @@
 	}
  }
  
+ //Check if one of these has been created in the sent in room. If one exists send back null otherwise let this
+ //unit be made with the returned name.
+ function createOneInRoom(role, roomName)
+ {
+	var nextName = role + '0' + roomName;
+	if(Memory.creeps[nextName] != null)
+		return(null);
+	else
+		return(nextName);
+ }
+ 
  function findNextUnusedName(role, roomName)
  {
 	var num = 0;
@@ -281,12 +292,15 @@
 	var length;
 	var role;
 	var name;
+	var claimName;
 	var num = 0;
 	
 	//TO DO: Convert to store and pull from unit.room, not spawn.room
 	if(source != null && source.room != null && 
 		harvestEmpty(spawner) == false)
 	{
+		claimName = createOneInRoom('claim', source.room.name);	//Attempt to pair worker/gather generation with 1 claim unit.
+		
 		if(getNeedHarvest(spawner) > 0)
 		{
 			role = 'worker';
@@ -325,8 +339,15 @@
 	{
 		console.log(unit.name + ' just added ' + name + ' to room: ' + unit.room.name + ' to end of respawn list.');
 		
-		Memory.creeps[name] = {'role': role, 'usingSourceId': sourceId, 'spawnID': unit.memory.spawnID, 'pathLength': length};
+		Memory.creeps[name] = {'role': role, 'usingSourceId': sourceId, 'spawnId': unit.memory.spawnId, 'pathLength': length};
 		spawner.memory.respawnName += (name+",");
+		
+		//If worker/gather found that a claim doesn't exist, create it for this room.
+		if(claimName != null)// && Memory.creeps[claimName] == null
+		{
+			Memory.creeps[claimName] = {'role': 'claim', 'usingSourceId': source.room.name, 'spawnId': unit.memory.spawnId, 'pathLength': length};
+			spawner.memory.respawnName += (claimName+",");
+		}
 		
 		if(role == 'worker')
 		{
@@ -990,11 +1011,11 @@
 	//if it's ready for more requests before the scouts go out and do more work so we don't overload the spawner
 	//with requests it can't deal with right now.
 	var useSpawn;
-	if(unit.memory.spawnID != null)
+	if(unit.memory.spawnId != null)
 	{
-		useSpawn = Game.getObjectById(unit.memory.spawnID);	//Spawn new units at this spawn
+		useSpawn = Game.getObjectById(unit.memory.spawnId);	//Spawn new units at this spawn
 	}
-	else	//Populate spawnID
+	else	//Populate spawnId
 	{
 		//For some stupid reason Game.spawns[0] doesn't work, but passing it a aguement from a for(var x in y) does
 		for(var x in Game.spawns)
@@ -1002,7 +1023,7 @@
 			if(unit.room.name == Game.spawns[x].room.name)
 			{
 				//console.log(unit.name + ' setting spawn id. ' + Game.spawns[x].id + ' has memory? ' + Game.spawns[x].memory);
-				unit.memory.spawnID = Game.spawns[x].id;	//Spawn new units at the last spawn the scout has seen
+				unit.memory.spawnId = Game.spawns[x].id;	//Spawn new units at the last spawn the scout has seen
 				useSpawn = Game.spawns[x];
 				break;
 			}
@@ -1011,11 +1032,11 @@
 	
 	if(useSpawn == null)
 	{
-		console.log(unit.name + ' did not find a spawn to use in ' + unit.room.name + ' or id: ' + unit.memory.spawnID);
+		console.log(unit.name + ' did not find a spawn to use in ' + unit.room.name + ' or id: ' + unit.memory.spawnId);
 	}
 	else if(useSpawn.memory == null)
 	{
-		console.log(unit.name + ' found spawn, null memory from id ' + unit.memory.spawnID + ' while in room: ' + unit.room.name + '.');
+		console.log(unit.name + ' found spawn, null memory from id ' + unit.memory.spawnId + ' while in room: ' + unit.room.name + '.');
 	}
 	return(useSpawn);
  }
@@ -1431,8 +1452,8 @@
 				{
 					//var role = 'attackPower';
 					var role = 'rangedPower';
-					//var memoryForTempUnit = {'role': role, 'usingSourceId': currentRoom.name, 'spawnID': useSpawn.id, 'bankId': bank[0].id};
-					var memoryForTempUnit = {'role': role, 'usingSourceId': unit.memory.usingSourceId, 'spawnID': useSpawn.id, 'bankId': bank[0].id};
+					//var memoryForTempUnit = {'role': role, 'usingSourceId': currentRoom.name, 'spawnId': useSpawn.id, 'bankId': bank[0].id};
+					var memoryForTempUnit = {'role': role, 'usingSourceId': unit.memory.usingSourceId, 'spawnId': useSpawn.id, 'bankId': bank[0].id};
 					//We need 3 attackPower units for each bank (at 2M hit points)
 					//Need 8 ranged to clear each bank
 					/**
@@ -1735,7 +1756,7 @@
 		}
 		else if(currentRoom.controller.owner != null && currentRoom.controller.owner.username == 'RaskVann')
 		{
-			//Happens when enter a room I control. Moved code above to where unit.memory.spawnID == null it then
+			//Happens when enter a room I control. Moved code above to where unit.memory.spawnId == null it then
 			//looks for a spawn that unit shares the same room with and assigns that ID.
 			
 			//If scout has returned to the spawn room again, reset the distance counter to outer rooms
@@ -2011,7 +2032,10 @@
 				targetCreep = findEnemy[0];
 				reportRoom = findEnemy[0].room;
 				//TO DO: Only request if don't already exceed the amount of attacking body
-				reportRoom.memory.requestDefender = 1;
+				//reportRoom.memory.requestDefender = 1;
+				//TO DO: This will spawn attackers endlessly for as long as the unit survives. Spawn 1 needed unit and that's it.
+				var spawner = require('Spawner');
+				spawner.createTempCreep('attack', {'role': 'attack', 'usingSourceId': reportRoom, 'spawnId': Game.spawns[x].id}, Game.spawns[x].room.name);
 			}
 			else
 			{
@@ -2074,8 +2098,13 @@
 	{
 		reportInjury(unit);
 	}
-	 
-    if(Game.flags.Attack != null)
+	
+	if(unit.memory.usingSourceId != null &&
+		unit.memory.usingSourceId != unit.room.name)
+	{
+		followFlagForward(unit, true);
+	}
+    else if(Game.flags.Attack != null)
     {
         if(Math.abs(unit.pos.getRangeTo(Game.flags.Attack)) > 1)
         {
@@ -2381,7 +2410,7 @@
 					
 					var role = 'gather';
 					//name = findNextUnusedName(role, useSpawn.room.name);
-					var memoryForTempUnit = {'role': role, 'usingSourceId': unit.memory.usingSourceId, 'spawnID': useSpawn.id, 'pathLength': unit.memory.pathLength};
+					var memoryForTempUnit = {'role': role, 'usingSourceId': unit.memory.usingSourceId, 'spawnId': useSpawn.id, 'pathLength': unit.memory.pathLength};
 					
 					//Find how many temp gathers we have for this bank, if we don't hit the threshold, attempt to spawn another gather.
 					var countTotalGathers;
@@ -2477,7 +2506,7 @@
 				{
 					var role = 'healPower';
 					//name = findNextUnusedName(role, useSpawn.room.name);
-					var memoryForTempUnit = {'role': role, 'usingSourceId': unit.memory.usingSourceId, 'spawnID': useSpawn.id, 'bankId': unit.memory.bankId, 'pair': unit.id};
+					var memoryForTempUnit = {'role': role, 'usingSourceId': unit.memory.usingSourceId, 'spawnId': useSpawn.id, 'bankId': unit.memory.bankId, 'pair': unit.id};
 					if(spawnTempUnit(role, useSpawn, memoryForTempUnit) == true)
 					{
 						unit.memory.healers++;	//Unit is spawning or in queue to spawn
@@ -2520,7 +2549,7 @@
 					
 					var role = 'gather';
 					//name = findNextUnusedName(role, useSpawn.room.name);
-					var memoryForTempUnit = {'role': role, 'usingSourceId': unit.memory.usingSourceId, 'spawnID': useSpawn.id, 'pathLength': unit.memory.pathLength};
+					var memoryForTempUnit = {'role': role, 'usingSourceId': unit.memory.usingSourceId, 'spawnId': useSpawn.id, 'pathLength': unit.memory.pathLength};
 					
 					//Find how many temp gathers we have for this bank, if we don't hit the threshold, attempt to spawn another gather.
 					var countTotalGathers;
@@ -2694,11 +2723,19 @@ module.exports.tower = function(nextRoom, enemyInSpawn)
 					filter: function(object) {
 						return(object.hits < object.hitsMax && object.hits < object.hitsMax*buildRatio && object.structureType != STRUCTURE_ROAD);
 					}
-				}); 
+				});
 				
 				if(findStructure.length > 0)
 				{
 					repairThis = _.min(findStructure, 'hits');
+					//var findRampart = towers[0].room.find(FIND_MY_STRUCTURES, {
+					//	filter: function(object) {
+					//		return(object.hits < repairThis.hits && object.hits < object.hitsMax && object.structureType != STRUCTURE_ROAD);
+					//	}
+					//});
+					//if(findRampart.length > 0)
+					//	repairThis = _.min(findRampart, 'hits');
+					
 					//repairThis = _.min(findStructure, function(str) {
 					//	return str.hits;
 					//});
@@ -2710,7 +2747,7 @@ module.exports.tower = function(nextRoom, enemyInSpawn)
 						if(towers[tow].energy > 100)
 						{
 							repairCode = towers[tow].repair(repairThis);
-							//console.log('Tower[' + towers[tow].id + '] repair code: ' + repairCode + ', repairing: ' + repairThis);
+							console.log('Tower[' + towers[tow].id + '] repair code: ' + repairCode + ', repairing: ' + repairThis);
 						}
 					}
 				}
@@ -2834,9 +2871,9 @@ module.exports.attack = function(unit, attackersSeen)
  //If consecutiveReady > scoutSpawn.memory.maxScouts then all scouts have been ready for at least 1 round
  function trackScoutReadiness(unit, previousScoutState)
  {
-	if(unit.memory.spawnID != null)
+	if(unit.memory.spawnId != null)
 	{
-		var scoutSpawn = Game.getObjectById(unit.memory.spawnID);
+		var scoutSpawn = Game.getObjectById(unit.memory.spawnId);
 		if(previousScoutState != 'ready')
 		{
 			scoutSpawn.memory.consecutiveReady = 0;

@@ -14,9 +14,9 @@
  function findSpawn(unit)
  {
 	var useSpawn;
-	if(unit.memory.spawnID != null)
+	if(unit.memory.spawnId != null)
 	{
-		useSpawn = Game.getObjectById(unit.memory.spawnID);	//A spawn this unit can dump resources to
+		useSpawn = Game.getObjectById(unit.memory.spawnId);	//A spawn this unit can dump resources to
 	}
 	else
 	{
@@ -25,7 +25,7 @@
 			if(unit.room.name == Game.spawns[x].room.name)
 			{
 				useSpawn = Game.spawns[x].id
-				unit.memory.spawnID = useSpawn;
+				unit.memory.spawnId = useSpawn;
 			}
 		}
 	}
@@ -487,7 +487,7 @@
 								
 								if(blockingHarvest.length <= 0)
 								{
-									console.log('Something is blocking ' + unit.name + ' in ' + unit.room.name + ' check and delete and fix lazyWorkerFindSource()');
+									//console.log('Something is blocking ' + unit.name + ' in ' + unit.room.name + ' check and delete and fix lazyWorkerFindSource()');
 								}
 								else
 								{
@@ -590,6 +590,12 @@
     if(unit.memory.role == 'lazy')
     {
         var activeSource = retrieveSource(unit);
+		//TO DO: This will spawn attackers endlessly for as long as the unit survives. Spawn 1 needed unit and that's it.
+		if(unit.hits < unit.hitsMax)
+		{
+			var spawner = require('Spawner');
+			spawner.createTempCreep('attack', {'role': 'attack', 'usingSourceId': activeSource.room.name, 'spawnId': unit.memory.spawnId}, activeSource.room.name);
+		}
 		
 		//If we've capped out on energy, look around for a gather to drop off on and transfer
         if(unit.carry.energy == unit.carryCapacity || unit.carryCapacity == 0)
@@ -655,9 +661,9 @@
         {
             unit.memory.role = 'worker';
         }
-		else if(harvestCode < 0 && harvestCode != -6)
+		else if(harvestCode < 0 && harvestCode != ERR_BUSY && harvestCode != ERR_NOT_ENOUGH_RESOURCES)
 		{
-			//console.log(unit.name + ' can not harvest, harvest error code: ' + harvestCode);
+			console.log(unit.name + ' can not harvest, harvest error code: ' + harvestCode);
 		}
     }
  }
@@ -836,6 +842,76 @@
 	return(false);
  }
  
+ //Returns the storage object that it assigned this unit to.
+ function uniqueStorage(unit, findStorage)
+ {
+	//Use this on storage structure if creeps keep lining up trying to store the same thing.
+	if(findStorage != null && findStorage.length > 0)
+	{
+		var storeId;
+		var currentStorage;
+		for(var x in findStorage)
+		{
+			currentStorage = findStorage[x];
+			for(var i in Game.creeps)
+			{
+				if(Game.creeps[i] != null && Game.creeps[i].memory.extraStorage != null &&
+					Game.creeps[i].memory.extraStorage == currentStorage.id)
+				{
+					//Check all creeps stored in memory, if id is taken, return false and reject assignment
+					storeId = null;
+					break;
+				}
+				else
+				{
+					storeId = currentStorage.id;
+				}
+			}
+			
+			//No creeps/units are using this storage, use this ID and exit
+			if(storeId != null)
+			{
+				//console.log('store for ' + unit.name + ' where found: ' + currentStorage.id);
+				//delete unit.memory.direction;
+				unit.memory.extraStorage = storeId;
+				return(currentStorage);
+			}
+		}
+	}
+	//Couldn't find a unassigned storage or all storage was full
+	return(null);
+ }
+ 
+ //Moves unit to the target provided (within same room)
+ function unitByPath(unit, target)
+ {
+	if(unit.room.name == target.room.name)
+	{
+		var newPath;
+		if(unit.memory._move == null)
+		{
+			newPath = unit.pos.findPathTo(target, {maxOps: 500, serialize: true});//, ignoreCreeps: true
+		}
+		else
+		{
+			newPath = unit.memory._move.path;
+		}
+		//var moveCode = unit.moveByPath(newPath);
+		var moveCode = unit.moveTo(target, {serializeMemory: true, reusePath: 5});
+		if(moveCode < 0)
+		{
+			delete unit.memory._move;
+			newPath = unit.pos.findPathTo(target, {maxOps: 500, serialize: true});
+			var newCode = unit.moveByPath(newPath);
+			if(newCode < 0)
+				console.log(unit.name + ' was expected to move via ' + newPath + ' but returned move code: ' + moveCode + ' new saved move. New code: ' + newCode);
+		}
+		return(moveCode);
+	}
+	console.log('Attempted to move ' + unit.name + ' to ' + target + ' but they are in different rooms.');
+	return(ERR_INVALID_ARGS);//ERR_NOT_FOUND
+ }
+ 
  //ReturnResources being the spawn the unit came from
  function fillUpRoomWithEnergy(unit, returnResources)
  {
@@ -860,7 +936,9 @@
 		var unitDirection = unit.memory.direction;
 		//If make it back to the drop off and its full go and fill up a extension instead, delete the direction so when it finishes
 		//the drop off it finds the start of the path again and resumes the path.
-		if(unit.carry.energy > 0 && (returnResources.energy >= returnResources.energyCapacity || unit.memory.extraStorage != null))
+		if(unit.carry.energy > 0 && 
+			((returnResources.energy >= returnResources.energyCapacity && unit.pos.getRangeTo(returnResources) <= 1) || 
+			unit.memory.extraStorage != null))
 		{
 			if(returnResources.room.energyAvailable < returnResources.room.energyCapacityAvailable)
 			{
@@ -868,14 +946,16 @@
 				var transferExtension;
 				if(unit.memory.extraStorage == null)
 				{
-					var findExtension = unit.pos.findClosestByRange(FIND_MY_STRUCTURES, {
+					//var findExtension = unit.pos.findClosestByRange(FIND_MY_STRUCTURES, {
+					var findExtension = unit.room.find(FIND_MY_STRUCTURES, {
 						filter: function(object) {
 							return(object.energy < object.energyCapacity && 
 									(object.structureType == STRUCTURE_SPAWN || object.structureType == STRUCTURE_EXTENSION));
 						}
 					});
-					unit.memory.extraStorage = findExtension.id;
-					transferExtension = findExtension;
+					
+					//unit.memory.extraStorage = findExtension.id;
+					transferExtension = uniqueStorage(unit, findExtension);
 				}
 				else
 				{
@@ -907,12 +987,25 @@
 						findRoadOrCreate(unit);
 						if(transferTarget != null)
 						{	//As long as there is a target to go to and the room isn't full of energy, move to the target
-							//var cpu = Game.getUsedCpu();
-							//unit.moveTo(transferTarget);
-							unit.moveByPath(unit.pos.findPathTo(transferTarget), {maxOps: 100});//, ignoreCreeps: false
-							
-							//cpu = Game.getUsedCpu()-cpu;
-							//console.log(unit.name + ' moving to ' + transferTarget.name + ' costs: ' + cpu);
+							var nearExtension = unit.pos.findInRange(FIND_MY_STRUCTURES, 1, {
+								filter: function(object) {
+									return(object.energy < object.energyCapacity && 
+											(object.structureType == STRUCTURE_SPAWN || object.structureType == STRUCTURE_EXTENSION));
+								}
+							});
+							if(nearExtension.length > 0 && unit.transferEnergy(nearExtension[0]) == 0)
+							{
+								//Fill objects along the way
+							}
+							else
+							{
+								//var cpu = Game.getUsedCpu();
+								//unit.moveTo(transferTarget);
+								unitByPath(unit, transferTarget);
+								
+								//cpu = Game.getUsedCpu()-cpu;
+								//console.log(unit.name + ' moving to ' + transferTarget.name + ' costs: ' + cpu);
+							}
 						}
 					}
 					else
@@ -921,6 +1014,7 @@
 							transferTarget.energy < transferTarget.energyCapacity && 
 							unit.transferEnergy(transferTarget) == 0)
 						{
+							delete unit.memory._move;
 							delete unit.memory.extraStorage;
 							//Don't look for any more structures to transfer to, successfully filled one.
 							return(true);
@@ -940,14 +1034,16 @@
 				{
 					//gathers carry 1350-1650 energy when with road, Tower takes 1000, Power takes 5000. If dropping near full (1350)
 					//into the highest of these we only want to drop energy if they are under .73 capacity.
-					var findStruct = unit.pos.findClosestByRange(FIND_MY_STRUCTURES, {
+					//var findStruct = unit.pos.findClosestByRange(FIND_MY_STRUCTURES, {
+					var findStruct = unit.room.find(FIND_MY_STRUCTURES, {
 						filter: function(object) {
 							return(object.energy < (object.energyCapacity*.73) && 
 								(object.structureType == STRUCTURE_POWER_SPAWN || object.structureType == STRUCTURE_TOWER));
 						}
 					});
-					unit.memory.extraStorage = findStruct.id;
-					needyStruct = findStruct;
+					
+					//unit.memory.extraStorage = findStruct.id;
+					needyStruct = uniqueStorage(unit, findStruct);
 				}
 				else
 				{
@@ -963,22 +1059,28 @@
 				{		//If we're in a room with a storage go over and transfer to the storage
 					if(transferStorage != null && (transferStorage.store.energy < 5000 || needyStruct == null))
 					{
-						unit.moveByPath(unit.pos.findPathTo(transferStorage), {maxOps: 100});//, ignoreCreeps: false
+						unitByPath(unit, transferStorage);
 						var transferCode = unit.transferEnergy(transferStorage);
 						
 						if(transferCode == 0)
+						{
+							delete unit.memory._move;
 							delete unit.memory.extraStorage;
+						}
 						
 						if(unitDirection != null)
 							delete unit.memory.direction;
 					}
 					else if(needyStruct != null)
 					{
-						unit.moveByPath(unit.pos.findPathTo(needyStruct), {maxOps: 100});//, ignoreCreeps: false
+						unitByPath(unit, needyStruct);
 						var transferCode = unit.transferEnergy(needyStruct);
 						
 						if(transferCode == 0)
+						{
+							delete unit.memory._move;
 							delete unit.memory.extraStorage;
+						}
 						
 						if(unitDirection != null)
 							delete unit.memory.direction;
@@ -1013,13 +1115,21 @@
 					{
 						//TO DO: Check if power spawn is > .5 of power, if unit has room, pickup energy from storage or equivalent
 						//and dump in power spawn.
-						unit.moveTo(powerSpawn[0]);
-						unit.transfer(powerSpawn[0], RESOURCE_POWER);
+						unitByPath(unit, powerSpawn[0]);
+						
+						if(unit.transfer(powerSpawn[0], RESOURCE_POWER) == 0)
+						{
+							delete unit.memory._move;
+						}
 					}
 					else
 					{
-						unit.moveTo(unit.room.storage);
-						unit.transfer(unit.room.storage, RESOURCE_POWER);
+						unitByPath(unit, unit.room.storage);
+
+						if(unit.transfer(unit.room.storage, RESOURCE_POWER) == 0)
+						{
+							delete unit.memory._move;
+						}
 					}
 				}
 				else
@@ -1067,6 +1177,13 @@
 	else
 		unitPower = 0;
 	var unitEnergyCapacity = unit.carryCapacity;
+	//TO DO: This will spawn attackers endlessly for as long as the unit survives. Spawn 1 needed unit and that's it.
+	if(unit.hits < unit.hitsMax)
+	{
+		var spawner = require('Spawner');
+		spawner.createTempCreep('attack', {'role': 'attack', 'usingSourceId': unit.room.name, 'spawnId': returnResources.id}, returnResources.room.name);
+	}
+	
 	//Going to try to grab any energy the unit can and immediately try a drop off instead of waiting for it to fill up
 	//since it seems like all energy sits in the gatherers if I wait until they are full.
     //if(unit.carry.energy < unit.carryCapacity)
@@ -1248,6 +1365,39 @@
  function distance(x1, y1, x2, y2)
  {
 	return(Math.sqrt(Math.pow(x1-x2, 2)+Math.pow(y1-y2, 2)));
+ }
+ 
+ //'claim' needs to move to controller
+ //'claim2' already at controller, just claim
+ function claimRoom(unit)
+ {
+	//var reserveController = Game.getObjectById(unit.memory.claimController);
+	if(unit.memory.role == 'claim')
+	{
+		//if(reserveController == null || reserveController.room.name != unit.room.name)	//usingSourceId is the room the controller is in
+		if(unit.memory.usingSourceId != unit.room.name)
+			followFlagForward(unit, true);
+		else if(unit.pos.getRangeTo(unit.room.controller) > 1)
+			unit.moveTo(unit.room.controller);
+		else
+		{
+			unit.memory.role = 'claim2';
+			unit.claimController(unit.room.controller);
+			return(true);
+		}
+	}
+	else if(unit.memory.role == 'claim2')
+	{
+		//if(reserveController == null || reserveController.room.name != unit.room.name)
+		if(unit.memory.usingSourceId != unit.room.name)
+			unit.memory.role = 'claim';
+		else
+		{
+			unit.claimController(unit.room.controller);
+			return(true);
+		}
+	}
+	return(false);
  }
  
  //Attempts to construct structure as close to closeSpawn as possible center being closestLocation, within range 1
@@ -1437,6 +1587,15 @@ module.exports.gather = function(unit, gatherersSeen)
         //goto and sit, making continuous trips from their spawn 
         //location and this spot
     }
+}
+
+module.exports.claim = function(unit, claimSeen)
+{
+	//role.contains('claim');
+	if(unit.memory.role.startsWith('claim'))
+	{
+		claimRoom(unit);
+	}
 }
 
 module.exports.distribute = function(unit, distributeSeen)
