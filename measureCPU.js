@@ -434,8 +434,8 @@
  }
 
  //10,000 ticks is roughly 12 hours (720 minutes) last time I checked. Cpu Limit is 500
- var reportEvery = 500;
- var reportMin = 36;
+ var reportEvery = 10000;	//500
+ var reportMin = 720;	//36
  
  module.exports.cpu = function()
  {

@@ -2027,15 +2027,25 @@
 				}
 			});
 			
+			//If find an enemy, check if we need more defenders
 			if(findEnemy.length > 0)
 			{
-				targetCreep = findEnemy[0];
-				reportRoom = findEnemy[0].room;
 				//TO DO: Only request if don't already exceed the amount of attacking body
-				//reportRoom.memory.requestDefender = 1;
-				//TO DO: This will spawn attackers endlessly for as long as the unit survives. Spawn 1 needed unit and that's it.
-				var spawner = require('Spawner');
-				spawner.createTempCreep('attack', {'role': 'attack', 'usingSourceId': reportRoom, 'spawnId': Game.spawns[x].id}, Game.spawns[x].room.name);
+				//If find an enemy and we don't have at least as many allies in that room, spawn another defender
+				var findAlly = Game.spawns[x].room.find(FIND_MY_CREEPS, {
+					filter: function(object) {
+						return(object.memory.role == 'attack' || object.memory.role == 'defend');
+					}
+				});
+			
+				if(findAlly.length < findEnemy.length)
+				{
+					targetCreep = findEnemy[0];
+					reportRoom = findEnemy[0].room;
+					
+					var spawner = require('Spawner');
+					spawner.createTempCreep('attack', {'role': 'attack', 'usingSourceId': reportRoom, 'spawnId': Game.spawns[x].id}, Game.spawns[x].room.name);
+				}
 			}
 			else
 			{

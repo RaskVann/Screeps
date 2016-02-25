@@ -457,7 +457,7 @@
                 {
                     unit.memory.role = 'lazy';
                 }
-                else
+                else if(unit.fatigue <= 0)
                 {
 					//if(unit.memory.pathTo != null)
 					//{
@@ -849,6 +849,10 @@
 	if(findStorage != null && findStorage.length > 0)
 	{
 		var storeId;
+		//Change the found structures to be ordered by the closest to the unit so it drops off at shorter trips first
+		findStorage = _.sortBy(findStorage, function(o) {
+		  return unit.pos.getRangeTo(o.pos);
+		});
 		var currentStorage;
 		for(var x in findStorage)
 		{
@@ -896,15 +900,16 @@
 		{
 			newPath = unit.memory._move.path;
 		}
+		var dist = Math.min(5, unit.pos.getRangeTo(target));
 		//var moveCode = unit.moveByPath(newPath);
-		var moveCode = unit.moveTo(target, {serializeMemory: true, reusePath: 5});
+		var moveCode = unit.moveTo(target, {serializeMemory: true, reusePath: dist});
 		if(moveCode < 0)
 		{
 			delete unit.memory._move;
 			newPath = unit.pos.findPathTo(target, {maxOps: 500, serialize: true});
 			var newCode = unit.moveByPath(newPath);
-			if(newCode < 0)
-				console.log(unit.name + ' was expected to move via ' + newPath + ' but returned move code: ' + moveCode + ' new saved move. New code: ' + newCode);
+			//if(newCode < 0)
+				//console.log(unit.name + ' was expected to move via ' + newPath + ' but returned move code: ' + moveCode + ' new saved move. New code: ' + newCode);
 		}
 		return(moveCode);
 	}
@@ -1383,7 +1388,8 @@
 		else
 		{
 			unit.memory.role = 'claim2';
-			unit.claimController(unit.room.controller);
+			//unit.claimController(unit.room.controller);
+			unit.reserveController(unit.room.controller);
 			return(true);
 		}
 	}
@@ -1394,7 +1400,8 @@
 			unit.memory.role = 'claim';
 		else
 		{
-			unit.claimController(unit.room.controller);
+			//unit.claimController(unit.room.controller);
+			unit.reserveController(unit.room.controller);
 			return(true);
 		}
 	}

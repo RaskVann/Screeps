@@ -461,7 +461,7 @@
  function buildRoad(unit)
  {
 	var workComponents = unit.getActiveBodyparts(WORK);
-	if(workComponents > 0 && unit.carry.energy > 0)
+	if(workComponents > 0 && unit.carry.energy >= workComponents)
 	{
 		var findStructure = unit.pos.lookFor('structure');
 		var foundRoad = -1;
