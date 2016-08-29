@@ -54,7 +54,7 @@
 	}
 	return(null);
  }
- 
+
  function nextNeedHarvest(spawn)
  {
 	//If we still have valid units to spawn, give the currentID, otherwise push list closer to top.
@@ -74,7 +74,7 @@
 		return(spawn.memory.needHarvest0);
 	}
  }
- 
+
  //Push all three parts of the list closer to the top to be retrieved, no more gatherers
  //or harvesters were found.
  function updateHarvestGatherList(spawn)
@@ -86,12 +86,12 @@
 		spawn.memory.needHarvest1 = spawn.memory.needHarvest2;
 		spawn.memory.needHarvest2 = spawn.memory.needHarvest3;
 		spawn.memory.needHarvest3 = resetValue;
-		
+
 		spawn.memory.needGather0 = spawn.memory.needGather1;
 		spawn.memory.needGather1 = spawn.memory.needGather2;
 		spawn.memory.needGather2 = spawn.memory.needGather3;
 		spawn.memory.needGather3 = resetValue;
-		
+
 		spawn.memory.harvestId0 = spawn.memory.harvestId1;
 		spawn.memory.harvestId1 = spawn.memory.harvestId2;
 		spawn.memory.harvestId2 = spawn.memory.harvestId3;
@@ -143,7 +143,7 @@
 	}
 	return(null);
  }
- 
+
  function nextNeedGather(spawn)
  {
 	//If we still have valid units to spawn, give the currentID, otherwise push list closer to top.
@@ -242,7 +242,7 @@
 		return(true);
 	}
  }
- 
+
  //Check if one of these has been created in the sent in room. If one exists send back null otherwise let this
  //unit be made with the returned name.
  function createOneInRoom(role, roomName)
@@ -253,21 +253,21 @@
 	else
 		return(nextName);
  }
- 
+
  function findNextUnusedName(role, roomName)
  {
 	var num = 0;
 	var nextName = role + num + roomName;
 	var count = 0;
 	var countMax = 50;
-	
+
 	while(Memory.creeps[nextName] != null && count < countMax)
 	{
 		num++;
 		nextName = role + num + roomName;
 		count++;
 	}
-	
+
 	if(count >= countMax)
 	{
 		console.log('Trying to find name for ' + role + ' in ' + roomName + ' failed, max attempts reached.');
@@ -278,7 +278,7 @@
 		return(nextName);
 	}
  }
- 
+
  //Note: Until this switches to store everything within the room that is relevant, any scout
  //		will happily create any available worker/gather as long as any unit is in the source room.
  //Takes unit that is within a room that needs units (currently workers and gatherers).
@@ -294,13 +294,13 @@
 	var name;
 	var claimName;
 	var num = 0;
-	
+
 	//TO DO: Convert to store and pull from unit.room, not spawn.room
-	if(source != null && source.room != null && 
+	if(source != null && source.room != null &&
 		harvestEmpty(spawner) == false)
 	{
 		claimName = createOneInRoom('claim', source.room.name);	//Attempt to pair worker/gather generation with 1 claim unit.
-		
+
 		if(getNeedHarvest(spawner) > 0)
 		{
 			role = 'worker';
@@ -316,7 +316,7 @@
 			console.log(unit.name + ' has not found any needed new units in ' + unit.room.name);
 			return(false);
 		}
-		
+
 		//The length this unit needs to travel should exceed this number by some amount, but this is a good ballpark
 		if(unit.memory.pathLength != null)
 		{
@@ -331,24 +331,24 @@
 	{
 		return(false);
 	}
-	
-	if( spawner != null && 
+
+	if( spawner != null &&
 		role != null && name != null && length != null &&
-		Memory.creeps[name] == null && 
+		Memory.creeps[name] == null &&
 		(sourceId != -1 && sourceId != 0) )
 	{
 		console.log(unit.name + ' just added ' + name + ' to room: ' + unit.room.name + ' to end of respawn list.');
-		
+
 		Memory.creeps[name] = {'role': role, 'usingSourceId': sourceId, 'spawnId': unit.memory.spawnId, 'pathLength': length};
 		spawner.memory.respawnName += (name+",");
-		
+
 		//If worker/gather found that a claim doesn't exist, create it for this room.
 		if(claimName != null)// && Memory.creeps[claimName] == null
 		{
 			Memory.creeps[claimName] = {'role': 'claim', 'usingSourceId': source.room.name, 'spawnId': unit.memory.spawnId, 'pathLength': length};
 			spawner.memory.respawnName += (claimName+",");
 		}
-		
+
 		if(role == 'worker')
 		{
 			nextNeedHarvest(spawner);	//This need is filled, decrease or remove
@@ -369,14 +369,14 @@
 		return(false);
 	}
  }
- 
+
  function requestScout(unit, useSpawn)
  {
 	useSpawn.memory.requestScout = 1;	//Replace the unit with one from spawn
 	var report = removeScout(unit);
 	return(report);
  }
- 
+
  function populateExitMax(currentRoom)
  {
 	if(currentRoom != null && currentRoom.memory.exitMax == null)
@@ -396,7 +396,7 @@
 	console.log('populate exit got a null room: ' + currentRoom);
 	return(false);
  }
- 
+
  function nextRoomManager(unit, currentRoom, useSpawn)
  {
 	var newExit;
@@ -408,23 +408,23 @@
 		//Find and assign how many exits are in this room
 		currentRoom.memory.exitsVisited = 0;
 		populateExitMax(currentRoom);
-		
+
 		//If found another user owned room. Remove unit and update previous room to look at next room
-		if(currentRoom.controller != null && currentRoom.controller.owner != null && 
+		if(currentRoom.controller != null && currentRoom.controller.owner != null &&
 			currentRoom.controller.owner.username != 'RaskVann')
 		{
 			currentRoom.memory.exitsVisited = currentRoom.memory.exitMax;
 			currentRoom.memory.owner = currentRoom.controller.owner.username;
 			currentRoom.memory.threat = evaluateThreat(currentRoom);
-			
+
 			if(unit.memory.previousRoom != null)
 				Memory.rooms[unit.memory.previousRoom].exitsVisited++;
 			else
 				console.log(unit.name + ' doesnt have previous room defined before ' + currentRoom.name + ' but this room is owned by ' + currentRoom.controller.owner.username + ' and needs turned into dead-end');
-			
+
 			return(requestScout(unit, useSpawn));
 		}
-	
+
 		//Look for next relevant room to go to
 		newExit = findNextRoom(unit, currentRoom);
 		if(newExit == null)	//All remaining rooms have been visited, end of this route
@@ -447,14 +447,14 @@
 		console.log(unit.name + ' visit is greater or equal then max. ' + currentRoom.memory.exitsVisited + ' of ' + currentRoom.memory.exitMax);
 		return(requestScout(unit, useSpawn));
 	}
-	
+
 	return(newExit);
  }
 
  function getRoomForExit(unit, value)
  {
 	var roomExits = Game.map.describeExits(unit.room.name);
-		
+
 	var count = 0;
 	for(var x in roomExits)
 	{
@@ -469,14 +469,14 @@
 				console.log(unit.name + ' this exit is a dead end. Try to find next room in ' + unit.room.name);
 				Memory.rooms[unit.room.name].exitsVisited++;	//Can cause unit to turn back.
 				return(findNextRoom(unit, unit.room));
-				
+
 				//if(Memory.rooms[unit.room.name].exitsVisited >= Memory.rooms[unit.room.name].exitMax)
 				//{
 				//	if(unit.memory.previousRoom != null)
 				//		Memory.rooms[unit.memory.previousRoom].exitsVisited++;
 				//	else
 				//		console.log(unit.name + ' doesnt have previous room defined before ' + unit.room.name + ' needs turned into dead-end');
-				//	
+				//
 				//	return(null);
 				//}
 				//value++;
@@ -524,14 +524,14 @@
  function findNextRoom(unit, currentRoom)
  {
 	if(currentRoom.memory.exitsVisited < currentRoom.memory.exitMax)
-	{	
+	{
 		//skip over all exits that go to all rooms we've previously visited
 		var roomList = Game.rooms;
 		var newExit;
 		while(currentRoom.memory.exitsVisited < currentRoom.memory.exitMax)
 		{
 			newExit = getRoomForExit(unit, currentRoom.memory.exitsVisited);
-			
+
 			if(newExit == null)
 			{	//Should mean this exit is a dead end. Look at next
 				currentRoom.memory.exitsVisited++;
@@ -551,11 +551,11 @@
 			//Out of exits. Make this a dead end by increasing exitsVisisted to equal or exceed exitMax, update previousRoom to look at the next exit
 			//because this is now a dead end.
 			else
-			{	
+			{
 				currentRoom.memory.exitsVisited++;
 				//Could cause loop back.
 				//If not a dead end then we can go there since it leads to a room that has yet to be explored.
-				//if(unit.memory.previousRoom != null && Memory.rooms[unit.memory.previousRoom] != null && 
+				//if(unit.memory.previousRoom != null && Memory.rooms[unit.memory.previousRoom] != null &&
 				//	Memory.rooms[unit.memory.previousRoom].exitsVisited != null)
 				//{
 				//	Memory.rooms[unit.memory.previousRoom].exitsVisited++;
@@ -582,7 +582,7 @@
 		//	Memory.rooms[unit.memory.previousRoom].exitsVisited++;
 		//else
 		//	console.log(unit.name + ' in ' + currentRoom.name + ' doesnt have previousRoom defined or room it points to. Error');
-		
+
 		return(null);
 	}
 	else if(currentRoom == null || currentRoom.memory.exitsVisited == null || currentRoom.memory.exitMax == null)
@@ -593,7 +593,7 @@
 	return(null);	//All exits lead to rooms we've been to, end of path reached.
 	//return(getRoomForExit(unit, currentRoom.memory.exitsVisited));
  }
- 
+
  //Only reason we're sending in a unit and requiring the unit to be in the same room as the route createDefinedPath
  //is findFlag takes a unit instead of a room to find flags. This does ensure that it's possible to create a flag there
  //So I'm not going to change it.
@@ -606,13 +606,13 @@
 	{
 		route = route[0];
 	}
-	
+
 	if(route == null || (route != null && route.routeStart.roomName != unit.room.name))
 	{
 		//Unit doesn't exist in the room we're interested in to create a route, skip.
 		return(false);
 	}
-	
+
 	if(route != null && route.routeStart.roomName == unit.room.name &&
 		followFlagForward.findFlag(unit, route.usingSourceId) != null)
 	{
@@ -621,10 +621,10 @@
 		console.log(unit.name + ' found route ' + route.usingSourceId + ' in ' + unit.room + ' removing from list since already created.');
 		return(true);
 	}
-	
-	//We have more then enough time, and there is a unit in the 
+
+	//We have more then enough time, and there is a unit in the
 	//room we need access to, to create the path in flags
-	if(Game.cpuLimit >= 500 && Game.getUsedCpu() < 20 &&
+	if(Game.cpuLimit >= 500 && Game.cpu.getUsed() < 20 &&
 		route != null && unit != null &&
 		route.routeStart.roomName == unit.room.name)
 	{
@@ -634,16 +634,16 @@
 		var exit = new RoomPosition(route.routeEnd.x, route.routeEnd.y, route.routeEnd.roomName);
 		var cap = route.cap;
 		//console.log('Attempting Creation: found start: ' + startPosition + ' with route ' + sourceId + ' to exit: ' + exit);
-		
+
 		//If in room I control, make path from spawns to relevant exit, otherwise from current
 		//position to the relevant exit.
-		if(currentRoom.controller != null && currentRoom.controller.owner != null && 
+		if(currentRoom.controller != null && currentRoom.controller.owner != null &&
 			currentRoom.controller.owner.username == 'RaskVann')
 		{
-			var tempCPU = Game.getUsedCpu();
+			var tempCPU = Game.cpu.getUsed();
 			var routeMessage = (unit.name + ', pos: ' + unit.pos + ', spawn: ' + currentRoom + ', stop: ' + exit + ', id: ' + sourceId + ' route creation.');
 			var pathMade = followFlagForward.createPathFromSpawn(exit, currentRoom, sourceId);
-			tempCPU = Game.getUsedCpu()-tempCPU;
+			tempCPU = Game.cpu.getUsed()-tempCPU;
 			if(pathMade)
 			{
 				console.log('SUCCESS: ' + routeMessage + ' took cpu: ' + tempCPU);
@@ -660,13 +660,13 @@
 		}
 		else if(startPosition != null && exit != null && startPosition != exit)
 		{
-			var tempCPU = Game.getUsedCpu();
+			var tempCPU = Game.cpu.getUsed();
 			var routeMessage = (unit.name + ', pos: ' + unit.pos + ', room: ' + currentRoom + ', start: ' + startPosition + ', stop: ' + exit + ', id: ' + sourceId + ' capped: ' + cap + ' route creation.');
 			var newPath = startPosition.findPathTo(exit, {maxOps: 4000, ignoreCreeps: true});
 			if(newPath != null && newPath.length > 0)
 			{
 				var pathMade = followFlagForward.createDefinedPath(currentRoom, newPath, sourceId, cap, startPosition);
-				tempCPU = Game.getUsedCpu()-tempCPU;
+				tempCPU = Game.cpu.getUsed()-tempCPU;
 				if(pathMade)
 				{
 					console.log('SUCCESS: ' + routeMessage + ' took cpu: ' + tempCPU);
@@ -700,6 +700,7 @@
  //path so it can follow it
  function createPathToExit(unit, currentRoom, newExit)
  {
+	console.log('NewExit? ' + newExit + ' name: ' + newExit.name);
 	//If can't find a flag in the room that matches id we're trying to create, create a path
 	if(followFlagForward.findFlag(unit, newExit) == null)
 	{
@@ -707,10 +708,10 @@
 		var startPosition = new RoomPosition(unit.memory.startPos.x, unit.memory.startPos.y, unit.memory.startPos.roomName);
 		var exit = startPosition.findClosestByRange(routeToExit);
 		//console.log('found exit: ' + newExit + ' with route ' + routeToExit + ' at destination ' + exit);
-		
+
 		//If in room I control, make path from spawns to relevant exit, otherwise from current
 		//position to the relevant exit.
-		if(currentRoom.controller != null && currentRoom.controller.owner != null && 
+		if(currentRoom.controller != null && currentRoom.controller.owner != null &&
 			currentRoom.controller.owner.username == 'RaskVann')
 		{
 			if(followFlagForward.createPathFromSpawn(exit, currentRoom, newExit))
@@ -738,7 +739,7 @@
 	}
 	return(null);
  }
- 
+
  function threatString(threat)
  {
 	var threatString;
@@ -801,7 +802,7 @@
 			threatString = 'enemy attacking body >= 20, grows during watch';
 		}
 	}
-	
+
 	return(threatString);
  }
 
@@ -839,7 +840,7 @@
 			totalHostileBody += targetCreep[hostileUnit].getActiveBodyparts(RANGED_ATTACK);
 			totalHostileBody += targetCreep[hostileUnit].getActiveBodyparts(ATTACK);
 		}
-		
+
 		if(totalHostileBody <= 0)
 		{
 			var targetSpawns = currentRoom.find(FIND_HOSTILE_SPAWNS);
@@ -864,7 +865,7 @@
 		else if(totalHostileBody < 5)
 		{
 			console.log(currentRoom + ' has ' + targetCreep.length + ' creeps with ' + totalHostileBody + ' hostile body, first unit owned by ' + targetCreep[0].owner.username);
-			if(currentRoom.controller != null)
+			if(currentRoom.controller != null && targetCreep.owner.name != 'Invader')
 				Game.notify(currentRoom + ' has ' + targetCreep.length + ' creeps with ' + totalHostileBody + ' hostile body, first unit owned by ' + targetCreep[0].owner.username, reportTime);
 			if(currentRoom.memory.threat != null && currentRoom.memory.threat < 5)
 			{
@@ -879,7 +880,7 @@
 		else if(totalHostileBody < 10)
 		{
 			console.log(currentRoom + ' has ' + targetCreep.length + ' creeps with ' + totalHostileBody + ' hostile body, first unit owned by ' + targetCreep[0].owner.username);
-			if(currentRoom.controller != null)
+			if(currentRoom.controller != null && targetCreep.owner.name != 'Invader')
 				Game.notify(currentRoom + ' has ' + targetCreep.length + ' creeps with ' + totalHostileBody + ' hostile body, first unit owned by ' + targetCreep[0].owner.username, reportTime);
 			if(currentRoom.memory.threat != null && currentRoom.memory.threat < 6)
 			{
@@ -898,7 +899,7 @@
 		else if(totalHostileBody < 20)
 		{
 			console.log(currentRoom + ' has ' + targetCreep.length + ' creeps with ' + totalHostileBody + ' hostile body, first unit owned by ' + targetCreep[0].owner.username);
-			if(currentRoom.controller != null)
+			if(currentRoom.controller != null && targetCreep.owner.name != 'Invader')
 				Game.notify(currentRoom + ' has ' + targetCreep.length + ' creeps with ' + totalHostileBody + ' hostile body, first unit owned by ' + targetCreep[0].owner.username, reportTime);
 			if(currentRoom.memory.threat != null && currentRoom.memory.threat < 7)
 			{
@@ -921,7 +922,7 @@
 		else
 		{
 			console.log(currentRoom + ' has ' + targetCreep.length + ' creeps with ' + totalHostileBody + ' hostile body, first unit owned by ' + targetCreep[0].owner.username);
-			if(currentRoom.controller != null)
+			if(currentRoom.controller != null && targetCreep.owner.name != 'Invader')
 				Game.notify(currentRoom + ' has ' + targetCreep.length + ' creeps with ' + totalHostileBody + ' hostile body, first unit owned by ' + targetCreep[0].owner.username, reportTime);
 			if(currentRoom.memory.threat != null && currentRoom.memory.threat < 8)
 			{
@@ -968,7 +969,7 @@
 		}
 	}
  }
- 
+
  function updateDistanceMoved(unit)
  {
 	if(unit.memory.distanceMoved == null)
@@ -980,7 +981,7 @@
 		unit.memory.distanceMoved += unit.memory.pathLength;
 	}
  }
- 
+
  function reportInjury(unit)
  {
 	if(unit.hits < unit.hitsMax)
@@ -995,15 +996,16 @@
 			{
 				owners += rangedTargets[x].owner.username + ', ';
 			}
-            Game.notify('Enemy found after injuring: ' + unit.name + ' of owners: ' + owners + ' in room: ' + unit.room.name, reportTime);
+			if(owners.indexOf('Invader') == -1)
+				Game.notify('Enemy found after injuring: ' + unit.name + ' of owners: ' + owners + ' in room: ' + unit.room.name, reportTime);
 		}
 		else
 		{
-			Game.notify('No enemy found after injuring: ' + unit.name + ' in room: ' + unit.room.name + ' at time: ' + Game.time, reportTime);
+			//Game.notify('No enemy found after injuring: ' + unit.name + ' in room: ' + unit.room.name, reportTime);
 		}
 	}
  }
- 
+
  function getSpawnId(unit)
  {
 	//The scouts throw back requests to spawn other scouts to continue their search. This populates a saved ID
@@ -1029,7 +1031,7 @@
 			}
 		}
 	}
-	
+
 	if(useSpawn == null)
 	{
 		console.log(unit.name + ' did not find a spawn to use in ' + unit.room.name + ' or id: ' + unit.memory.spawnId);
@@ -1040,24 +1042,24 @@
 	}
 	return(useSpawn);
  }
- 
+
  function getPreviousRoom(unit)
  {
-	if(unit.memory.roomName != null && unit.room.name != unit.memory.roomName && 
+	if(unit.memory.roomName != null && unit.room.name != unit.memory.roomName &&
 		unit.memory.roomName != 'changeRouteFromDeadEnd')
 	{
 		//If we enter in the function while roomName hasn't updated then memory.roomName is the previousRoom
 		return(unit.memory.roomName);
 	}
-	else if(unit.memory.previousRoom != null && unit.room.name == unit.memory.roomName && 
+	else if(unit.memory.previousRoom != null && unit.room.name == unit.memory.roomName &&
 			unit.memory.previousRoom != unit.room.name && unit.memory.previousRoom != 'changeRouteFromDeadEnd')
 	{
 		//Otherwise the previousValue is updated and we can use it.
 		return(unit.memory.previousRoom);
 	}
 	else if(unit.memory.previousRoom != null && unit.memory.previousRoom != unit.room.name &&
-		unit.memory.roomName == 'changeRouteFromDeadEnd' && 
-		unit.memory.usingSourceId == 'changeRouteFromDeadEnd' && 
+		unit.memory.roomName == 'changeRouteFromDeadEnd' &&
+		unit.memory.usingSourceId == 'changeRouteFromDeadEnd' &&
 		unit.memory.previousRoom != 'changeRouteFromDeadEnd')
 	{
 		//Assumes previous room was updated properly, but we blew away the roomName for this so either change how this is defined
@@ -1067,18 +1069,18 @@
 	//console.log(unit.name + ' found roomName and previousRoom not defined.');
 	return(null);
  }
- 
+
  function scoutsInEachRoom(unit)
  {
 	var lastScout = unit;
 	var count = 0;
 	var limit = 50;
-	
+
 	while(lastScout != null && getPreviousRoom(lastScout) != null && count++ < limit)
 	{
 		lastScout = scoutFromRoomName(getPreviousRoom(lastScout));
 	}
-	
+
 	if(lastScout != null)
 	{
 		if(lastScout.room.controller != null &&
@@ -1119,14 +1121,14 @@
 			//console.log(unit.name + ' in ' + unit.room.name + ' trying to find scout in ' + getPreviousRoom(unit) + ' failed in ' + unit.memory.previousRoom + ' or in subsequent room.');
 		}
 	}
-	
+
 	if(count+1 >= limit)
 	{
 		console.log(unit.name + ' ran into infinite loop looking through previousRoom');
 	}
 	return(false);
  }
- 
+
  //We store the last room the scout came from in unit.memory.previousRoom. We pass that value in
  //here to get the room we're trying to do something in and return back a unit from that room
  function scoutFromRoomName(roomName)
@@ -1135,7 +1137,7 @@
 	{
 		for(var scouts in Game.creeps)
 		{
-			if(Game.creeps[scouts].memory.role == 'scout' && 
+			if(Game.creeps[scouts].memory.role == 'scout' &&
 				Game.creeps[scouts].room.name == roomName)
 			{
 				return(Game.creeps[scouts]);
@@ -1145,7 +1147,7 @@
 	}
 	return(null);
  }
- 
+
  function removeRouteLocation(routeLocation)
  {
 	if(Memory.scoutRoute != null && Memory.scoutRoute.length != null && routeLocation != null)
@@ -1167,7 +1169,7 @@
 	}
 	return(false);
  }
- 
+
  //returns location of route that matches the room we send in
  function getRouteFromRoom(findRoomName)
  {
@@ -1190,17 +1192,17 @@
 	}
 	return(null);
  }
- 
+
  function getRoutePos(pos)
  {
-	if(Memory.scoutRoute != null && Memory.scoutRoute.length != null && 
+	if(Memory.scoutRoute != null && Memory.scoutRoute.length != null &&
 		pos != null && pos < Memory.scoutRoute.length)
 	{
 		return(Memory.scoutRoute[pos]);
 	}
 	return(null);
  }
- 
+
  //Checks Memory.scoutRoute to see if it has information to use or not. Used to spawn scouting routes after the
  //scouts have found and stored routes.
  function isScoutRouteEmpty()
@@ -1214,7 +1216,7 @@
 		return(false);
 	}
  }
- 
+
  //Assumes: route = [ { routeStart: startPosition, routeEnd: exit, usingSourceId: id } ];
  function addRoute(route)
  {
@@ -1233,7 +1235,7 @@
 		Memory.scoutRoute[Memory.scoutRoute.length++] = route;
 	}
  }
- 
+
  function storeRoute(unit, id, capRoute, useId)
  {
 	var exit;
@@ -1242,7 +1244,7 @@
 		return(false);
 	}
 	var startPosition = new RoomPosition(unit.memory.startPos.x, unit.memory.startPos.y, unit.memory.startPos.roomName);
-	
+
 	var routeToExit;
 	if(useId == true)
 	{
@@ -1267,9 +1269,9 @@
 			exit = null;
 		}
 	}
-	
+
 	//If starting position and exit position match the last entered value
-	if(Memory.scoutRoute != null && Memory.scoutRoute.length != null && 
+	if(Memory.scoutRoute != null && Memory.scoutRoute.length != null &&
 		Memory.scoutRoute[Memory.scoutRoute.length-1] != null &&
 		(//Memory.scoutRoute[Memory.scoutRoute.length-1][0].routeStart.x == startPosition.x &&
 		//Memory.scoutRoute[Memory.scoutRoute.length-1][0].routeStart.y == startPosition.y &&
@@ -1281,7 +1283,7 @@
 		//Already entered this into storage, reject another entry.
 		return(false);
 	}
-	
+
 	if(startPosition != null && exit != null && startPosition.x == exit.x && startPosition.y == exit.y)
 	{
 		console.log(unit.name + ' in ' + unit.room.name + ' trying to set route that starts and ends in same place.');
@@ -1292,13 +1294,13 @@
 		console.log(unit.name + ' in ' + unit.room.name + ' trying to save null in route.');
 		return(false);
 	}
-	
+
 	var route = [ { routeStart: startPosition, routeEnd: exit, usingSourceId: id, cap: capRoute } ];
 
 	addRoute(route);
 	return(true);
  }
- 
+
  //Checks the direction of unit to see if it's moving towards the scout. If the scout is in the way
  //it is sent a move command to move towards the unit so they can move through one another and return true
  //otherwise nothing happens and returns false.
@@ -1377,7 +1379,7 @@
     }
 	return(false);
  }
- 
+
  //Returns true if we can find the sourceId already existing in the creeps we've stored in memory.
  //Used since we only want scouts to create new creeps once and not to duplicate creeps forever
  //when the creation of routes/flags lags up.
@@ -1391,7 +1393,7 @@
 	}
 	return(false);
  }
- 
+
  //Used to spawn another role 'attackPower' or 'healPower' but can be modified slightly to spawn any temporary unit.
  function spawnTempUnit(role, useSpawn, memoryForTempUnit)
  {
@@ -1404,7 +1406,7 @@
 	{
 		var name = findNextUnusedName(role, useSpawn.room.name);
 		Memory.creeps[name] = memoryForTempUnit;
-		
+
 		//TO DO: Find 'name' in memory and spawn when able, remove name from requestCreep
 		//when successful. Use equivalent to createTempCreep but with name.
 		if(useSpawn.memory.requestCreep == null)
@@ -1420,7 +1422,7 @@
 	}
 	return(false);
  }
- 
+
  function storeBank(unit, currentRoom, useSpawn)
  {
 	if(currentRoom.controller == null)
@@ -1434,17 +1436,17 @@
 			{
 				if(currentRoom.memory.bank != null)
 					console.log('found bank ' + bank[0].id + ' match memory: ' + currentRoom.memory.bank.id + '<- shouldnt be null');
-				
+
 				//Can get how long until death by deathTime-Game.time. If negative, already dead
 				var timeTillDeath = bank[0].ticksToDecay + Game.time;
 				var healthRatio = bank[0].hits / bank[0].hitsMax;
-				
+
 				//When these entries are found, spawn 2 power, 2 heal and send them to the roomName, when they have identical room names, go to id
 				currentRoom.memory.bank = { id: bank[0].id, power: bank[0].power, deathTime: timeTillDeath, roomName: bank[0].room.name, health: healthRatio };
 				//currentRoom.memory.bank = [ id: bank[0].id, power: bank[0].power, deathTime: timeTillDeath, roomName: bank[0].room.name, health: healthRatio ];
 				//currentRoom.memory.bank = [ { id: bank[0].id, power: bank[0].power, deathTime: timeTillDeath, roomName: bank[0].room.name, health: healthRatio } ];
-				
-				//If the controller advanced to level 8. See if we can spawn 
+
+				//If the controller advanced to level 8. See if we can spawn
 				if(useSpawn.room.controller != null &&
 					useSpawn.room.controller.owner != null &&
 					useSpawn.room.controller.owner.username == 'RaskVann' &&
@@ -1481,9 +1483,9 @@
 	}
  }
 
- function scout(unit, scoutsSeen, previousScoutState)
+ function scout(unit, previousScoutState)
  {
-	var initialize = Game.getUsedCpu();
+	var initialize = Game.cpu.getUsed();
 	if(removeUnitNearDeath(unit) == 'death')
 	{	//Unit ran out of time, could still have more room to explore so we're not calling exploreEnd
 		//This should be fixed to call removeScout(unit) when the scouts are properly working
@@ -1494,7 +1496,7 @@
 	{
 		reportInjury(unit);
 	}
-	 
+
 	if(previousScoutState == 'ready' || previousScoutState == 'travel')
 	{
 		//Everything going well, continue on with regular scout logic
@@ -1502,7 +1504,7 @@
 	else if(previousScoutState == 'exploreEnd')
 	{
 		//unit.room.memory.exitsVisited++;	//Code tied to visiting room increases exitsVistited for me
-		
+
 		//Change the name of the room stored here, this is a cheap way to trigger
 		//the 'im in a new room' code below to generate a new route if needed and follow it.
 		unit.memory.roomName = 'changeRouteFromDeadEnd';
@@ -1513,20 +1515,20 @@
 	else if(previousScoutState != null)
 	{
 		console.log('DEPRECATED, STOP THE SOURCE');
-		console.log(unit.name + ' creating path: ' + previousScoutState + ' in ' + unit.room + ' usedCpu: ' + Game.getUsedCpu() + ' limit: ' + Game.cpuLimit);
+		console.log(unit.name + ' creating path: ' + previousScoutState + ' in ' + unit.room + ' usedCpu: ' + Game.cpu.getUsed() + ' limit: ' + Game.cpuLimit);
 		//If got this far then we've sent a new id to be implemented in a route, create it and
 		//send to the next scout waiting further behind
 		return(createPathToExit(unit, unit.room, previousScoutState));
 	}
-	
+
 	//Here just in case, will overwrite logic so be careful with this flag.
 	if(Game.flags.Scout != null)
 	{
 		unit.moveTo(Game.flags.Scout);
 	}
 
-	var scoutInit = Game.getUsedCpu() - initialize;
-	
+	var scoutInit = Game.cpu.getUsed() - initialize;
+
 	var currentRoom = unit.room;
 	var useSpawn = getSpawnId(unit);
 	var scoutsInAllPreviousRooms = scoutsInEachRoom(unit);
@@ -1534,15 +1536,15 @@
 	var usingSourceId = unit.memory.usingSourceId;
 	var reportTime = 720;
 
-	var searchRoom = Game.getUsedCpu() - initialize - scoutInit;
+	var searchRoom = Game.cpu.getUsed() - initialize - scoutInit;
 	//When entering a new room and if the room is the room we intended and there are scouts
 	//in all previous rooms for us to send information to.
 	//TO DO: Potentially reach a state in that roomName is changed but the path isn't created. May want to check
 	//		if the flag isn't found and create a path independent of entering a new room.
-	if(((roomNameMem != unit.room.name) || (roomNameMem == null || roomNameMem == 'changeRouteFromDeadEnd')) && 
-		(unit.room.name == usingSourceId || (usingSourceId == null || usingSourceId == 'changeRouteFromDeadEnd')) && 
-		scoutsInAllPreviousRooms)// && 
-		//((Game.getUsedCpu() < 10 && scoutsSeen == 0) || scoutsSeen != 0) )
+	if(((roomNameMem != unit.room.name) || (roomNameMem == null || roomNameMem == 'changeRouteFromDeadEnd')) &&
+		(unit.room.name == usingSourceId || (usingSourceId == null || usingSourceId == 'changeRouteFromDeadEnd')) &&
+		scoutsInAllPreviousRooms)// &&
+		//((Game.cpu.getUsed() < 10 && scoutsSeen == 0) || scoutsSeen != 0) )
 	{
 		//Visited all exits from this room, we need to find another room, hopefully down this path
 		//and go to that room to continue exploring
@@ -1555,14 +1557,17 @@
 		roomNameMem = unit.room.name;
 		unit.memory.startPos = unit.pos;
 		unit.memory.roomName = roomNameMem;
-		
-		var scoutNewRoomInit = Game.getUsedCpu() - initialize - scoutInit - searchRoom;
-		var updateRoom = Game.getUsedCpu() - initialize - scoutInit - searchRoom - scoutNewRoomInit;
-		
+
+		var scoutNewRoomInit = Game.cpu.getUsed() - initialize - scoutInit - searchRoom;
+		var updateRoom = Game.cpu.getUsed() - initialize - scoutInit - searchRoom - scoutNewRoomInit;
+
 		var newExit = nextRoomManager(unit, currentRoom, useSpawn);
 		if(newExit == 'exploreEnd')
 			return(newExit);	//Dead - End found. Stop here
-		
+
+		if(newExit.name != null)
+			console.log(unit.name + ', ' + currentRoom.name + ', ' + useSpawn.name + ' returned non-room-name: ' + newExit + ' want: ' + newExit.name);
+
 		if(currentRoom.memory.exitsVisited < currentRoom.memory.exitMax)
 		{
 			if(unit.memory.roomsMoved == null)
@@ -1575,7 +1580,8 @@
 			}
 
 			//Where newExit was
-			
+
+			console.log('NewExit2? ' + newExit + ' name: ' + newExit.name);
 			//All following scouts should find a flag underneath to follow, TO DO: error if not
 			var foundFlag = followFlagForward.findFlag(unit, newExit)
 			if(newExit == null)
@@ -1602,27 +1608,27 @@
 				//console.log(unit.name + ' creating another scout, creating path to ' + newExit);
 				//Get another scout on the field. We'll be moving to the next room and we'll need another
 				//scout to take up the former location so we can pass new paths to it.
-				
+
 				//First this unit creates a path to sources[x] in currentRoom, then we go to the previousRoom and get a unit
 				//there that creates a path going to the current exit/path in the previous room. We keep going to previous rooms
-				//and create paths to this new place for as long as there is a new previousRoom 
+				//and create paths to this new place for as long as there is a new previousRoom
 				//var nextSourceId = createPathToExit(unit, currentRoom, newExit);
 				if(storeRoute(unit, newExit, false, true) == true)
 				{
 					useSpawn.memory.requestScout = 1;
 				}
-				
+
 				updateDistanceMoved(unit);
 				usingSourceId = newExit;
 				unit.memory.usingSourceId = newExit;
 				delete unit.memory.direction;	//Attach self to new route
-				
+
 				if(unit.memory.previousRoom != null)
 				{
 					for(var nextScout = scoutFromRoomName(unit.memory.previousRoom); nextScout != null; nextScout = scoutFromRoomName(nextScout.memory.previousRoom))
 					{
 						console.log(unit.name + ' creating path in room ' + currentRoom.name + '. ' + nextScout + ' now creating ' + newExit + ' in ' + nextScout.room);
-						//TO DO: Should be able to append information or place new flags onto all places in this room where 
+						//TO DO: Should be able to append information or place new flags onto all places in this room where
 						//		nextScout.memory.usingSourceId is found on flags since a route was previously laid out.
 						//nextSourceId = createPathToExit(nextScout, nextScout.room, newExit);
 						storeRoute(nextScout, newExit, false, true);
@@ -1630,7 +1636,7 @@
 					console.log(unit.name + ' creating path in room ' + currentRoom.name);
 				}
 				else if(currentRoom.controller != null &&
-						currentRoom.controller.owner != null && 
+						currentRoom.controller.owner != null &&
 						currentRoom.controller.owner.username == 'RaskVann')
 				{
 					//This is a potential home so it's fine if there is no previousRoom, another way is to check spawnId.room.name == currentRoom.name but
@@ -1640,31 +1646,31 @@
 				{
 					console.log(unit.name + ' was going to create a new path but no found previousRoom. If ' + currentRoom.name + ' is home? then fine');
 				}
-				
+
 				//TO DO: New code for 'we are creating paths'?
 				return('travel');
 			}
 		}
 	}
-	//If the scout is in a new room and it's the room we intend to be in and it's 
-	//found that there isn't scouts in all the rooms we need, the spawn isn't spawning 
-	//anything (not needed, but this ensures it will react within 1 tick), and there 
+	//If the scout is in a new room and it's the room we intend to be in and it's
+	//found that there isn't scouts in all the rooms we need, the spawn isn't spawning
+	//anything (not needed, but this ensures it will react within 1 tick), and there
 	//isn't a scout in the spawn room, spawn a scout
-	else if(roomNameMem != currentRoom.name && 
-			(currentRoom.name == usingSourceId || usingSourceId == null) && 
-			scoutsInAllPreviousRooms == false && useSpawn != null && useSpawn.spawning == null && 
+	else if(roomNameMem != currentRoom.name &&
+			(currentRoom.name == usingSourceId || usingSourceId == null) &&
+			scoutsInAllPreviousRooms == false && useSpawn != null && useSpawn.spawning == null &&
 			scoutFromRoomName(useSpawn.room.name) == null)
 	{
 		//useSpawn.memory.requestScout = 1;
 	}
-	
-	var newRoom = Game.getUsedCpu() - initialize - scoutInit - searchRoom;
+
+	var newRoom = Game.cpu.getUsed() - initialize - scoutInit - searchRoom;
 	if(scoutInit + searchRoom + newRoom > 15)
 	{
 		//console.log(unit.name + ' scoutInit: ' + scoutInit + 'searchRooms: ' + searchRoom + ' newRoom: ' + newRoom);
 		//Game.notify(unit.name + ' scoutInit: ' + scoutInit + 'searchRooms: ' + searchRoom + ' newRoom: ' + newRoom, reportTime);
 	}
-	
+
 	//This unit shouldn't be created until the spawner has the chance to set everything it needs in the core room. This is for every other room the scout visits.
 	//Create harvesters and gatherers needed for this room if it hasn't done so already. This only happens once on first entering the room for the first time.
 	//if(currentRoom.controller != null && isScoutsReady(useSpawn) && Game.cpuLimit >= 500)
@@ -1684,9 +1690,9 @@
 			var pathLength = 1;
 			//Only the first scout should be performing the creation of harvesters, gatherers and initial paths
 			//TO DO: Only do if passed in status of all scouts is 'ready'
-			for(var x = 0; scoutsSeen == 0 && x < sources.length && Game.getUsedCpu() < 10; x++)
+			for(var x = 0; scoutsSeen == 0 && x < sources.length && Game.cpu.getUsed() < 10; x++)
 			{
-				//console.log('Scout-Room: ' + currentRoom.name + ' with sources: ' + sources.length + ' cpu: ' + Game.getUsedCpu());
+				//console.log('Scout-Room: ' + currentRoom.name + ' with sources: ' + sources.length + ' cpu: ' + Game.cpu.getUsed());
 				if(harvestIdInList(useSpawn, sources[x].id) ||
 					followFlagForward.findFlag(unit, sources[x].id) != null ||
 					foundIdInCreeps(sources[x].id) == true)
@@ -1697,7 +1703,7 @@
 				var startPosition = new RoomPosition(unit.memory.startPos.x, unit.memory.startPos.y, unit.memory.startPos.roomName);
 				var pathToSource = startPosition.findPathTo(sources[x], {maxOps: 2000, ignoreCreeps: true});
 				pathLength = pathToSource.length + unit.memory.distanceMoved;
-				
+
 				console.log(unit.name + ' has recorded distance: ' + unit.memory.distanceMoved + ' and distance to next source: ' + pathToSource.length);
 				//Around length 160-180 we hit twice as much profit as the cost to extract that node, cut off sending harvesters at this point.
 				//I'm assuming I'm more then half efficient with harvesting and so this will net a profit. Inefficiency in gatherers going where
@@ -1705,7 +1711,7 @@
 				if(pathLength < 160)
 				{
 					//console.log(unit.name + ' trying to create path to source ' + sources[x].id + ' and add units to spawners list');
-					
+
 					//followFlagForward.createDefinedPath(currentRoom, pathToSource, sources[x].id, true, startPosition);
 					storeRoute(unit, sources[x].id, true, false);
 					//followFlagForward.updatePathLength(sources[x].id, pathLength);
@@ -1719,12 +1725,12 @@
 					var maxCapacity = Math.min(2550, useSpawn.room.energyCapacityAvailable);
 					var gatherAmount = Math.abs(Math.ceil(40.0*pathLength/maxCapacity));
 					addNeedGather(useSpawn, gatherAmount+1);	//Only need gatherAmount but add another in memory so we can have one spawn when the other is dieing
-					
+
 					//console.log(unit.name + ' success, added harvester for: ' + sources[x].id + ' and gatherer(s): ' + gatherAmount + ' to pending list for creation in spawn ' + useSpawn);
-					
+
 					//First this unit creates a path to sources[x] in currentRoom, then we go to the previousRoom and get a unit
 					//there that creates a path going to the current exit/path in the previous room. We keep going to previous rooms
-					//and create paths to this new place for as long as there is a new previousRoom 
+					//and create paths to this new place for as long as there is a new previousRoom
 					if(unit.memory.previousRoom != null)
 					{
 						//var nextSourceId = 1;
@@ -1733,7 +1739,7 @@
 						//and isn't endless (end after a few dozen checks)
 						for(var nextScout = scoutFromRoomName(unit.memory.previousRoom); nextScout != null; nextScout = scoutFromRoomName(nextScout.memory.previousRoom))
 						{
-							//TO DO: Should be able to append information or place new flags onto all places in this room where 
+							//TO DO: Should be able to append information or place new flags onto all places in this room where
 							//		nextScout.memory.usingSourceId is found on flags since a route was previously laid out.
 							console.log(unit.name + ' creating path in room ' + currentRoom.name + '. ' + nextScout + ' now creating ' + newExit + ' in ' + nextScout.room);
 							//nextSourceId = createPathToExit(nextScout, nextScout.room, sources[x].id);
@@ -1745,7 +1751,7 @@
 					{
 						//console.log(unit.name + ' was going to create a new path but no found previousRoom. If ' + currentRoom.name + ' is home? then fine');
 					}
-					
+
 					return('travel');	//Creating path, may want another code
 				}
 				else
@@ -1758,7 +1764,7 @@
 		{
 			//Happens when enter a room I control. Moved code above to where unit.memory.spawnId == null it then
 			//looks for a spawn that unit shares the same room with and assigns that ID.
-			
+
 			//If scout has returned to the spawn room again, reset the distance counter to outer rooms
 			if(unit.memory.distanceMoved == null)
 			{
@@ -1773,7 +1779,7 @@
 		{
 			//console.log('Scout-Room: ' + currentRoom.name + ' with owner: ' + currentRoom.controller.owner.username + ', ignoring it for harvesting.');
 			Game.notify('Scout-Room: ' + currentRoom.name + ' with owner: ' + currentRoom.controller.owner.username + ', send message to user about expansion.', reportTime);
-			
+
 			//TO DO: Create another unit type after all exploration is done, he moves to all the stored user occupied rooms and sits there
 			//		for a certain amount of time looking for attackers and auto spawning attackers (potentially add a attack/ranged/heal
 			//		body to trigger it on purpose. Send back findings and set a threat level accordingly,
@@ -1789,7 +1795,7 @@
 	}
 	//Here to catch when a scout finds a populated room, don't bother waiting for units to catch up in previous
 	//rooms, just mark this as a dead end, get what information we can and kill the unit.
-	else if(currentRoom.controller != null && currentRoom.controller.owner != null && 
+	else if(currentRoom.controller != null && currentRoom.controller.owner != null &&
 			currentRoom.controller.owner.username != 'RaskVann')
 	{
 		currentRoom.memory.owner = currentRoom.controller.owner.username;
@@ -1801,7 +1807,7 @@
 	else if(currentRoom.controller == null)
 	{
 		storeBank(unit, currentRoom, useSpawn);
-		
+
 		//Is evaluated once when a 'no controller' room is entered and defines the threat value and again in the next tick
 		//to find if there is a source defined and populates that if needed (more CPU effective this way)
 		if(currentRoom.memory.sources == null)
@@ -1809,7 +1815,7 @@
 			if(currentRoom.memory.threat == null)
 			{
 				var threat = evaluateThreat(currentRoom);
-				
+
 				//console.log('Scout-Room: ' + currentRoom.name + ' threat: ' + threatString(threat));
 				Game.notify('Scout-Room: ' + currentRoom.name + ' threat: ' + threatString(threat), reportTime);
 				currentRoom.memory.threat = threat;
@@ -1822,7 +1828,7 @@
 					//console.log('Scout-Room: ' + currentRoom.name + ' AI Room with sources: ' + sources.length);
 					Game.notify('Scout-Room: ' + currentRoom.name + ' AI Room with sources: ' + sources.length, reportTime);
 					currentRoom.memory.sources = sources.length;
-					
+
 					//var threat = evaluateThreat(currentRoom);
 					//currentRoom.memory.threat = threat;
 					//if(threat > 4)	//Enemy units with attacking body found, we could try to outrun them but we'll skip to the next scout instead
@@ -1844,27 +1850,27 @@
 			//TO DO: Save this room, when have plenty of resources continually send attackers to this room until can explore past it.
 		}
 	}
-	
-	var newSource = Game.getUsedCpu() - initialize - scoutInit - searchRoom - newRoom;
+
+	var newSource = Game.cpu.getUsed() - initialize - scoutInit - searchRoom - newRoom;
 	if(scoutInit + searchRoom + newRoom + newSource > 15)
 	{
 		//console.log(unit.name + ' scoutInit: ' + scoutInit + ' searchRoom: ' + searchRoom +  ' newRoom: ' + newRoom + ' newSource: ' + newSource);
 		//Game.notify(unit.name + ' scoutInit: ' + scoutInit + ' searchRoom: ' + searchRoom +  ' newRoom: ' + newRoom + ' newSource: ' + newSource, reportTime);
 	}
-	
-	//If at edge of map, move until off of edge, 
+
+	//If at edge of map, move until off of edge,
 	//OR
 	//If this is the lead scout and it's had a chance to run the 'ive entered a new room' code
 	//(leader doesn't fit in the logic we have for 'trail behind the previous unit by 1 room' logic)
 	//OR
-	//If the spawner isn't trying to spawn anything and we've had a chance to handle 'i am in a new room' 
-	//logic. We should be free to travel if there is an appropriate number of scouts alive compared to 
+	//If the spawner isn't trying to spawn anything and we've had a chance to handle 'i am in a new room'
+	//logic. We should be free to travel if there is an appropriate number of scouts alive compared to
 	//the number of rooms this unit has moved. (Need 1 unit in each room, following leader 0).
 	if(canScoutMove(unit, useSpawn, scoutsSeen))
 	{
 		followFlagForward(unit, true);
 		//console.log(unit.name + ' moving at scoutAlive: ' + useSpawn.memory.scoutsAlive + ' room moved: ' + unit.memory.roomsMoved + ' above ' + scoutsSeen);
-		var move = Game.getUsedCpu() - initialize - scoutInit - searchRoom - newRoom - newSource;
+		var move = Game.cpu.getUsed() - initialize - scoutInit - searchRoom - newRoom - newSource;
 		if(scoutInit + searchRoom + newRoom + newSource + move > 15)
 		{
 			//console.log(unit.name + ' scoutInit: ' + scoutInit + ' searchRoom: ' + searchRoom +  ' newRoom: ' + newRoom + ' newSource: ' + newSource + ' FlagMove: ' + move);
@@ -1873,7 +1879,7 @@
 		return('travel');
 	}
 	else	//Wait for permission to move
-	{	
+	{
 		var rangePosition;
 		if(unit.memory.startPos != null)
 		{
@@ -1911,19 +1917,19 @@
 				}
 			}
 			//Otherwise scout is away from startPos, move towards startPos
-			else if(unit.memory.moveBack != null && unit.memory.moveBack != -1)// && 
+			else if(unit.memory.moveBack != null && unit.memory.moveBack != -1)// &&
 					//unit.pos.getRangeTo(rangePosition) > searchWithinRange)
 			{
 				//TO DO: If opposite direction stored, move that direction and delete.
 				//We've moved away from the startPos. Return to this location
 				//console.log(unit.name + ' moving from: ' + unit.pos + ' to ' + rangePosition + ' with direction ' + unit.memory.moveBack);
-				
+
 				unit.move(unit.memory.moveBack);
 				//unit.moveByPath(unit.pos.findPathTo(rangePosition), {maxOps: 100, ignoreCreeps: true});
 				//unit.moveTo(rangePosition);
 			}
 		}
-		var move = Game.getUsedCpu() - initialize - scoutInit - searchRoom - newRoom - newSource;
+		var move = Game.cpu.getUsed() - initialize - scoutInit - searchRoom - newRoom - newSource;
 		if(scoutInit + searchRoom + newRoom + newSource + move > 15)
 		{
 			//console.log(unit.name + ' scoutInit: ' + scoutInit + ' searchRoom: ' + searchRoom +  ' newRoom: ' + newRoom + ' newSource: ' + newSource + ' moveBack: ' + move);
@@ -1933,7 +1939,7 @@
 	}
 	return('ready');
  }
- 
+
  function scoutInPreviousRoom(unit)
  {
 	if(unit.memory.previousRoom == null)
@@ -1948,31 +1954,31 @@
 			console.log(unit.name + ' could not retrieve room: ' + unit.memory.previousRoom);
 			return(false);
 		}
-		
+
 		var findScout = previousRoom.find(FIND_MY_CREEPS, {
 			filter: function(object) {
 				return(object.memory.role == 'scout');
 			}
 		});
-		
+
 		return(findScout.length > 0);
 	}
  }
- 
- //If at edge of map, move until off of edge, 
+
+ //If at edge of map, move until off of edge,
  //OR
  //If this is the lead scout and it's had a chance to run the 'ive entered a new room' code
  //(leader doesn't fit in the logic we have for 'trail behind the previous unit by 1 room' logic)
  //OR
- //If the spawner isn't trying to spawn anything and we've had a chance to handle 'i am in a new room' 
- //logic. We should be free to travel if there is an appropriate number of scouts alive compared to 
+ //If the spawner isn't trying to spawn anything and we've had a chance to handle 'i am in a new room'
+ //logic. We should be free to travel if there is an appropriate number of scouts alive compared to
  //the number of rooms this unit has moved. (Need 1 unit in each room, following leader 0).
  ////This isn't used anywhere but followFlagForward but it was so unweildly I seperated into its own function
  function canScoutMove(unit, useSpawn, scoutsSeen)
  {
 	var unitRoomName = unit.memory.roomName;
 	var edgeOfMap = (1 > unit.pos.x || unit.pos.x > 48 || 1 > unit.pos.y || unit.pos.y > 48);
-	var harvestEmptyAndRoomUpdated = (harvestEmpty(useSpawn) && 
+	var harvestEmptyAndRoomUpdated = (harvestEmpty(useSpawn) &&
 									unitRoomName != null && unitRoomName == unit.room.name);
 	var nextRoomMove;
 	var scoutsAlive = useSpawn.memory.scoutsAlive;
@@ -1990,12 +1996,12 @@
 	//TO DO: Fix, should have 1 unit behind(unless at spawn) but don't want to move to next room if the unit ahead hasn't made it out yet (unless its lead)
 	//Possibly move if more then 1 unit in the room, failing that move if have unit in previous room (unless in spawn, just move)
 	//nextRoomMove = scoutInPreviousRoom(unit);	//Move if can find a scout in the room this unit just came from (or just spawned)
-	
+
 	//if((edgeOfMap || (harvestEmptyAndRoomUpdated && nextRoomMove)) == false)
 		//console.log(unit.name + '[' + scoutsSeen + '] harvest: ' + harvestEmptyAndRoomUpdated + ' nextRoom: ' + nextRoomMove + '=' + (edgeOfMap || (harvestEmptyAndRoomUpdated && nextRoomMove)));
 	return(edgeOfMap || (harvestEmptyAndRoomUpdated && nextRoomMove));
  }
- 
+
  //Finds the closest enemy (if one exists) and returns him, calls reinforcements if found
  function detectEnemyCreep(unit)
  {
@@ -2026,7 +2032,7 @@
 						object.getActiveBodyparts(MOVE) > 0));
 				}
 			});
-			
+
 			//If find an enemy, check if we need more defenders
 			if(findEnemy.length > 0)
 			{
@@ -2037,14 +2043,14 @@
 						return(object.memory.role == 'attack' || object.memory.role == 'defend');
 					}
 				});
-			
+
 				if(findAlly.length < findEnemy.length)
 				{
 					targetCreep = findEnemy[0];
 					reportRoom = findEnemy[0].room;
-					
+
 					var spawner = require('Spawner');
-					spawner.createTempCreep('attack', {'role': 'attack', 'usingSourceId': reportRoom, 'spawnId': Game.spawns[x].id}, Game.spawns[x].room.name);
+					spawner.createTempCreep('defend', {'role': 'defend', 'usingSourceId': reportRoom, 'spawnId': Game.spawns[x].id}, Game.spawns[x].room.name);
 				}
 			}
 			else
@@ -2053,7 +2059,7 @@
 			}
 		}
 	}
-	 
+
 	if(targetCreep != null && reportRoom != null)
 	{
 		//TO DO: Only request if don't already exceed the amount of attacking body
@@ -2063,28 +2069,34 @@
 		var attack = targetCreep.getActiveBodyparts(ATTACK);
 		if(rangedAttack > 0 || attack > 0)	//If this unit has offensive capabilities, report in 10 minutes
 		{
-			Game.notify('owner: ' + targetCreep.owner.username + ', has OFFENSIVE creep, has body length: ' + targetCreep.body.length + ' in room ' + targetCreep.room.name, 10);
-			Game.notify('OFFENSIVE target has active MOVE: ' + targetCreep.getActiveBodyparts(MOVE) + ', WORK: ' + targetCreep.getActiveBodyparts(WORK) +
-						', CARRY: ' + targetCreep.getActiveBodyparts(CARRY) + ', ATTACK: ' + attack + ', RANGED_ATTACK: ' +
-						rangedAttack + ', HEAL: ' + targetCreep.getActiveBodyparts(HEAL) + ', TOUGH: ' +
-						targetCreep.getActiveBodyparts(TOUGH), 10);
+			if(targetCreep.owner.username != 'Invader')
+			{
+				Game.notify('owner: ' + targetCreep.owner.username + ', has OFFENSIVE creep, has body length: ' + targetCreep.body.length + ' in room ' + targetCreep.room.name, 10);
+				Game.notify('OFFENSIVE target has active MOVE: ' + targetCreep.getActiveBodyparts(MOVE) + ', WORK: ' + targetCreep.getActiveBodyparts(WORK) +
+							', CARRY: ' + targetCreep.getActiveBodyparts(CARRY) + ', ATTACK: ' + attack + ', RANGED_ATTACK: ' +
+							rangedAttack + ', HEAL: ' + targetCreep.getActiveBodyparts(HEAL) + ', TOUGH: ' +
+							targetCreep.getActiveBodyparts(TOUGH), 60);
+			}
 		}
 		else	//If this is a passive unit, report every 24 hours
 		{
-			Game.notify('owner: ' + targetCreep.owner.username + ', has passive creep, has body length: ' + targetCreep.body.length + ' in room ' + targetCreep.room.name, 1440);
-			Game.notify('Passive target has active MOVE: ' + targetCreep.getActiveBodyparts(MOVE) + ', WORK: ' + targetCreep.getActiveBodyparts(WORK) +
-						', CARRY: ' + targetCreep.getActiveBodyparts(CARRY) + ', HEAL: ' + targetCreep.getActiveBodyparts(HEAL) + 
-						', TOUGH: ' + targetCreep.getActiveBodyparts(TOUGH), 1440);
+			if(targetCreep.owner.username != 'Invader')
+			{
+				Game.notify('owner: ' + targetCreep.owner.username + ', has passive creep, has body length: ' + targetCreep.body.length + ' in room ' + targetCreep.room.name, 1440);
+				Game.notify('Passive target has active MOVE: ' + targetCreep.getActiveBodyparts(MOVE) + ', WORK: ' + targetCreep.getActiveBodyparts(WORK) +
+							', CARRY: ' + targetCreep.getActiveBodyparts(CARRY) + ', HEAL: ' + targetCreep.getActiveBodyparts(HEAL) +
+							', TOUGH: ' + targetCreep.getActiveBodyparts(TOUGH), 1440);
+			}
 		}
 	}
 	else if(reportRoom != null)
 	{
 		reportRoom.memory.requestDefender = 0;
 	}
-	
+
 	return(targetCreep);
  }
- 
+
  function removeUnitNearDeath(unit)
  {
 	if(unit.ticksToLive <= 2)
@@ -2108,7 +2120,7 @@
 	{
 		reportInjury(unit);
 	}
-	
+
 	if(unit.memory.usingSourceId != null &&
 		unit.memory.usingSourceId != unit.room.name)
 	{
@@ -2137,7 +2149,7 @@
 			}
 		}
     }
-   
+
     if(unit.getActiveBodyparts(RANGED_ATTACK) > 0)
 	{
 		//Kill any unit that can heal or can attack and still has capacity to move
@@ -2150,10 +2162,10 @@
 		});
 		if(rangedTargets.length > 0)	//Report getting close to a offensive unit (I potentially attacked it) every hour.
 		{
-			//if(unit.room.mode != 'MODE_SIMULATION')
-			//{
+			if(rangedTargets[0].owner.username != 'Invader')
+			{
 				Game.notify('owner: ' + rangedTargets[0].owner.username + ', has ' + rangedTargets.length + 'creeps within range 3, has body length: ' + rangedTargets[0].body.length + ' in room ' + unit.room.name, 480);
-			//}
+			}
 			if(unit.rangedAttack(rangedTargets[0]) == ERR_NOT_IN_RANGE)
 			{
 				unit.moveTo(rangedTargets[0]);
@@ -2161,11 +2173,11 @@
 			}
 		}
 	}
-	
+
 	if(unit.getActiveBodyparts(ATTACK) > 0)
 	{
 		var targetCreep = detectEnemyCreep(unit);
-		
+
 		if(targetCreep != null)
 		{
 			if(unit.pos.getRangeTo(targetCreep) > 1)
@@ -2186,9 +2198,9 @@
 			if(targetSpawn.length)
 			{
 				var path = unit.pos.findPathTo(targetSpawn[0], {maxOps: 200});
-				if( !path.length || !targetSpawn[0].equalsTo(path[path.length - 1]) ) 
+				if( !path.length || !targetSpawn[0].equalsTo(path[path.length - 1]) )
 				{
-					//No path could be found, 
+					//No path could be found,
 					console.log(unit.name + ' blocked by structure. ' + unit.room.name + ' to target ' + targetSpawn[0]);
 					//TO DO: blocked by structure, find weakest way through and target that.
 					//path = unit.pos.findPathTo(target, {maxOps: 1000, ignoreDestructibleStructures: true});
@@ -2215,9 +2227,9 @@
 				return(object.hits < object.hitsMax);
 			}
 		});
-		
+
 		//TO DO: Change to store most damaged unit first and heal that first, do we take effectiveness into account?
-		//Go through all hurt units and heal them if completely effective (healing wouldn't be wasted). Move closer 
+		//Go through all hurt units and heal them if completely effective (healing wouldn't be wasted). Move closer
 		//to one of these units if these conditions are satisfied and not within range 1
 		for(var heal in healedUnits)
 		{
@@ -2244,7 +2256,7 @@
 			}
 		}
 	}
-	
+
 	if(Game.flags.Hold != null)
 	{
 		unit.moveTo(Game.flags.Hold);	//Make unit passive, goes to flag and ignores all previous moves, probably won't attack either.
@@ -2252,13 +2264,13 @@
 	}
 	return('attack');
  }
- 
+
  function healPower(unit)
  {
 	removeUnitNearDeath(unit);
 	var useSpawn = getSpawnId(unit);
 	var bank = Game.getObjectById(unit.memory.bankId);
-	
+
 	if(unit.room.name != bank.room.name)
 	{
 		followFlagForward(unit, true);
@@ -2287,7 +2299,7 @@
 					else if(rangeToAttack > 1)
 					{
 						unit.moveTo(pairedUnit);
-						
+
 						//Heal the main unit with rangedHeal if hurt
 						if(pairedUnit.hits < pairedUnit.hitsMax)
 						{
@@ -2300,7 +2312,7 @@
 									return(object.hits < object.hitsMax);
 								}
 							});
-							
+
 							for(var x in nearby)
 							{
 								if(nearby[x].hits/nearby[x].hitsMax < unit.hits/unit.hitsMax)
@@ -2323,7 +2335,7 @@
 								return(object.hits < object.hitsMax);
 							}
 						});
-						
+
 						for(var x in nearby)
 						{
 							if(nearby[x].hits/nearby[x].hitsMax < unit.hits/unit.hitsMax)
@@ -2346,15 +2358,15 @@
 		}
 	}
  }
- 
+
  function rangedPower(unit)
  {
 	removeUnitNearDeath(unit);
-	
+
 	//When these entries are found, spawn 2 power, 2 heal and send them to the roomName, when they have identical room names, go to id
 	//unit.room.memory.bank = { id: bank[0].id, power: bank[0].power, deathTime: timeTillDeath, roomName: bank[0].room.name, health: healthRatio };
 	detectEnemyCreep(unit);
-	
+
 	var useSpawn = getSpawnId(unit);
 	var bank;
 	//If hasn't been assigned to anywhere, look in memory for a bank to raid, select the first one found and store it in this units memory
@@ -2376,7 +2388,7 @@
 	{
 		bank = Game.getObjectById(unit.memory.bankId);
 		var attack = unit.getActiveComponents(RANGED_ATTACK);
-		
+
 		//As long as we aren't in the right room yet, just follow the path to the appropriate room
 		if(unit.room.name != bank.room.name)
 		{	//WARNING: Move out of border first? In check above?
@@ -2384,7 +2396,7 @@
 			{
 				unit.heal(unit);
 			}
-	
+
 			followFlagForward(unit, true);
 		}
 		else
@@ -2395,33 +2407,33 @@
 			{
 				unit.heal(unit);
 			}
-			
+
 			if(bank != null && rangeToBank > 3)
 			{
 				unit.moveTo(bank);
 			}
 			else if(bank != null)	//And within range
 			{	//Attack as long as we have over half health
-				if(unit.hits/unit.hitsMax > .5 && unit.rangedAttack(bank) == 0 && 
+				if(unit.hits/unit.hitsMax > .5 && unit.rangedAttack(bank) == 0 &&
 						bank.hits/(attack*10) < unit.memory.pathLength+(3*bank.power/25))
 				{
 					//hits/attack is how long it will take this unit to destroy the structure
 					//If this is less then the time it would to spawn a unit and have him travel over here
 					//Spawn a unit and send him this direction.
-					
+
 					//TO DO:
 					//Give gathers or power gathers logic enough to go to a power source and return when there is no more
 					//on the ground, or when the capacity is full.
-					
+
 					//We're capped at 50 body which caps gather costs at 2550 or if capacity is lower then that, use that.
 					var ceiling = Math.min(2550, useSpawn.room.energyCapacityAvailable);
 					var gatherAmount = Math.ceil(2.0*bank.power/ceiling) + 1;
 					console.log(unit.name + ' is asking for gathers: ' + gatherAmount + ' for power: ' + bank.power);
-					
+
 					var role = 'gather';
 					//name = findNextUnusedName(role, useSpawn.room.name);
 					var memoryForTempUnit = {'role': role, 'usingSourceId': unit.memory.usingSourceId, 'spawnId': useSpawn.id, 'pathLength': unit.memory.pathLength};
-					
+
 					//Find how many temp gathers we have for this bank, if we don't hit the threshold, attempt to spawn another gather.
 					var countTotalGathers;
 					if(bank.room.memory.bank.totalGathers != null)
@@ -2453,7 +2465,7 @@
 				//Bank doesn't exist anymore, if power is on the ground call for a gatherer if needed, otherwise we got here to late
 				//or need further orders
 				console.log(unit.name + ' power attacker no longer has a bank to attack');
-				
+
 				for(var x in Memory.rooms)
 				{
 					bank = Memory.rooms[x].bank;
@@ -2470,15 +2482,15 @@
 		}
 	}
  }
- 
+
  function attackPower(unit)
  {
 	removeUnitNearDeath(unit);
-	
+
 	//When these entries are found, spawn 2 power, 2 heal and send them to the roomName, when they have identical room names, go to id
 	//unit.room.memory.bank = { id: bank[0].id, power: bank[0].power, deathTime: timeTillDeath, roomName: bank[0].room.name, health: healthRatio };
 	detectEnemyCreep(unit);
-	
+
 	var useSpawn = getSpawnId(unit);
 	var bank;
 	//If hasn't been assigned to anywhere, look in memory for a bank to raid, select the first one found and store it in this units memory
@@ -2500,7 +2512,7 @@
 	{
 		var attack = unit.getActiveComponents(ATTACK);
 		bank = Game.getObjectById(unit.memory.bankId);
-		
+
 		//As long as we aren't in the right room yet, just follow the path to the appropriate room
 		if(unit.room.name != bank.room.name)
 		{	//WARNING: Move out of border first? In check above?
@@ -2523,14 +2535,14 @@
 					}
 				}
 			}
-	
+
 			followFlagForward(unit, true);
 		}
 		else
 		{
 			//Once we are in the right room, move with range of the bank and wait for a pairing unit to show up.
 			var rangeToBank = unit.pos.getRangeTo(bank);
-			
+
 			if(bank != null && rangeToBank > 2)
 			{
 				unit.moveTo(bank);
@@ -2541,26 +2553,26 @@
 				{
 					unit.moveTo(bank);
 				}
-				else if(unit.hits/unit.hitsMax > .5 && unit.attack(bank) == 0 && 
+				else if(unit.hits/unit.hitsMax > .5 && unit.attack(bank) == 0 &&
 						bank.hits/(attack*30) < unit.memory.pathLength+(3*bank.power/25))
 				{
 					//hits/attack is how long it will take this unit to destroy the structure
 					//If this is less then the time it would to spawn a unit and have him travel over here
 					//Spawn a unit and send him this direction.
-					
+
 					//TO DO:
 					//Give gathers or power gathers logic enough to go to a power source and return when there is no more
 					//on the ground, or when the capacity is full.
-					
+
 					//We're capped at 50 body which caps gather costs at 2550 or if capacity is lower then that, use that.
 					var ceiling = Math.min(2550, useSpawn.room.energyCapacityAvailable);
 					var gatherAmount = Math.ceil(2.0*bank.power/ceiling) + 1;
 					console.log(unit.name + ' is asking for gathers: ' + gatherAmount + ' for power: ' + bank.power);
-					
+
 					var role = 'gather';
 					//name = findNextUnusedName(role, useSpawn.room.name);
 					var memoryForTempUnit = {'role': role, 'usingSourceId': unit.memory.usingSourceId, 'spawnId': useSpawn.id, 'pathLength': unit.memory.pathLength};
-					
+
 					//Find how many temp gathers we have for this bank, if we don't hit the threshold, attempt to spawn another gather.
 					var countTotalGathers;
 					if(bank.room.memory.bank.totalGathers != null)
@@ -2592,7 +2604,7 @@
 				//Bank doesn't exist anymore, if power is on the ground call for a gatherer if needed, otherwise we got here to late
 				//or need further orders
 				console.log(unit.name + ' power attacker no longer has a bank to attack');
-				
+
 				for(var x in Memory.rooms)
 				{
 					bank = Memory.rooms[x].bank;
@@ -2609,11 +2621,11 @@
 		}
 	}
  }
- 
+
  //Room names are structured like a compass such that 'E/W-###-N/S-###' where
  //a higher number indicates its more North if N is higher or more West if W is higher
  //At the center of the world is E0N0, W0N0, E0S0, W0S0 as they transition over
- //This search from the lowest possible bounds within the observers range (### 
+ //This search from the lowest possible bounds within the observers range (###
  //is as low as possible for both coordinates) and goes through each room and gets a room
  //for the observer to look at, it auto translates if it goes over the border such that
  //low bounds W5S-3 because we started at W10S2 would return W5N2
@@ -2630,9 +2642,9 @@
 	var eastWestNum = (nextRoomName.substring(1, northSouth))*1;
 	var northSouthLetter = nextRoomName.substring(northSouth, northSouth+1);
 	var northSouthNum = (nextRoomName.substring(northSouth+1))*1;
-	
+
 	//console.log(eastWestLetter + '-' + eastWestNum + '-' + northSouthLetter + '-' + northSouthNum);
-	
+
 	//All rooms within range 5 are accessible (11x11 grid) = 121 rooms
 	//6th row, 6th column is the starting room (5*11+6) = Room 61
 	var roomRow = Math.floor(1.0*accessRoom/observerLength);
@@ -2640,9 +2652,9 @@
 	//The numbers we retrieve below need to move by the mod amount
 	var modRowFromStart = roomRow - (observerRange);
 	var modColumnFromStart = columnRow - (observerRange);
-	
+
 	//console.log(accessRoom + ' Add to row: ' + modRowFromStart + ' add to column ' + modColumnFromStart);
-	
+
 	//Modify the Num values by the mod values we just found
 	eastWestNum += modRowFromStart;
 	northSouthNum += modColumnFromStart;
@@ -2678,7 +2690,7 @@
 		}
 		northSouthNum = Math.abs(northSouthNum)-1;
 	}
-	
+
 	//console.log('After modding, looking at:' + eastWestLetter + '-' + eastWestNum + '-' + northSouthLetter + '-' + northSouthNum);
 	return(eastWestLetter + eastWestNum + northSouthLetter + northSouthNum);
  }
@@ -2687,7 +2699,7 @@ module.exports.tower = function(nextRoom, enemyInSpawn)
 {
 	if(nextRoom.controller != null &&
 		nextRoom.controller.level >= 3 &&
-		nextRoom.controller.owner != null && 
+		nextRoom.controller.owner != null &&
 		nextRoom.controller.owner.username == 'RaskVann')
 	{
 		//tower.energy
@@ -2695,14 +2707,14 @@ module.exports.tower = function(nextRoom, enemyInSpawn)
 		//tower.attack()
 		//tower.heal()
 		//tower.repair()
-				
+
 		//Level 3-5: 1 Tower, Level 6-7: 2 Towers, Level 8: 4 Towers
 		var towers = nextRoom.find(FIND_MY_STRUCTURES, {
 			filter: function(object) {
 				return(object.structureType == STRUCTURE_TOWER && object.energy >= 10);
 			}
 		});
-		
+
 		if(towers.length > 0)
 		{
 			//if(enemyInSpawn == null || (enemyInSpawn != null && enemyInSpawn.room.name == towers[0].room.name))
@@ -2710,11 +2722,11 @@ module.exports.tower = function(nextRoom, enemyInSpawn)
 			{
 				//var enemyInSpawn = towers[0].findClosestByRange(FIND_HOSTILE_CREEPS, {
 				//	filter: function(object) {
-				//		return(object.getActiveBodyparts(ATTACK) > 0 || object.getActiveBodyparts(RANGED_ATTACK) > 0 || object.getActiveBodyparts(HEAL) > 0 || 
+				//		return(object.getActiveBodyparts(ATTACK) > 0 || object.getActiveBodyparts(RANGED_ATTACK) > 0 || object.getActiveBodyparts(HEAL) > 0 ||
 				//				object.getActiveBodyparts(WORK) > 0 || object.getActiveBodyparts(CLAIM) > 0);
 				//	}
 				//});
-				
+
 				for(var tow in towers)
 				{
 					towers[tow].attack(enemyInSpawn);
@@ -2734,7 +2746,7 @@ module.exports.tower = function(nextRoom, enemyInSpawn)
 						return(object.hits < object.hitsMax && object.hits < object.hitsMax*buildRatio && object.structureType != STRUCTURE_ROAD);
 					}
 				});
-				
+
 				if(findStructure.length > 0)
 				{
 					repairThis = _.min(findStructure, 'hits');
@@ -2745,7 +2757,7 @@ module.exports.tower = function(nextRoom, enemyInSpawn)
 					//});
 					//if(findRampart.length > 0)
 					//	repairThis = _.min(findRampart, 'hits');
-					
+
 					//repairThis = _.min(findStructure, function(str) {
 					//	return str.hits;
 					//});
@@ -2775,23 +2787,23 @@ module.exports.tower = function(nextRoom, enemyInSpawn)
 		}
 	}
 }
- 
+
 module.exports.observe = function(nextRoom)
 {
-	if(nextRoom.controller != null && nextRoom.controller.owner != null && 
+	if(nextRoom.controller != null && nextRoom.controller.owner != null &&
 			nextRoom.controller.owner.username == 'RaskVann' && nextRoom.controller.level == 8)
 	{
 		var observers = nextRoom.find(FIND_MY_STRUCTURES, {
 			filter: { structureType: STRUCTURE_OBSERVER }
 		});
-		
+
 		if(observers.length > 0)
 		{
 			var observer = observers[0];
 			var observerRange = 5;
 			var observerLength = observerRange*2 + 1;
 			var observerSize = Math.pow(observerLength, 2);
-			
+
 			var accessRoom = Game.time % observerSize;
 			var previousRoom = accessRoom-1;
 			var reportTime = 720;
@@ -2800,14 +2812,14 @@ module.exports.observe = function(nextRoom)
 			{
 				previousRoom = observerSize-1;
 			}
-			
+
 			var lookAtRoom = roomNameAtPos(nextRoom.name, accessRoom, observerLength, observerRange);
 			var analyzeRoom = roomNameAtPos(nextRoom.name, previousRoom, observerLength, observerRange);
-			
+
 			//If I don't have access to this room already, observe the room
 			if(Game.rooms[lookAtRoom] == null)
 				observer.observeRoom(lookAtRoom);
-			
+
 			var analyzeRoomObject = Game.rooms[analyzeRoom];
 			if(analyzeRoomObject != null)
 			{
@@ -2823,7 +2835,7 @@ module.exports.observe = function(nextRoom)
 						Game.notify('Room: ' + analyzeRoom + ' PrevThreat: ' + threatString(Memory.rooms[analyzeRoom].threat) + ', CurrThreat: ' + threatString(threatVal), reportTime);
 					Memory.rooms[analyzeRoom].threat = threatVal;
 				}
-				
+
 				//Store owner of room and notify of changes in ownership
 				if(analyzeRoomObject.controller != null && analyzeRoomObject.controller.owner != null &&
 					analyzeRoomObject.controller.owner.username != "RaskVann")
@@ -2848,12 +2860,12 @@ module.exports.observe = function(nextRoom)
 			{
 				console.log('Should be able to see ' + analyzeRoom + ' but cannot. Something stopped the observer from looking at it.');
 			}
-			
+
 			//TO DO: Else have everything in memory, go through the flagged rooms and just analyze them every so often.
 		}
 	}
 }
- 
+
 module.exports.attackPower = function(unit)
 {
 	if(unit.memory.role == 'attackPower')
@@ -2863,7 +2875,7 @@ module.exports.attackPower = function(unit)
 	else if(unit.memory.role == 'rangedPower')
 		return(rangedPower(unit));
 }
- 
+
 module.exports.detectEnemyCreep = function()
 {
 	return(detectEnemyCreep(null));
@@ -2914,7 +2926,7 @@ module.exports.attack = function(unit, attackersSeen)
 	{
 		scoutSpawn.memory.consecutiveReady = 0;
 	}
-	
+
 	//console.log(scoutSpawn + ' isScoutReady, ' + scoutSpawn.memory.consecutiveReady);
 	if(scoutSpawn.memory.scoutsAlive != null)
 	{
@@ -2922,33 +2934,33 @@ module.exports.attack = function(unit, attackersSeen)
 		//we send in a 'ready' for the first scout so he doesn't stall since he won't have any valid readiness to
 		//pull from for the first tick. So we'll tell all scouts they are ready if they go through 2 full cycles
 		//of all scouts reporting ready to ensure we've retrieved a valid 'ready' status from all scouts.
-		
+
 		//If all scouts reported 'ready', give a go ahead for any advanced functionality.
 		return(scoutSpawn.memory.consecutiveReady > (scoutSpawn.memory.scoutsAlive));
 	}
 	return(false);	//one of the checks we need haven't been made yet.
  }
-
-module.exports.scout = function(unit, scoutsSeen, previousScoutState)
+var scoutsSeen = 0; //TODO : Update this to pull from room information. see getRoleCount() in spawner
+module.exports.scout = function(unit, previousScoutState)
 {
 	if(unit.memory.role == 'scout' && !unit.spawning)
 	{
-		var initialize = Game.getUsedCpu();
+		var initialize = Game.cpu.getUsed();
 		var pastState = scout(unit, scoutsSeen, previousScoutState);
 		trackScoutReadiness(unit, pastState);
-		var scoutTime = Game.getUsedCpu() - initialize;
+		var scoutTime = Game.cpu.getUsed() - initialize;
 		//If we have plenty of cpu time left, create memory for units to go to this room
-		if(Game.getUsedCpu() < 10)
+		if(Game.cpu.getUsed() < 10)
 		{
 			createMemoryNew(unit);
 		}
-		var memoryTime = Game.getUsedCpu() - initialize - scoutTime;
+		var memoryTime = Game.cpu.getUsed() - initialize - scoutTime;
 		//Spawn a route if this unit is in a room we have a pending route to be created (and it doesn't already exist)
 		if(isScoutRouteEmpty() == false)
 		{
 			createPreviousExit(unit);
 		}
-		var createExit = Game.getUsedCpu() - initialize - scoutTime - memoryTime;
+		var createExit = Game.cpu.getUsed() - initialize - scoutTime - memoryTime;
 		if(scoutTime + memoryTime + createExit > 15)
 		{
 			//console.log(unit.name + ' scout: ' + scoutTime + ' memory: ' + memoryTime + ' create: ' + createExit);

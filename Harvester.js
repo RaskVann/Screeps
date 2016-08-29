@@ -5,10 +5,10 @@
  * You can import it from another modules like this:
  * var mod = require('Harvester'); // -> 'a thing'
  */
- 
+
  //var viewFlags = require('previewRoute');
  var followFlagForward = require('createPathFlags');
- 
+
  //TO DO: Use the spawn that this unit came from. This currently just sends back the first
  //spawn that is in the same room as the unit.
  function findSpawn(unit)
@@ -31,69 +31,78 @@
 	}
 	return(useSpawn);
  }
- 
+
  //Reassign the unit to be role = 'to' with the flags To and From created.
  //This will clear and create the first route and move automatically to
  //use ressignFrom
 // function reassignTo(unit)
 // {
-//    if(Game.flags.To != null && Game.flags.From != null )
-//    {
-//        //This clears (and thus needs to recreate) a new path
-//        unit.memory.pathTo = null;
-//        saveAndPathToNew(unit, Game.flags.From.pos, Game.flags.To.pos);
-//        unit.memory.role = 'from';
-//        viewFlags(unit);
-//    }
+//		if(Game.flags.To != null && Game.flags.From != null )
+//		{
+//				//This clears (and thus needs to recreate) a new path
+//				unit.memory.pathTo = null;
+//				saveAndPathToNew(unit, Game.flags.From.pos, Game.flags.To.pos);
+//				unit.memory.role = 'from';
+//				viewFlags(unit);
+//		}
 // }
- 
+
  //Let reassignTo use this, don't call directly. Clears the pathFrom and assigns
  //it a new one, gives the new 'idle' role once complete.
 // function reassignFrom(unit)
 // {
-//    if(Game.flags.From != null && Game.flags.To != null)
-//    {
-//        //This clears (and thus needs to recreate) a new path
-//        unit.memory.pathFrom = null;
-//        saveAndPathFromNew(unit, Game.flags.From.pos, Game.flags.To.pos);
-//        unit.memory.role = 'idle';
-//        viewFlags(unit);
-//    }
+//		if(Game.flags.From != null && Game.flags.To != null)
+//		{
+//				//This clears (and thus needs to recreate) a new path
+//				unit.memory.pathFrom = null;
+//				saveAndPathFromNew(unit, Game.flags.From.pos, Game.flags.To.pos);
+//				unit.memory.role = 'idle';
+//				viewFlags(unit);
+//		}
 // }
- 
+
  function moveToFlag(unit)
  {
-     if(Game.flags.Flag1 != null)
-     {
-        unit.moveTo(Game.flags.Flag1);
-     }
+		 if(Game.flags.Flag1 != null)
+		 {
+				unit.moveTo(Game.flags.Flag1);
+		 }
  }
- 
+
  //Axillary function, return unit to closest spawn, will have to manually mess with
  //memory by hand from there to reassign.
  function reassignJob(unit)
  {
-    if(unit.memory.role != 'idle')
-    {
-        unit.memory.role = 'idle';
-    }
-    
-    var target = unit.pos.findInRange(FIND_MY_SPAWNS, 1)
-    if(target != null)
-    {
-        //unit.say('Del Mem');
-        unit.memory.role = 'idle';  //Perhaps change to something else
-    }
-    else
-    {
-        var returnTo = unit.pos.findClosestByRange(FIND_MY_SPAWNS);
-        if(returnTo != null)
-        {
-            unit.moveTo(returnTo.x, returnTo.y);
-        }
-    }
+		if(unit.memory.role != 'idle')
+		{
+				unit.memory.role = 'idle';
+		}
+
+		var target = _.filter(Game.spawns, function(object) {
+			return(unit.room.name == object.room.name &&
+						unit.pos.inRangeTo(object.pos, 1));
+		});
+		//var target = unit.pos.findInRange(FIND_MY_SPAWNS, 1)
+		if(target != null)
+		{
+				//unit.say('Del Mem');
+				unit.memory.role = 'idle';	//Perhaps change to something else
+		}
+		else
+		{
+				var returnTo = _.filter(Game.spawns, function(object) {
+					return(unit.room.name == object.room.name);
+				});
+				returnTo = _.sortBy(returnTo, function(object) {
+					return(unit.pos.getRangeTo(object.pos));
+				});
+				if(returnTo != null)
+				{
+						unit.moveTo(returnTo[0]);
+				}
+		}
  }
- 
+
  //This function runs by retrieving which spot is our next 'need to fill this with a
  //harvester' spot which we retrieve with increaseHarvestSpot by saving how many harvesters
  //we've assigned already. We then proceed look at all relevant spots in always the same
@@ -101,50 +110,51 @@
  //we've placed +1 this spot needs a harvestor and other code places that harvestor there.
  //Repeatedly this will fill up the first source first and then fill all other sources where
  //possible. maxPerEnergy should equal neededHarvestPerSec/unitHarvestCapability, rounded up.
- //On the base game the energy respawns every 300 seconds, so at 3000 max energy 
+ //On the base game the energy respawns every 300 seconds, so at 3000 max energy
  //this is 10/unitHarvestCapability
  //Return the source we'll be using from here on out.
  function getEnergyHarvestLoc(unit, sources)
  {
 	var spawnInRoom = findSpawn(unit);
 	if(unit.memory.harvestLocation == null && spawnInRoom != null &&
-		(unit.memory.role == 'worker' || unit.memory.role == 'lazy'))
+		(unit.memory.task == 'worker' || unit.memory.task == 'lazy'))
 	{
 		var currentEnergy;
 		var currentRoom = unit.room;
-		var stopAtSpot = increaseHarvestSpot(unit)-1;   //HavestSpot is saving the 'next' spot, so -1 to get current one
+		var stopAtSpot = getHarvestSpot(unit);	 //HavestSpot is saving the 'next' spot, so -1 to get current one
 		var totalHarvestSpots = 0;
 		for(var i = 0; i < sources.length; i++)
 		{
 			currentEnergy = sources[i];
 			var countHarvestSpots = 0;
 			var maxPerEnergy = 3;	//Allow this many harvesters at each energy node, no more
-            //Search 1 spot away from the source and store applicable spots for harvest/gather
-            for(var x = currentEnergy.pos.x - 1; x <= (currentEnergy.pos.x + 1) && countHarvestSpots < maxPerEnergy; x++)
-            {
-                for(var y = currentEnergy.pos.y - 1; y <= (currentEnergy.pos.y + 1) && countHarvestSpots < maxPerEnergy; y++)
-                {
-                    var lookAtRoomPosition = currentRoom.getPositionAt(x, y);
-                    var terrain = lookAtRoomPosition.lookFor('terrain');
-                    //Just avoiding walls should be enough, but plain's are ideal
-                    if(terrain == 'plain' || terrain == 'swamp')
-                    {
-						if(totalHarvestSpots == stopAtSpot)
+			//Search 1 spot away from the source and store applicable spots for harvest/gather
+			for(var x = currentEnergy.pos.x - 1; x <= (currentEnergy.pos.x + 1) && countHarvestSpots < maxPerEnergy; x++)
+			{
+				for(var y = currentEnergy.pos.y - 1; y <= (currentEnergy.pos.y + 1) && countHarvestSpots < maxPerEnergy; y++)
+				{
+						var lookAtRoomPosition = currentRoom.getPositionAt(x, y);
+						var terrain = lookAtRoomPosition.lookFor('terrain');
+						//Just avoiding walls should be enough, but plain's are ideal
+						if(terrain == 'plain' || terrain == 'swamp')
 						{
-							//Assumes harvester was just spawned after needGatherers = 0, otherwise
-							//this should be += but this messes up the entire logic of harvester->gatherer*x
-							//TO DO: Adjust according to what units we're currently spawning, formula is
-							//Alternative Gatherer per Harvester= ROUND_UP((HarvestRate*(DistanceToNode*2))/CapacityPerGatherer)
-							//getRangeTo is returning negative values, going to assume its still the range just 'behind', so Abs()'ing the value
-							unit.room.memory.needGatherers = Math.abs(Math.ceil(4.0*2.0*(lookAtRoomPosition.findPathTo(spawnInRoom).length)/150.0));
-							unit.memory.harvestLocation = lookAtRoomPosition;
-							return(currentEnergy);
+								if(totalHarvestSpots >= stopAtSpot)
+								{
+									//Assumes harvester was just spawned after needGatherers = 0, otherwise
+									//this should be += but this messes up the entire logic of harvester->gatherer*x
+									//TO DO: Adjust according to what units we're currently spawning, formula is
+									//Alternative Gatherer per Harvester= ROUND_UP((HarvestRate*(DistanceToNode*2))/CapacityPerGatherer)
+									//getRangeTo is returning negative values, going to assume its still the range just 'behind', so Abs()'ing the value
+									unit.room.memory.needGatherers = Math.abs(Math.ceil(4.0*2.0*(lookAtRoomPosition.findPathTo(spawnInRoom).length)/150.0));
+									unit.memory.harvestLocation = lookAtRoomPosition;
+                  increaseHarvestSpot(unit);
+									return(currentEnergy);
+								}
+								countHarvestSpots++;
+								totalHarvestSpots++;
 						}
-                        countHarvestSpots++;
-						totalHarvestSpots++;
-                    }
-                }
-            }
+				}
+			}
 		}
 	}
 	else
@@ -155,10 +165,10 @@
 	//To many harvesters, most likely cause of this.
 	//TO DO: Switch to building gathers, builders, or attackers
 	//unit.suicide();
-	console.log("couldn't find a place for this harvester");
+	console.log("couldn't find a place for this harvester: " + unit.name + ", looking for: " + stopAtSpot + " of " + totalHarvestSpots);
 	return(null);
  }
- 
+
  //This does the same thing as the harvester by searching for a good spot for a harvester
  //that is being paired with this gatherer, then searches a 3x3 grid around that for gatherer
  //spot and places the gatherer there if it's a plain.
@@ -169,7 +179,6 @@
 	{
 		var currentEnergy;
 		var currentRoom = unit.room;
-		increaseGatherSpot(unit);
 		var stopAtSpot = getHarvestSpot(unit)-1;	//HavestSpot is saving the 'next' spot, so -1 to get current one
 		var totalHarvestSpots = 0;
 		var harvestLocation;
@@ -178,16 +187,16 @@
 			currentEnergy = sources[i];
 			var countHarvestSpots = 0;
 			var maxPerEnergy = 3;	//Allow this many harvesters at each energy node, no more
-            //Search 1 spot away from the source and store applicable spots for harvest/gather
-            for(var x = currentEnergy.pos.x - 1; x <= (currentEnergy.pos.x + 1) && countHarvestSpots < maxPerEnergy; x++)
-            {
-                for(var y = currentEnergy.pos.y - 1; y <= (currentEnergy.pos.y + 1) && countHarvestSpots < maxPerEnergy; y++)
-                {
-                    var lookAtRoomPosition = currentRoom.getPositionAt(x, y);
-                    //Just avoiding walls should be enough, but plain's are ideal
-                    var terrain = lookAtRoomPosition.lookFor('terrain');
-                    if(terrain == 'plain' || terrain == 'swamp')
-                    {
+						//Search 1 spot away from the source and store applicable spots for harvest/gather
+						for(var x = currentEnergy.pos.x - 1; x <= (currentEnergy.pos.x + 1) && countHarvestSpots < maxPerEnergy; x++)
+						{
+								for(var y = currentEnergy.pos.y - 1; y <= (currentEnergy.pos.y + 1) && countHarvestSpots < maxPerEnergy; y++)
+								{
+										var lookAtRoomPosition = currentRoom.getPositionAt(x, y);
+										//Just avoiding walls should be enough, but plain's are ideal
+										var terrain = lookAtRoomPosition.lookFor('terrain');
+										if(terrain == 'plain' || terrain == 'swamp')
+										{
 						if(totalHarvestSpots == stopAtSpot)
 						{
 							//------------------------------------------------------
@@ -208,9 +217,10 @@
 										//Just avoiding walls should be enough, but plain's are ideal
 										var terrain = gatherPosition.lookFor('terrain');
 										if((terrain == 'plain' || terrain == 'swamp') &&
-									        Math.abs(currentEnergy.pos.getRangeTo(gatherPosition.x,gatherPosition.y)) == 2)
+													Math.abs(currentEnergy.pos.getRangeTo(gatherPosition.x,gatherPosition.y)) == 2)
 										{
 											unit.memory.currentGatherSpot = gatherPosition;
+                      increaseGatherSpot(unit);
 											return(currentEnergy);
 										}
 									}
@@ -219,11 +229,11 @@
 							console.log(unit + " never found a gatherer spot, this will cause an issue");
 							return(currentEnergy);
 						}
-                        countHarvestSpots++;
+												countHarvestSpots++;
 						totalHarvestSpots++;
-                    }
-                }
-            }
+										}
+								}
+						}
 		}
 	}
 	else
@@ -237,60 +247,60 @@
 	console.log("couldn't find a place for this gatherer");
 	return(null);
  }
- 
+
  function retrieveSource(unit)
  {
-    var activeSource;
-    //Record in the worker what source he's working at for using later
-    //no need to check for all the sources every frame if we can just retrieve it
-    if(unit.memory.usingSourceId)
-    {
-        activeSource = Game.getObjectById(unit.memory.usingSourceId);
-    }
-    else
-    {
-        var sources = unit.room.find(FIND_SOURCES);
-		activeSource = getEnergyHarvestLoc(unit, sources);
-		if(activeSource == null)
+		var activeSource;
+		//Record in the worker what source he's working at for using later
+		//no need to check for all the sources every frame if we can just retrieve it
+		if(unit.memory.usingSourceId)
 		{
-			activeSource = getEnergyPickupLoc(unit, sources);
+				activeSource = Game.getObjectById(unit.memory.usingSourceId);
 		}
-		if(activeSource != null)
+		else
 		{
-			unit.memory.usingSourceId = activeSource.id;
-		}
-        var storeId = unit.memory.usingSourceId;
+				var sources = unit.room.find(FIND_SOURCES);
+    		activeSource = getEnergyHarvestLoc(unit, sources);
+    		if(activeSource == null)
+    		{
+    			activeSource = getEnergyPickupLoc(unit, sources);
+    		}
+    		if(activeSource != null)
+    		{
+    			unit.memory.usingSourceId = activeSource.id;
+    		}
+				var storeId = unit.memory.usingSourceId;
 
-        //Since we've captured this data already, we should record (if not already)
-        //the maxSources in the room so we can use it later.
-        if(!unit.room.memory.maxSources)
-        {
-            unit.room.memory.maxSources = Object.keys(sources).length;
-        }
-    }
-    return(activeSource);
+				//Since we've captured this data already, we should record (if not already)
+				//the maxSources in the room so we can use it later.
+				if(!unit.room.memory.maxSources)
+				{
+						unit.room.memory.maxSources = Object.keys(sources).length;
+				}
+		}
+		return(activeSource);
  }
- 
+
  //CAUTION: Make sure the flags to move the harvesters into position have at least 1 flag, 1 away from the harvesters, if the
  //harvesters need to return, they'll look for this flag and use it to head back.
  function autoWorker(unit)
  {
-    if(!unit.spawning && unit.memory.role == 'worker')
-    {
-        var activeSource;
-        var saveAtSpawn = findSpawn(unit);
-        if((unit.carry.energy < unit.carryCapacity || unit.carryCapacity == 0) && saveAtSpawn != null)
-        {
-            //Harvest by finding based on ID if activeSource == null
-            if(unit.memory.usingSourceId != null)
-    		{
-    		    activeSource = Game.getObjectById(unit.memory.usingSourceId);
-    		}
+		if(!unit.spawning && unit.memory.task == 'worker')
+		{
+				var activeSource;
+				var saveAtSpawn = findSpawn(unit);
+				if((unit.carry.energy < unit.carryCapacity || unit.carryCapacity == 0) && saveAtSpawn != null)
+				{
+						//Harvest by finding based on ID if activeSource == null
+						if(unit.memory.usingSourceId != null)
+				{
+						activeSource = Game.getObjectById(unit.memory.usingSourceId);
+				}
 			else
 			{
 				activeSource = retrieveSource(unit);
 			}
-            
+
 			var harvestError = unit.harvest(activeSource);
 			if(harvestError == ERR_NOT_IN_RANGE)	//-9
 			{
@@ -316,152 +326,152 @@
 				//	saveAndPathToNew(unit, saveAtSpawn.pos, unit.memory.harvestLocation);
 				//}
 			}
-        }
-        else if(saveAtSpawn != null)
-        {
-            //if(unit.memory.pathTo != null)
-            //{
+				}
+				else if(saveAtSpawn != null)
+				{
+						//if(unit.memory.pathTo != null)
+						//{
 				//The unit is full so move in reverse back towards the spawn for drop-off
 				followFlagForward(unit, unit.carry.energy < unit.carryCapacity);
-                //saveAndPathFrom(unit, unit.memory.pathTo[0]);
-            //}
-        	//unit.moveTo(saveAtSpawn);
-        	unit.transferEnergy(saveAtSpawn);
-        }
-    }
+								//saveAndPathFrom(unit, unit.memory.pathTo[0]);
+						//}
+					//unit.moveTo(saveAtSpawn);
+					unit.transfer(saveAtSpawn, RESOURCE_ENERGY);
+				}
+		}
  }
- 
+
  function saveAndPathToNew(unit, positionStart, positionEnd)
  {
-    if(!unit.memory.pathTo)
-    {
-        if(positionEnd != null)
-        {
-            unit.memory.pathTo = positionStart.findPathTo(positionEnd.x, positionEnd.y, {maxOps: 2000, ignoreCreeps: true});
-            return(unit.moveTo(unit.memory.pathTo[0].x, unit.memory.pathTo[0].y));
-        }
-    }
-    //No need to move if you're already at the destination
-    else if(unit.pos.isEqualTo(positionEnd) == false)
-    {
-        var errors = unit.moveByPath(unit.memory.pathTo);
-        //The storing and using moveByPath code looks for a path once and uses it until completion.
-        //the begginings/ends of these paths don't always line up and so we use expensive moveTo
-        //when it gets off track since it won't be using it for very long it's not a concern.
-        if(errors == -5)
-        {
-            var error1 = unit.moveTo(positionStart.x, positionStart.y);
-            var error2 = unit.moveTo(positionEnd.x, positionEnd.y);
-            if( error1 != 0 && error2 != 0)
-            {
-                unit.say(errors);
-            }
-        }
-        //If can't move, try to go around it, ignore if lost move part or if 'tired'
-        else if(errors > -10 && errors != 0)
-        {
-            var error3 = unit.moveTo(positionStart.x, positionStart.y);
-            var error4 = unit.moveTo(positionEnd.x, positionEnd.y);
-            if(error3 != 0 && error4 != 0)
-            {
-                unit.say(errors);
-            }
-        }
-        return(errors);
-    }
-    return(0);
+		if(!unit.memory.pathTo)
+		{
+				if(positionEnd != null)
+				{
+						unit.memory.pathTo = positionStart.findPathTo(positionEnd.x, positionEnd.y, {maxOps: 2000, ignoreCreeps: true});
+						return(unit.moveTo(unit.memory.pathTo[0].x, unit.memory.pathTo[0].y));
+				}
+		}
+		//No need to move if you're already at the destination
+		else if(unit.pos.isEqualTo(positionEnd) == false)
+		{
+				var errors = unit.moveByPath(unit.memory.pathTo);
+				//The storing and using moveByPath code looks for a path once and uses it until completion.
+				//the begginings/ends of these paths don't always line up and so we use expensive moveTo
+				//when it gets off track since it won't be using it for very long it's not a concern.
+				if(errors == -5)
+				{
+						var error1 = unit.moveTo(positionStart.x, positionStart.y);
+						var error2 = unit.moveTo(positionEnd.x, positionEnd.y);
+						if( error1 != 0 && error2 != 0)
+						{
+								unit.say(errors);
+						}
+				}
+				//If can't move, try to go around it, ignore if lost move part or if 'tired'
+				else if(errors > -10 && errors != 0)
+				{
+						var error3 = unit.moveTo(positionStart.x, positionStart.y);
+						var error4 = unit.moveTo(positionEnd.x, positionEnd.y);
+						if(error3 != 0 && error4 != 0)
+						{
+								unit.say(errors);
+						}
+				}
+				return(errors);
+		}
+		return(0);
  }
- 
+
  //Attempting to use this to send in a unit, tell it to go somewhere and have that route saved under 'saveAt' for reuse later
  //Use this in all the other function, tired if rewriting it each time.
  function saveAndPathTo(unit, position)
  {
-    return(saveAndPathToNew(unit, unit.pos, position));
+		return(saveAndPathToNew(unit, unit.pos, position));
  }
- 
+
  function saveAndPathFromNew(unit, positionStart, positionEnd)
  {
-    if(!unit.memory.pathFrom)
-    {
-        if(positionEnd != null && positionStart != null)
-        {
-            unit.memory.pathFrom = positionStart.findPathTo(positionEnd.x, positionEnd.y, {maxOps: 2000, ignoreCreeps: true});
-            return(unit.moveTo(unit.memory.pathFrom[0].x, unit.memory.pathFrom[0].y));
-        }
-    }
-    //No need to move if you're already at the destination
-    else if(unit.pos.isEqualTo(positionEnd) == false)
-    {
-        var errors = unit.moveByPath(unit.memory.pathFrom);
-        //The storing and using moveByPath code looks for a path once and uses it until completion.
-        //the begginings/ends of these paths don't always line up and so we use expensive moveTo
-        //when it gets off track since it won't be using it for very long it's not a concern.
-        if(errors == -5)
-        {
-            var error1 = unit.moveTo(positionStart.x, positionStart.y);
-            var error2 = unit.moveTo(positionEnd.x, positionEnd.y);
-            if( error1 != 0 && error2 != 0)
-            {
-                unit.say(errors);
-            }
-        }
-        //If can't move, try to go around it, ignore if lost move part or if 'tired'
-        else if(errors > -10 && errors != 0)
-        {
-            var error3 = unit.moveTo(positionStart.x, positionStart.y);
-            var error4 = unit.moveTo(positionEnd.x, positionEnd.y);
-            if(error3 != 0 && error4 != 0)
-            {
-                unit.say(errors);
-            }
-        }
-        return(errors);
-    }
-    return(0);
+		if(!unit.memory.pathFrom)
+		{
+				if(positionEnd != null && positionStart != null)
+				{
+						unit.memory.pathFrom = positionStart.findPathTo(positionEnd.x, positionEnd.y, {maxOps: 2000, ignoreCreeps: true});
+						return(unit.moveTo(unit.memory.pathFrom[0].x, unit.memory.pathFrom[0].y));
+				}
+		}
+		//No need to move if you're already at the destination
+		else if(unit.pos.isEqualTo(positionEnd) == false)
+		{
+				var errors = unit.moveByPath(unit.memory.pathFrom);
+				//The storing and using moveByPath code looks for a path once and uses it until completion.
+				//the begginings/ends of these paths don't always line up and so we use expensive moveTo
+				//when it gets off track since it won't be using it for very long it's not a concern.
+				if(errors == -5)
+				{
+						var error1 = unit.moveTo(positionStart.x, positionStart.y);
+						var error2 = unit.moveTo(positionEnd.x, positionEnd.y);
+						if( error1 != 0 && error2 != 0)
+						{
+								unit.say(errors);
+						}
+				}
+				//If can't move, try to go around it, ignore if lost move part or if 'tired'
+				else if(errors > -10 && errors != 0)
+				{
+						var error3 = unit.moveTo(positionStart.x, positionStart.y);
+						var error4 = unit.moveTo(positionEnd.x, positionEnd.y);
+						if(error3 != 0 && error4 != 0)
+						{
+								unit.say(errors);
+						}
+				}
+				return(errors);
+		}
+		return(0);
  }
- 
+
  function saveAndPathFrom(unit, position)
  {
-    return(saveAndPathFromNew(unit, unit.pos, position));
+		return(saveAndPathFromNew(unit, unit.pos, position));
  }
- 
+
  function lazyWorkerFindSource(unit)
  {
 	var saveAtSpawn = findSpawn(unit);
-    if(unit.memory.role == 'worker' && saveAtSpawn != null)
-    {
-        var activeSource;
-        if(unit.getActiveBodyparts(CARRY) == 0 || unit.carry.energy < unit.carryCapacity)
-        {
+		if(unit.memory.task == 'worker' && saveAtSpawn != null)
+		{
+				var activeSource;
+				if(unit.getActiveBodyparts(CARRY) == 0 || unit.carry.energy < unit.carryCapacity)
+				{
 			//Harvest by finding based on ID if activeSource == null
 			if(unit.memory.usingSourceId != null)
-    		{
-    		    activeSource = Game.getObjectById(unit.memory.usingSourceId);
-    		}
+				{
+						activeSource = Game.getObjectById(unit.memory.usingSourceId);
+				}
 			else
 			{
 				activeSource = retrieveSource(unit);
 			}
-			
+
 			var harvestSpot = unit.memory.harvestLocation;
 			//TO DO: Investigate how activeSource can be null here
 			if(harvestSpot == null && activeSource != null)
 			{
 				harvestSpot = activeSource.pos;
 			}
-			
+
 			if(unit.pos.isEqualTo(harvestSpot) == false)
 			{
 				var harvestError = unit.harvest(activeSource);
-                if(harvestError == 0)
-                {
-                    unit.memory.role = 'lazy';
-                }
-                else if(unit.fatigue <= 0)
-                {
+								if(harvestError == 0)
+								{
+										unit.memory.task = 'lazy';
+								}
+								else if(unit.fatigue <= 0)
+								{
 					//if(unit.memory.pathTo != null)
 					//{
-					    //console.log(unit.pos.getRangeTo(activeSource));
+							//console.log(unit.pos.getRangeTo(activeSource));
 						//The paths to the energy sources will stop 2 spaces away from the energy sources for the gatherers
 						//to pick up what they need. When they only need to move 1 more space to be in position, manually move
 						//them that last spot.
@@ -479,12 +489,17 @@
 								//This is a hack to fix this situation. The spawner is sending more harvesters then this source can handle due to we don't have enough
 								//work at this source but we can't fit more units then we already have. The energy or energy capacity isn't sufficient yet to fully
 								//take care of this source.
-								var blockingHarvest = activeSource.pos.findInRange(FIND_MY_CREEPS, 1, {
-									filter: function(object) {
-										return(object.memory != null && object.memory.role == 'lazy' && object.memory.usingSourceId == unit.memory.usingSourceId);
-									}
+								var blockingHarvest = _.filter(Game.creeps, function(object) {
+									return(object.room.name == unit.room.name &&
+												object.pos.inRangeTo(unit.pos, 1) &&
+												object.memory != null && object.memory.task == 'lazy' && object.memory.usingSourceId == unit.memory.usingSourceId);
 								});
-								
+								//var blockingHarvest = activeSource.pos.findInRange(FIND_MY_CREEPS, 1, {
+								//	filter: function(object) {
+								//		return(object.memory != null && object.memory.task == 'lazy' && object.memory.usingSourceId == unit.memory.usingSourceId);
+								//	}
+								//});
+
 								if(blockingHarvest.length <= 0)
 								{
 									//console.log('Something is blocking ' + unit.name + ' in ' + unit.room.name + ' check and delete and fix lazyWorkerFindSource()');
@@ -517,20 +532,20 @@
 							followFlagForward(unit, unit.getActiveBodyparts(CARRY) == 0 || (unit.carry.energy < unit.carryCapacity));
 						}
 					//}
-					//else 
+					//else
 					//{
 					//	saveAndPathToNew(unit, saveAtSpawn.pos, harvestSpot);
 					//}
 				}
 			}
-        }
-        else if(unit.transferEnergy(saveAtSpawn) == ERR_NOT_IN_RANGE)
-        {
-            unit.moveTo(saveAtSpawn);
-        }
-    }
+				}
+				else if(unit.transfer(saveAtSpawn, RESOURCE_ENERGY) == ERR_NOT_IN_RANGE)
+				{
+						unit.moveTo(saveAtSpawn);
+				}
+		}
  }
- 
+
  //As long as a transfer to a link was successful, or it had an attempt to transfer to another link.
  //Return true, otherwise return false so the linking harvester knows to try to search elsewhere.
  function transferBetweenLinks(unit, findLinks)
@@ -544,28 +559,29 @@
 			{
 				continue;
 			}
-			
+
 			//If transfer is successful, or the link is already full, make the link
 			//look for other links to transfer energy to so we have room for subsequent transfers
-			var transferCode = unit.transferEnergy(findLinks[i]);
+			var transferCode = unit.transfer(findLinks[i], RESOURCE_ENERGY);
 			if(transferCode == 0 || transferCode == ERR_FULL)
 			{
 				var recievedEnergy = findLinks[i];
-				//Look to see if the link is filling up. If so, look for a link 
+				//Look to see if the link is filling up. If so, look for a link
 				//with the lowest amount and send as much energy to it as possible
 				if(recievedEnergy.cooldown <= 0 && recievedEnergy.energy/recievedEnergy.energyCapacity > 0.9)
 				{
-					var links = unit.room.find(FIND_MY_STRUCTURES, { 
-						filter: { structureType: STRUCTURE_LINK } 
-					});
-					
+					var links = filterStructure(unit, STRUCTURE_LINK);
+					//var links = unit.room.find(FIND_MY_STRUCTURES, {
+					//	filter: { structureType: STRUCTURE_LINK }
+					//});
+
 					var lowestEnergy = recievedEnergy.energy;
 					var transferHere;
 					for(var j in links)
 					{
 						//Prepare to transfer here if it has the lowest yet found
 						//energy and it has at least 25% we can fill
-						if(links[j].energy < lowestEnergy && 
+						if(links[j].energy < lowestEnergy &&
 							links[j].energy/links[j].energyCapacity < .75)
 						{
 							//Send the link that has the least energy
@@ -573,8 +589,8 @@
 							lowestEnergy = links[j].energy;
 						}
 					}
-					
-					if(transferHere != null && recievedEnergy.transferEnergy(transferHere) == 0)
+
+					if(transferHere != null && recievedEnergy.transfer(transferHere, RESOURCE_ENERGY) == 0)
 					{
 						return(true);
 					}
@@ -584,22 +600,39 @@
 	}
 	return(false);
  }
- 
+
+ function filterStructure(unit, structureType)
+ {
+	 var tempStructure = _.filter(Game.structures, function(object) {
+		 return(unit.room.name == object.room.name &&
+					 object.structureType == structureType);
+	 });
+	 return(tempStructure);
+ }
+
+ function filterStructureInRange(unit, structureType, rangeTo)
+ {
+	 var tempStructure = _.filter(filterStructure(unit, structureType), function(object) {
+		 return(object.pos.getRangeTo(unit.pos, rangeTo));
+	 });
+   return(tempStructure);
+ }
+
  function lazyHarvest(unit)
  {
-    if(unit.memory.role == 'lazy')
-    {
-        var activeSource = retrieveSource(unit);
-		//TO DO: This will spawn attackers endlessly for as long as the unit survives. Spawn 1 needed unit and that's it.
-		if(unit.hits < unit.hitsMax)
+		if(unit.memory.task == 'lazy')
 		{
-			var spawner = require('Spawner');
-			spawner.createTempCreep('attack', {'role': 'attack', 'usingSourceId': activeSource.room.name, 'spawnId': unit.memory.spawnId}, activeSource.room.name);
-		}
-		
+			var activeSource = retrieveSource(unit);
+  		//TO DO: This will spawn attackers endlessly for as long as the unit survives. Spawn 1 needed unit and that's it.
+  		if(unit.hits < unit.hitsMax)
+  		{
+  			var spawner = require('Spawner');
+  			spawner.createTempCreep('attack', {'role': 'attack', 'usingSourceId': activeSource.room.name, 'spawnId': unit.memory.spawnId}, activeSource.room.name);
+  		}
+
 		//If we've capped out on energy, look around for a gather to drop off on and transfer
-        if(unit.carry.energy == unit.carryCapacity || unit.carryCapacity == 0)
-        {
+				if(unit.carry.energy == unit.carryCapacity || unit.carryCapacity == 0)
+				{
 			var neighbors;
 			//TO DO: Once we completely seperate gathers from spawning if harvesters have links we may
 			//want to change the below neighbors == null check into an else that way only 1 possible search
@@ -609,36 +642,43 @@
 				unit.room.controller.owner.username == 'RaskVann' &&
 				unit.room.controller.level >= 5)	//Links are available
 			{
-				var findLinks = unit.pos.findInRange(FIND_MY_STRUCTURES, 1, {
-					filter: { structureType: STRUCTURE_LINK }
-				});
-				
+				var findLinks = filterStructureInRange(unit, STRUCTURE_LINK, 1);
+				//var findLinks = unit.pos.findInRange(FIND_MY_STRUCTURES, 1, {
+				//	filter: { structureType: STRUCTURE_LINK }
+				//});
+
 				if(transferBetweenLinks(unit, findLinks) == true)
 				{
 					neighbors = findLinks;	//Disable transfer to gather, already sent to link, can't do 2+ at once
 				}
 			}
-			
+
 			//If we don't find any links, populate with any gathers in range
 			if(neighbors == null || neighbors.length <= 0)
 			{
-				neighbors = unit.pos.findInRange(FIND_MY_CREEPS, 1, {
-					filter: function(object) {
-						return(object.carry.energy < object.carryCapacity && object.memory != null && object.memory.role == 'gather');
-					}
+				neighbors = _.filter(Game.creeps, function(object) {
+					return(unit.room.name == object.room.name &&
+								unit.name != object.name &&
+								unit.pos.inRangeTo(object.pos, 1) &&
+								object.carry.energy < object.carryCapacity && object.memory != null && object.memory.role == 'gather');
 				});
+				//neighbors = unit.pos.findInRange(FIND_MY_CREEPS, 1, {
+				//	filter: function(object) {
+				//		return(object.carry.energy < object.carryCapacity && object.memory != null && object.memory.role == 'gather');
+				//	}
+				//});
 
 				//Try to transfer to anything in range from lists populated above
 				if(neighbors.length)
 				{
 					for(var i in neighbors)
 					{
-						if(unit.transferEnergy(neighbors[i]) == 0)
+						if(unit.transfer(neighbors[i], RESOURCE_ENERGY) == 0)
 							break;
 					}
 				}
 			}
-        }
+				}
 		else
 		{
 			//In preparation for having links by the harvesters, sooner or later we're going to drop energy
@@ -648,81 +688,81 @@
 			if(target.length > 0)
 				unit.pickup(target[0]);
 		}
-		
+
 		//Harvest by finding based on ID if activeSource == null
 		if(activeSource == null)
 		{
-		    activeSource = Game.getObjectById(unit.memory.usingSourceId);
+				activeSource = Game.getObjectById(unit.memory.usingSourceId);
 		}
 		//If can't harvest, assume need to become worker to get back to the spot.
 		//ERR_INVALID_TARGET happens when targeting a source not in this room
 		var harvestCode = unit.harvest(activeSource);
-        if(harvestCode == ERR_NOT_IN_RANGE || harvestCode == ERR_INVALID_TARGET)
-        {
-            unit.memory.role = 'worker';
-        }
+				if(harvestCode == ERR_NOT_IN_RANGE || harvestCode == ERR_INVALID_TARGET)
+				{
+						unit.memory.task = 'worker';
+				}
 		else if(harvestCode < 0 && harvestCode != ERR_BUSY && harvestCode != ERR_NOT_ENOUGH_RESOURCES)
 		{
 			console.log(unit.name + ' can not harvest, harvest error code: ' + harvestCode);
 		}
-    }
+		}
  }
- 
+
  function creepAtDirection(unit)
  {
-    if(unit != null && unit.memory.direction != null)
-    {
-        var posX = unit.pos.x;
-        var posY = unit.pos.y;
-        if(unit.memory.direction == TOP)
-        {
-            posY++;
-        }
-        else if(unit.memory.direction == TOP_RIGHT)
-        {
-            posX++;
-            posY++;
-        }
-        else if(unit.memory.direction == RIGHT)
-        {
-            posX++;
-        }
-        else if(unit.memory.direction == BOTTOM_RIGHT)
-        {
-            posX++;
-            posY--;
-        }
-        else if(unit.memory.direction == BOTTOM)
-        {
-            posY--;
-        }
-        else if(unit.memory.direction == BOTTOM_LEFT)
-        {
-            posX--;
-            posY--;
-        }
-        else if(unit.memory.direction == LEFT)
-        {
-            posX--;
-        }
-        else if(unit.memory.direction == TOP_LEFT)
-        {
-            posX--;
-            posY++;
-        }
-        else
-        {
-            return(null);
-        }
-        //Only search if in bounds, not valid when on boundary
+		if(unit != null && unit.memory.direction != null)
+		{
+				var posX = unit.pos.x;
+				var posY = unit.pos.y;
+				if(unit.memory.direction == TOP)
+				{
+						posY++;
+				}
+				else if(unit.memory.direction == TOP_RIGHT)
+				{
+						posX++;
+						posY++;
+				}
+				else if(unit.memory.direction == RIGHT)
+				{
+						posX++;
+				}
+				else if(unit.memory.direction == BOTTOM_RIGHT)
+				{
+						posX++;
+						posY--;
+				}
+				else if(unit.memory.direction == BOTTOM)
+				{
+						posY--;
+				}
+				else if(unit.memory.direction == BOTTOM_LEFT)
+				{
+						posX--;
+						posY--;
+				}
+				else if(unit.memory.direction == LEFT)
+				{
+						posX--;
+				}
+				else if(unit.memory.direction == TOP_LEFT)
+				{
+						posX--;
+						posY++;
+				}
+				else
+				{
+						return(null);
+				}
+				//Only search if in bounds, not valid when on boundary
 		if(posX >= 0 && posX <= 49 && posY >= 0 && posY <= 49)
 		{
 			return(unit.room.lookForAt('creep', posX, posY));
 		}
-    }
+		}
 	return(null);
  }
- 
+
  //If unit we're passing in is full of energy, and we've found a unit with no energy, try to transfer to them
  function transferAround(unit)
  {
@@ -735,18 +775,18 @@
 		for(var y = yMax; y >= yMin; y--)
 		{
 			var unitAt = unit.room.lookForAt('creep', x, y);
-			if(unitAt != null && unitAt[0] != null && 
-				unitAt[0].memory != null && 
+			if(unitAt != null && unitAt[0] != null &&
+				unitAt[0].memory != null &&
 				unitAt[0].memory.role == 'builder')
 			{
-				if(unit.transferEnergy(unitAt[0]) == 0)
+				if(unit.transfer(unitAt[0], RESOURCE_ENERGY) == 0)
 					return(true);
 			}
 		}
 	}
 	return(false);
  }
- 
+
  //Similar to the builder's buildRoad() in that it looks for a road underneath the gather and if none exists creates it.
  //Runs right before gatherers move along their task. Searches for a existing road and a construction site for a road
  //under the gatherer, if none exists the unit creates one for the builders to get to later.
@@ -759,14 +799,14 @@
 		{
 			var findStructure = unit.pos.lookFor('structure');
 			var foundRoad = -1;
-			var lowCpuUsage = (Game.getUsedCpu() < 5);
+			var lowCpuUsage = (Game.cpu.getUsed() < 5);
 			for(var x = 0; findStructure != null && x < findStructure.length; x++)
 			{
 				if(findStructure[x].structureType == STRUCTURE_ROAD)
 				{
 					//Go through all structures at current builder's spot, if they have less hits then what the builder
 					//would repair, repair the structure
-					if(workComponents > 0 && 
+					if(workComponents > 0 &&
 						findStructure[x].hits < (findStructure[x].hitsMax - (workComponents*100)) &&
 						unit.carry.energy >= workComponents)
 					{
@@ -779,21 +819,21 @@
 			//If we found a road on this spot and we don't need to repair it, we have extra time to try to repair roads nearby
 			//Also don't do this unless we're really low on cpuUsage as this is a convienance feature, not needed.
 			//if(foundRoad >= 0 && unit.carry.energy > workComponents && lowCpuUsage)
-            //
+						//
 			//{
 			//	var repairInRange = unit.pos.findInRange(FIND_STRUCTURES, 3);
 			//	for(var z in repairInRange)
-            //
+						//
 			//	{
 			//		if(repairInRange[z] != null && repairInRange[z].structureType == STRUCTURE_ROAD &&
-			//			repairInRange[z].hits < (repairInRange[z].hitsMax - (workComponents*100)) && 
+			//			repairInRange[z].hits < (repairInRange[z].hitsMax - (workComponents*100)) &&
 			//			unit.repair(repairInRange[z]) == 0)
-            //
+						//
 			//		{
 			//			return(true);
-            //
-            //
-            //
+						//
+						//
+						//
 			//		}
 			//	}
 			//}
@@ -813,21 +853,21 @@
 			//If we found a road on this spot and we don't need to repair or build it, we have extra time to try to build any roads nearby
 			//Also don't do this unless we're really low on cpuUsage as this is a convienance feature, not needed.
 			//if(foundRoad >= 0 && unit.carry.energy > workComponents && lowCpuUsage)
-            //
+						//
 			//{
 			//	var constructionInRange = unit.pos.findInRange(FIND_MY_CONSTRUCTION_SITES, 3);
 			//	for(var w in constructionInRange)
-            //
+						//
 			//	{
-			//		if(constructionInRange[w] != null && 
+			//		if(constructionInRange[w] != null &&
 			//			constructionInRange[w].structureType == STRUCTURE_ROAD &&
 			//			unit.build(constructionInRange[w]) == 0)
-            //
+						//
 			//		{
 			//			return(true);
-            //
-            //
-            //
+						//
+						//
+						//
 			//		}
 			//	}
 			//}
@@ -841,7 +881,7 @@
 	}
 	return(false);
  }
- 
+
  //Returns the storage object that it assigned this unit to.
  function uniqueStorage(unit, findStorage)
  {
@@ -851,7 +891,7 @@
 		var storeId;
 		//Change the found structures to be ordered by the closest to the unit so it drops off at shorter trips first
 		findStorage = _.sortBy(findStorage, function(o) {
-		  return unit.pos.getRangeTo(o.pos);
+			return unit.pos.getRangeTo(o.pos);
 		});
 		var currentStorage;
 		for(var x in findStorage)
@@ -871,7 +911,7 @@
 					storeId = currentStorage.id;
 				}
 			}
-			
+
 			//No creeps/units are using this storage, use this ID and exit
 			if(storeId != null)
 			{
@@ -885,7 +925,7 @@
 	//Couldn't find a unassigned storage or all storage was full
 	return(null);
  }
- 
+
  //Moves unit to the target provided (within same room)
  function unitByPath(unit, target)
  {
@@ -916,7 +956,39 @@
 	console.log('Attempted to move ' + unit.name + ' to ' + target + ' but they are in different rooms.');
 	return(ERR_INVALID_ARGS);//ERR_NOT_FOUND
  }
- 
+
+//This is done in more then one spot, so made it a function to call from 1 place.
+ function findFillableStructures(unit)
+ {
+	 var fillable = _.filter(Game.structures, function(object) {
+		 return(object.room.name == unit.room.name &&
+					 object.energy < object.energyCapacity &&
+					 (object.structureType == STRUCTURE_SPAWN || object.structureType == STRUCTURE_EXTENSION));
+	 });
+	 return(fillable);
+ }
+
+ var findNeedEnergy;
+ //Only provides cpu savings if more then 1 unit looks for extensions in the same tick.
+ function findExtensions(unit)
+ {
+	var findExtension = findNeedEnergy;
+	if(findNeedEnergy == null ||
+		(findNeedEnergy != null && findNeedEnergy.length > 0 && findNeedEnergy[0].room.name == unit.room.name))
+	{
+		findExtension = findFillableStructures(unit);
+		//findExtension = unit.room.find(FIND_MY_STRUCTURES, {
+		//	filter: function(object) {
+		//		return(object.energy < object.energyCapacity &&
+		//				(object.structureType == STRUCTURE_SPAWN || object.structureType == STRUCTURE_EXTENSION));
+		//	}
+		//});
+
+		findNeedEnergy = findExtension;
+	}
+	return(findExtension);
+ }
+
  //ReturnResources being the spawn the unit came from
  function fillUpRoomWithEnergy(unit, returnResources)
  {
@@ -927,7 +999,7 @@
 		if(returnResources.room != null)
 		{
 			//If room is full, send back to retrieve what energy they can.
-			followFlagForward(unit, unit.carry.energy <= unit.carryCapacity*.5 || 
+			followFlagForward(unit, unit.carry.energy <= unit.carryCapacity*.5 ||
 							(returnResources.room.energyAvailable >= returnResources.room.energyCapacityAvailable &&
 							unit.carry.energy < unit.carryCapacity*.9));
 		}
@@ -941,26 +1013,19 @@
 		var unitDirection = unit.memory.direction;
 		//If make it back to the drop off and its full go and fill up a extension instead, delete the direction so when it finishes
 		//the drop off it finds the start of the path again and resumes the path.
-		if(unit.carry.energy > 0 && 
-			((returnResources.energy >= returnResources.energyCapacity && unit.pos.getRangeTo(returnResources) <= 1) || 
+		if(unit.carry.energy > 0 &&
+			((returnResources.energy >= returnResources.energyCapacity && unit.pos.getRangeTo(returnResources) <= 1) ||
 			unit.memory.extraStorage != null))
 		{
 			if(returnResources.room.energyAvailable < returnResources.room.energyCapacityAvailable)
 			{
-				//var cpu2 = Game.getUsedCpu();
+				//var cpu2 = Game.cpu.getUsed();
 				var transferExtension;
 				if(unit.memory.extraStorage == null)
 				{
-					//var findExtension = unit.pos.findClosestByRange(FIND_MY_STRUCTURES, {
-					var findExtension = unit.room.find(FIND_MY_STRUCTURES, {
-						filter: function(object) {
-							return(object.energy < object.energyCapacity && 
-									(object.structureType == STRUCTURE_SPAWN || object.structureType == STRUCTURE_EXTENSION));
-						}
-					});
-					
-					//unit.memory.extraStorage = findExtension.id;
-					transferExtension = uniqueStorage(unit, findExtension);
+					var tempNeedFilled = findExtensions(unit);
+
+					transferExtension = uniqueStorage(unit, tempNeedFilled);
 				}
 				else
 				{
@@ -971,10 +1036,10 @@
 						return(false);	//Nothing will be done this tick while we wait to get another object in the next tick. This object was filled by another unit.
 					}
 				}
-				
-				//cpu2 = Game.getUsedCpu()-cpu2;
+
+				//cpu2 = Game.cpu.getUsed()-cpu2;
 				//console.log(unit.name + ' finding closest (need filled) ' + transferExtension + ' costs: ' + cpu2);
-				
+
 				if(transferExtension != null)//transferExtension.length > 0
 				{
 					var transferTarget = transferExtension;
@@ -988,36 +1053,40 @@
 							//was on, so delete the direction now so it will search for the beginning of the route afterwards.
 							delete unit.memory.direction;
 						}
-						
+
 						findRoadOrCreate(unit);
 						if(transferTarget != null)
 						{	//As long as there is a target to go to and the room isn't full of energy, move to the target
-							var nearExtension = unit.pos.findInRange(FIND_MY_STRUCTURES, 1, {
-								filter: function(object) {
-									return(object.energy < object.energyCapacity && 
-											(object.structureType == STRUCTURE_SPAWN || object.structureType == STRUCTURE_EXTENSION));
-								}
+							var nearExtension = findFillableStructures(unit);
+							nearExtension = _.filter(nearExtension, function(object) {
+								return(object.pos.inRangeTo(unit.pos, 1));
 							});
-							if(nearExtension.length > 0 && unit.transferEnergy(nearExtension[0]) == 0)
+							//var nearExtension = unit.pos.findInRange(FIND_MY_STRUCTURES, 1, {
+							//	filter: function(object) {
+							//		return(object.energy < object.energyCapacity &&
+							//				(object.structureType == STRUCTURE_SPAWN || object.structureType == STRUCTURE_EXTENSION));
+							//	}
+							//});
+							if(nearExtension.length > 0 && unit.transfer(nearExtension[0], RESOURCE_ENERGY) == 0)
 							{
 								//Fill objects along the way
 							}
 							else
 							{
-								//var cpu = Game.getUsedCpu();
+								//var cpu = Game.cpu.getUsed();
 								//unit.moveTo(transferTarget);
 								unitByPath(unit, transferTarget);
-								
-								//cpu = Game.getUsedCpu()-cpu;
+
+								//cpu = Game.cpu.getUsed()-cpu;
 								//console.log(unit.name + ' moving to ' + transferTarget.name + ' costs: ' + cpu);
 							}
 						}
 					}
 					else
 					{
-						if(transferTarget.energy != null && 
-							transferTarget.energy < transferTarget.energyCapacity && 
-							unit.transferEnergy(transferTarget) == 0)
+						if(transferTarget.energy != null &&
+							transferTarget.energy < transferTarget.energyCapacity &&
+							unit.transfer(transferTarget, RESOURCE_ENERGY) == 0)
 						{
 							delete unit.memory._move;
 							delete unit.memory.extraStorage;
@@ -1040,13 +1109,12 @@
 					//gathers carry 1350-1650 energy when with road, Tower takes 1000, Power takes 5000. If dropping near full (1350)
 					//into the highest of these we only want to drop energy if they are under .73 capacity.
 					//var findStruct = unit.pos.findClosestByRange(FIND_MY_STRUCTURES, {
-					var findStruct = unit.room.find(FIND_MY_STRUCTURES, {
-						filter: function(object) {
-							return(object.energy < (object.energyCapacity*.73) && 
-								(object.structureType == STRUCTURE_POWER_SPAWN || object.structureType == STRUCTURE_TOWER));
-						}
+					var findStruct = _.filter(Game.structures, function(object) {
+							return(unit.room.name == object.room.name &&
+										object.energy < (object.energyCapacity*.73) &&
+										(object.structureType == STRUCTURE_POWER_SPAWN || object.structureType == STRUCTURE_TOWER));
 					});
-					
+
 					//unit.memory.extraStorage = findStruct.id;
 					needyStruct = uniqueStorage(unit, findStruct);
 				}
@@ -1059,34 +1127,34 @@
 						return(false);	//Nothing will be done this tick while we wait to get another object in the next tick. This object was filled by another unit.
 					}
 				}
-				
+
 				if(transferStorage != null || needyStruct != null)
 				{		//If we're in a room with a storage go over and transfer to the storage
 					if(transferStorage != null && (transferStorage.store.energy < 5000 || needyStruct == null))
 					{
 						unitByPath(unit, transferStorage);
-						var transferCode = unit.transferEnergy(transferStorage);
-						
+						var transferCode = unit.transfer(transferStorage, RESOURCE_ENERGY);
+
 						if(transferCode == 0)
 						{
 							delete unit.memory._move;
 							delete unit.memory.extraStorage;
 						}
-						
+
 						if(unitDirection != null)
 							delete unit.memory.direction;
 					}
 					else if(needyStruct != null)
 					{
 						unitByPath(unit, needyStruct);
-						var transferCode = unit.transferEnergy(needyStruct);
-						
+						var transferCode = unit.transfer(needyStruct, RESOURCE_ENERGY);
+
 						if(transferCode == 0)
 						{
 							delete unit.memory._move;
 							delete unit.memory.extraStorage;
 						}
-						
+
 						if(unitDirection != null)
 							delete unit.memory.direction;
 					}
@@ -1110,10 +1178,8 @@
 			}
 			else	//Otherwise we're in spawn and need to move and transfer energy into power bank
 			{
-				var powerSpawn = unit.room.find(FIND_MY_STRUCTURES, {
-					filter: { structureType: STRUCTURE_POWER_SPAWN }
-				});
-				
+				var powerSpawn = filterStructure(unit, STRUCTURE_POWER_SPAWN);
+
 				if(powerSpawn.length > 0)
 				{
 					if(powerSpawn[0].power < powerSpawn[0].powerCapacity * .5)
@@ -1121,7 +1187,7 @@
 						//TO DO: Check if power spawn is > .5 of power, if unit has room, pickup energy from storage or equivalent
 						//and dump in power spawn.
 						unitByPath(unit, powerSpawn[0]);
-						
+
 						if(unit.transfer(powerSpawn[0], RESOURCE_POWER) == 0)
 						{
 							delete unit.memory._move;
@@ -1151,7 +1217,7 @@
 			if(returnResources.room != null)
 			{
 				//If room is full, send back to retrieve what energy they can.
-				followFlagForward(unit, unit.carry.energy <= unit.carryCapacity*.5 || 
+				followFlagForward(unit, unit.carry.energy <= unit.carryCapacity*.5 ||
 								(returnResources.room.energyAvailable >= returnResources.room.energyCapacityAvailable &&
 								unit.carry.energy < unit.carryCapacity*.9));
 			}
@@ -1162,19 +1228,19 @@
 		}
 		else
 		{
-			var transferEnergyReturn = unit.transferEnergy(returnResources);
-			if(transferEnergyReturn != 0)
-				console.log(unit.name + ' transfer not handled. ' + transferEnergyReturn);
+			var transferReturn = unit.transfer(returnResources, RESOURCE_ENERGY);
+			if(transferReturn != 0)
+				console.log(unit.name + ' transfer not handled. ' + transferReturn);
 			else
 				return(true);
 		}
 	}
 	return(false);
  }
- 
+
  function gatherFrom(unit)
  {
-    var returnResources = findSpawn(unit);
+		var returnResources = findSpawn(unit);
 	var unitEnergy = unit.carry.energy;
 	var unitPower;
 	if(unit.carry.power != null)
@@ -1188,50 +1254,48 @@
 		var spawner = require('Spawner');
 		spawner.createTempCreep('attack', {'role': 'attack', 'usingSourceId': unit.room.name, 'spawnId': returnResources.id}, returnResources.room.name);
 	}
-	
+
 	//Going to try to grab any energy the unit can and immediately try a drop off instead of waiting for it to fill up
 	//since it seems like all energy sits in the gatherers if I wait until they are full.
-    //if(unit.carry.energy < unit.carryCapacity)
+		//if(unit.carry.energy < unit.carryCapacity)
 	if(unitEnergy == 0 && unitPower == 0 && returnResources != null)
-    {
-        var activeSource;
+		{
+				var activeSource;
 		if(unit.memory.usingSourceId != null)
 		{
-		    activeSource = Game.getObjectById(unit.memory.usingSourceId);
+				activeSource = Game.getObjectById(unit.memory.usingSourceId);
 		}
 		else
 		{
 			activeSource = retrieveSource(unit);
 		}
-		
+
 		if(unit.room.controller != null &&
 			unit.room.controller.owner != null &&
 			unit.room.controller.owner.username == 'RaskVann' &&
 			unit.room.controller.level >= 5)
 		{
-			var links = unit.pos.findInRange(FIND_MY_STRUCTURES, 1, { 
-				filter: { structureType: STRUCTURE_LINK } 
-			});
-			
+			var links = filterStructureInRange(unit, STRUCTURE_LINK, 1);
+
 			if(links.length > 0 && links[0].cooldown <= 0)
 			{
-				links[0].transferEnergy(unit);
+				links[0].transfer(unit, RESOURCE_ENERGY);
 			}
 		}
-		
+
 		followFlagForward(unit, (unitEnergy+unitPower) < unitEnergyCapacity);
-		
+
 		//Look for power
 		if(returnResources != null && returnResources.room != null &&
 			returnResources.room.name != unit.room.name)
 		{
 			if(unitEnergy > 0)
 				unit.drop(RESOURCE_ENERGY);
-			
+
 			var powerDrop = unit.room.find(FIND_DROPPED_RESOURCES, {
 				filter: { resourceType: RESOURCE_POWER }
 			});
-			
+
 			if(powerDrop.length > 0)
 			{
 				unit.moveTo(powerDrop[0]);
@@ -1242,34 +1306,34 @@
 				}
 			}
 		}
-    }
-    else if(returnResources != null)
-    {
-        fillUpRoomWithEnergy(unit, returnResources);
-    }
-    
-    if(unitEnergy < unitEnergyCapacity)
-    {
-        var target = unit.pos.findInRange(FIND_DROPPED_ENERGY, 1);
-        if(target.length > 0)
-    	{
-            unit.pickup(target[0]);
-        }
-    }
+		}
+		else if(returnResources != null)
+		{
+				fillUpRoomWithEnergy(unit, returnResources);
+		}
+
+		if(unitEnergy < unitEnergyCapacity)
+		{
+				var target = unit.pos.findInRange(FIND_DROPPED_ENERGY, 1);
+				if(target.length > 0)
+			{
+						unit.pickup(target[0]);
+				}
+		}
  }
- 
+
  function distribute(unit)
  {
 	var returnResources = findSpawn(unit);
 
 	if(unit.carry.energy == 0)
-    {
+		{
 		var activeSource;
 		var continueGather = true;
 		//Look for dropped energy around the sources in this room, if it exists retrieve and bring back to spawn
 		if(unit.memory.usingSourceId != null)
 		{
-		    activeSource = Game.getObjectById(unit.memory.usingSourceId);
+				activeSource = Game.getObjectById(unit.memory.usingSourceId);
 			//Remove assignment of the source (stop going back and forth to here)
 			//if we can't find any energy here.
 			if(activeSource.pos.findInRange(FIND_DROPPED_ENERGY, 1).length <= 0)
@@ -1297,7 +1361,7 @@
 				}
 			}
 		}
-		
+
 		findRoadOrCreate(unit);
 		followFlagForward(unit, unit.carry.energy < unit.carryCapacity && continueGather);
 	}
@@ -1305,30 +1369,30 @@
 	{
 		fillUpRoomWithEnergy(unit, returnResources);
 	}
-	
+
 	if(unit.carry.energy < unit.carryCapacity)
-    {
-        var target = unit.pos.findInRange(FIND_DROPPED_ENERGY, 1);
-        if(target.length > 0)
-    	{
-            unit.pickup(target[0]);
-        }
-    }
+		{
+				var target = unit.pos.findInRange(FIND_DROPPED_ENERGY, 1);
+				if(target.length > 0)
+			{
+						unit.pickup(target[0]);
+				}
+		}
  }
- 
+
  function getHarvestSpot(unit)
  {
-    var thisRoom = unit.room;
+		var thisRoom = unit.room;
 	if(thisRoom.memory.currentHarvestSpot == null)
 	{
 		thisRoom.memory.currentHarvestSpot = 0;
 	}
 	return(thisRoom.memory.currentHarvestSpot);
  }
- 
+
  function increaseHarvestSpot(unit)
  {
-    var thisRoom = unit.room;
+		var thisRoom = unit.room;
 	if(thisRoom.memory.currentHarvestSpot == null)
 	{
 		thisRoom.memory.currentHarvestSpot = 0;
@@ -1339,10 +1403,10 @@
 	}
 	return(thisRoom.memory.currentHarvestSpot);
  }
- 
+
  function increaseGatherSpot(unit)
  {
-    var thisRoom = unit.room;
+		var thisRoom = unit.room;
 	if(thisRoom.memory.currentGatherSpot == null)
 	{
 		thisRoom.memory.currentGatherSpot = 0;
@@ -1353,7 +1417,7 @@
 	}
 	return(thisRoom.memory.currentGatherSpot);
  }
- 
+
  function increaseBuilders(unit)
  {
 	var thisRoom = unit.room;
@@ -1367,12 +1431,12 @@
 	}
 	return(thisRoom.memory.currentBuilders);
  }
- 
+
  function distance(x1, y1, x2, y2)
  {
 	return(Math.sqrt(Math.pow(x1-x2, 2)+Math.pow(y1-y2, 2)));
  }
- 
+
  //'claim' needs to move to controller
  //'claim2' already at controller, just claim
  function claimRoom(unit)
@@ -1407,7 +1471,7 @@
 	}
 	return(false);
  }
- 
+
  //Attempts to construct structure as close to closeSpawn as possible center being closestLocation, within range 1
  function constructOutOfWay(closestLocation, structure, closeSpawn)
  {
@@ -1423,28 +1487,28 @@
 				{
 					continue; //Skip over the location the harvester/builder should be sitting at that this link is for.
 				}
-				
+
 				var nextPosition = new RoomPosition(x, y, closestLocation.roomName);
 				var findTerrain = closeSpawn.room.lookForAt('terrain', x, y);
 				var findFlag = closeSpawn.room.lookForAt('flag', x, y);
 				var findCreep = closeSpawn.room.lookForAt('creep', x, y);
 				var findStructure = closeSpawn.room.lookForAt('structure', x, y);
 				var findConstruction = closeSpawn.room.lookForAt('constructionSite', x, y);
-				
+
 				//console.log('testing: ' + nextPosition + ' range: ' + nextPosition.getRangeTo(closeSpawn) + ' Terrain: ' + findTerrain + ' findFlag: ' + findFlag.length + ' findCreep: ' + findCreep.length + ' findStructure: ' + findStructure.length + ' findConstruction: ' + findConstruction.length);
 				//Terrain should be movable (not constructable otherwise), if there is a flag, structure
 				//or creep this area is being used for something important (usually travel) and so this
 				//should only construct within 2 range of anchor in a buildable, unused spot.
 				if(findTerrain.length > 0 && (findTerrain[0] == 'plain' || findTerrain[0] == 'swamp') &&
-					findFlag.length == 0 && findCreep.length == 0 && findStructure.length == 0 && 
-					findConstruction.length == 0 && 
+					findFlag.length == 0 && findCreep.length == 0 && findStructure.length == 0 &&
+					findConstruction.length == 0 &&
 					(closeBuild == null || distance(closeBuild.x, closeBuild.y, closeSpawn.pos.x, closeSpawn.pos.y) > distance(nextPosition.x, nextPosition.y, closeSpawn.pos.x, closeSpawn.pos.y)))
 				{
 					closeBuild = nextPosition;
 				}
 			}
 		}
-		
+
 		//Build a structure at the closest found location to the spawn
 		if(closeBuild != null)
 		{
@@ -1467,7 +1531,7 @@
 	console.log('structure: ' + structure + ' could not be built around: ' + closestLocation);
 	return(success);
  }
- 
+
  //Tries to find a ideal location, 1-2 spaces away from anchor, not in the way of anything in use and add construction site for link
  function constructStructure(anchor, structure)
  {
@@ -1487,7 +1551,7 @@
 			}
 		}
 	}
-	
+
 	//Closest location should be where the builder/harvester is sitting at either upgrading the controller or
 	//harvesting a source. We want a link 1 away from this location. That isn't disruptive (isn't in a path,
 	//isn't in a wall
@@ -1502,11 +1566,11 @@
 	}
 	return(success);	//Send back last attempted createConstructionSite error, if any was attempted
  }
- 
+
 module.exports.link = function(nextRoom)
 {
 	//Look through all the rooms we have access to (passed in from main)
-	if(Game.getUsedCpu() < 5)
+	if(Game.cpu.getUsed() < 5)
 	{
 		//If the room is mine and has access to links, look for applicable link locations
 		if(nextRoom.controller != null &&
@@ -1519,10 +1583,11 @@ module.exports.link = function(nextRoom)
 				//Make sure there is a link within 2 spaces of every source, and create one if there isn't.
 				for(var i in sources)
 				{
-					var allLinks = sources[i].pos.findInRange(FIND_MY_STRUCTURES, 2, {
-						filter: { structureType: STRUCTURE_LINK }
-					});
-					
+					var allLinks = filterStructureInRange(sources[i], STRUCTURE_LINK, 2);
+					//var allLinks = sources[i].pos.findInRange(FIND_MY_STRUCTURES, 2, {
+					//	filter: { structureType: STRUCTURE_LINK }
+					//});
+
 					if(allLinks.length <= 0)
 					{
 						var allConstructLinks = sources[i].pos.findInRange(FIND_MY_CONSTRUCTION_SITES, 2, {
@@ -1537,15 +1602,13 @@ module.exports.link = function(nextRoom)
 					}
 				}
 			}
-			
+
 			if(nextRoom.controller.level >= 4)
 			{
 				//Look at the controller and make sure there is a link within 2 spaces of it
-				var controllerStorage = nextRoom.controller.pos.findInRange(FIND_MY_STRUCTURES, 2, {
-					filter: { structureType: STRUCTURE_STORAGE }
-				});
-				
-				if(controllerStorage.length <= 0)
+				var controllerStorage = nextRoom.controller.room.storage;
+
+				if(controllerStorage == null)
 				{
 					var controllerConstructStorage = nextRoom.controller.pos.findInRange(FIND_MY_CONSTRUCTION_SITES, 2, {
 						filter: { structureType: STRUCTURE_STORAGE }
@@ -1565,39 +1628,47 @@ module.exports.link = function(nextRoom)
 		console.log('creation of links and storage skipped, not enough cpu');
 	}
 }
- 
-module.exports.work = function(unit, harvestersSeen)
+
+module.exports.work = function(unit)
 {
-	//TO DO: Refill builders from harvesters. Possible new unit role.
-    if(unit.memory.role == 'worker')
+  if(unit.memory.role == 'worker' || unit.memory.role == 'lazy')
+  {
+    if(unit.memory.task == null)
     {
-        if(Object.keys(Game.creeps).length < 2)
-        {
-            autoWorker(unit);              //Sends blindly to selected source (don't leave it on this mode)
-        }
-        else
-        {
-            lazyWorkerFindSource(unit);    //Switch to lazyWorker when the initial 2-3 harvesters are up.
-        }
+      unit.memory.role = 'worker';
+      unit.memory.task = 'worker';
     }
-    else if(unit.memory.role == 'lazy')
-    {
-        lazyHarvest(unit);
-    }
+	   //TO DO: Refill builders from harvesters. Possible new unit role.
+		if(unit.memory.task == 'worker')
+		{
+				if(Object.keys(Game.creeps).length < 2)
+				{
+						autoWorker(unit);							//Sends blindly to selected source (don't leave it on this mode)
+				}
+				else
+				{
+						lazyWorkerFindSource(unit);		//Switch to lazyWorker when the initial 2-3 harvesters are up.
+				}
+		}
+		else if(unit.memory.task == 'lazy')
+		{
+				lazyHarvest(unit);
+		}
+  }
 }
 
-module.exports.gather = function(unit, gatherersSeen)
+module.exports.gather = function(unit)
 {
 	if(unit.memory.role == 'gather')
-    {
-        gatherFrom(unit);
-        //customize the x,y position to be where they create a path, 
-        //goto and sit, making continuous trips from their spawn 
-        //location and this spot
-    }
+		{
+				gatherFrom(unit);
+				//customize the x,y position to be where they create a path,
+				//goto and sit, making continuous trips from their spawn
+				//location and this spot
+		}
 }
 
-module.exports.claim = function(unit, claimSeen)
+module.exports.claim = function(unit)
 {
 	var role = unit.memory.role;
 	if(role != null && role.startsWith('claim'))
@@ -1606,33 +1677,33 @@ module.exports.claim = function(unit, claimSeen)
 	}
 }
 
-module.exports.distribute = function(unit, distributeSeen)
+module.exports.distribute = function(unit)
 {
 	if(unit.memory.role == 'distribute')
 	{
 		distribute(unit);
 	}
 }
- 
+
 //module.exports = function(unit, harvestersSeen, gatherersSeen)
 //{
 //	if(unit.memory.role == 'idle')
-//    {
-//        reassignJob(unit);
-//    }
-//    else if(unit.memory.role == 'flag')
-//    {
-//        moveToFlag(unit);
-//    }
-//    else if(unit.memory.role == 'to' || unit.memory.role == 'To')
-//    {
-//        //Have flags 'To' and 'From' created, assigns 'idle' role when complete
-//        reassignTo(unit);
-//    }
-//    else if(unit.memory.role == 'from' || unit.memory.role == 'From')
-//    {
-//        //Have flags 'To' and 'From' created, assigns 'idle' role when complete
-//        reassignFrom(unit);
-//    }
-//    //reassignJob(Game.creeps.Worker12);
+//		{
+//				reassignJob(unit);
+//		}
+//		else if(unit.memory.role == 'flag')
+//		{
+//				moveToFlag(unit);
+//		}
+//		else if(unit.memory.role == 'to' || unit.memory.role == 'To')
+//		{
+//				//Have flags 'To' and 'From' created, assigns 'idle' role when complete
+//				reassignTo(unit);
+//		}
+//		else if(unit.memory.role == 'from' || unit.memory.role == 'From')
+//		{
+//				//Have flags 'To' and 'From' created, assigns 'idle' role when complete
+//				reassignFrom(unit);
+//		}
+//		//reassignJob(Game.creeps.Worker12);
 //}

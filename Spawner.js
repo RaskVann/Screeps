@@ -44,7 +44,7 @@
                       { cost: 400, body: [CARRY, MOVE, CARRY, MOVE, CARRY, MOVE, CARRY, MOVE] },
                       { cost: 750, body: [WORK, CARRY, MOVE, CARRY, MOVE, CARRY, MOVE, CARRY, MOVE, CARRY, MOVE, CARRY, MOVE, MOVE] },
 					  { cost: 950, body: [WORK, CARRY, MOVE, CARRY, MOVE, CARRY, MOVE, CARRY, MOVE, CARRY, MOVE, CARRY, MOVE, CARRY, MOVE, CARRY, MOVE, MOVE] },
-					  { cost: 1150, body: [WORK, MOVE, CARRY, MOVE, CARRY, MOVE, CARRY, MOVE, CARRY, MOVE, CARRY, MOVE, CARRY, MOVE, CARRY, MOVE, CARRY, MOVE, CARRY, MOVE, CARRY, MOVE] }, 
+					  { cost: 1150, body: [WORK, MOVE, CARRY, MOVE, CARRY, MOVE, CARRY, MOVE, CARRY, MOVE, CARRY, MOVE, CARRY, MOVE, CARRY, MOVE, CARRY, MOVE, CARRY, MOVE, CARRY, MOVE] },
 					  { cost: 1350, body: [WORK, MOVE, CARRY, MOVE, CARRY, MOVE, CARRY, MOVE, CARRY, MOVE, CARRY, MOVE, CARRY, MOVE, CARRY, MOVE, CARRY, MOVE, CARRY, MOVE, CARRY, MOVE, CARRY, MOVE, CARRY, MOVE] },
 					  { cost: 2550, body: [WORK, MOVE, CARRY, MOVE, CARRY, MOVE, CARRY, MOVE, CARRY, MOVE, CARRY, MOVE, CARRY, MOVE, CARRY, MOVE, CARRY, MOVE, CARRY, MOVE, CARRY, MOVE, CARRY, MOVE, CARRY, MOVE,
 											CARRY, MOVE, CARRY, MOVE, CARRY, MOVE, CARRY, MOVE, CARRY, MOVE, CARRY, MOVE, CARRY, MOVE, CARRY, MOVE, CARRY, MOVE, CARRY, MOVE, CARRY, MOVE, CARRY, MOVE] } ];
@@ -53,13 +53,13 @@
                       { cost: 800, body: [WORK, CARRY, CARRY, CARRY, CARRY, CARRY, CARRY, CARRY, CARRY, CARRY, MOVE, MOVE, MOVE, MOVE, MOVE] },
 					  { cost: 1100, body: [WORK, CARRY, CARRY, CARRY, CARRY, CARRY, CARRY, CARRY, CARRY, CARRY, CARRY, CARRY, CARRY, CARRY, MOVE, MOVE, MOVE, MOVE, MOVE, MOVE, MOVE] },
 					  { cost: 1250, body: [WORK, CARRY, CARRY, CARRY, CARRY, CARRY, CARRY, CARRY, CARRY, CARRY, CARRY, CARRY, CARRY, CARRY, CARRY, CARRY, MOVE, MOVE, MOVE, MOVE, MOVE, MOVE, MOVE, MOVE] },
-					  { cost: 1850, body: [WORK, CARRY, CARRY, CARRY, CARRY, CARRY, CARRY, CARRY, CARRY, CARRY, CARRY, CARRY, CARRY, CARRY, CARRY, CARRY, 
+					  { cost: 1850, body: [WORK, CARRY, CARRY, CARRY, CARRY, CARRY, CARRY, CARRY, CARRY, CARRY, CARRY, CARRY, CARRY, CARRY, CARRY, CARRY,
 											CARRY, CARRY, CARRY, CARRY, CARRY, CARRY, CARRY, CARRY,
 											MOVE, MOVE, MOVE, MOVE, MOVE, MOVE, MOVE, MOVE, MOVE, MOVE, MOVE, MOVE] },
-					  { cost: 2150, body: [WORK, CARRY, CARRY, CARRY, CARRY, CARRY, CARRY, CARRY, CARRY, CARRY, CARRY, CARRY, CARRY, CARRY, CARRY, CARRY, 
+					  { cost: 2150, body: [WORK, CARRY, CARRY, CARRY, CARRY, CARRY, CARRY, CARRY, CARRY, CARRY, CARRY, CARRY, CARRY, CARRY, CARRY, CARRY,
 											CARRY, CARRY, CARRY, CARRY, CARRY, CARRY, CARRY, CARRY, CARRY, CARRY, CARRY, CARRY,
 											MOVE, MOVE, MOVE, MOVE, MOVE, MOVE, MOVE, MOVE, MOVE, MOVE, MOVE, MOVE, MOVE, MOVE] },
-					  { cost: 2550, body: [WORK, CARRY, CARRY, CARRY, CARRY, CARRY, CARRY, CARRY, CARRY, CARRY, CARRY, CARRY, CARRY, CARRY, CARRY, CARRY, 
+					  { cost: 2550, body: [WORK, CARRY, CARRY, CARRY, CARRY, CARRY, CARRY, CARRY, CARRY, CARRY, CARRY, CARRY, CARRY, CARRY, CARRY, CARRY,
 											CARRY, CARRY, CARRY, CARRY, CARRY, CARRY, CARRY, CARRY, CARRY, CARRY, CARRY, CARRY, CARRY, CARRY, CARRY, CARRY,
 											CARRY, CARRY, MOVE, MOVE, MOVE, MOVE, MOVE, MOVE, MOVE, MOVE, MOVE, MOVE, MOVE, MOVE, MOVE, MOVE, MOVE, MOVE] } ];	//Max 50 components
 // var builderBody = [WORK, CARRY, MOVE, CARRY, MOVE];
@@ -81,7 +81,8 @@
  					  { cost: 2250, body: [WORK, WORK, WORK, WORK, WORK, WORK, WORK, WORK, WORK, WORK, WORK, WORK, WORK, WORK, WORK, CARRY, CARRY, CARRY, CARRY, CARRY, MOVE, MOVE, MOVE, MOVE, MOVE, MOVE, MOVE, MOVE, MOVE, MOVE] } ];	//Only 1 needed at controller at level 8 max
  var scoutBody =   [ { cost: 50, body: [MOVE] } ];
  var claimBody =   [ { cost: 1300, body: [MOVE, MOVE, CLAIM, CLAIM] } ];
- 
+ var creepsInRoom;
+
  function getHarvestId(spawn)
  {
 	if(spawn == null)
@@ -97,7 +98,7 @@
 	}
 	return(spawn.memory.harvestId0);
  }
- 
+
  function nextHarvestId(spawn)
  {
 	//If we still have valid units to spawn, give the currentID, otherwise push list closer to top.
@@ -115,7 +116,7 @@
 		return(spawn.memory.harvestId0);
 	}
  }
- 
+
  function getNeedGather(spawn)
  {
 	if(spawn == null)
@@ -131,7 +132,7 @@
 	}
 	return(spawn.memory.needGather0);
  }
- 
+
  function nextNeedGather(spawn)
  {
 	//If we still have valid units to spawn, give the currentID, otherwise push list closer to top.
@@ -151,7 +152,7 @@
 		return(spawn.memory.needGather0);
 	}
  }
- 
+
  function getNeedHarvest(spawn)
  {
 	if(spawn == null)
@@ -167,7 +168,7 @@
 	}
 	return(spawn.memory.needHarvest0);
  }
- 
+
  function nextNeedHarvest(spawn)
  {
 	//If we still have valid units to spawn, give the currentID, otherwise push list closer to top.
@@ -187,7 +188,7 @@
 		return(spawn.memory.needHarvest0);
 	}
  }
- 
+
  //Push all three parts of the list closer to the top to be retrieved, no more gatherers
  //or harvesters were found.
  function updateHarvestGatherList(spawn)
@@ -199,19 +200,30 @@
 		spawn.memory.needHarvest1 = spawn.memory.needHarvest2;
 		spawn.memory.needHarvest2 = spawn.memory.needHarvest3;
 		spawn.memory.needHarvest3 = resetValue;
-		
+
 		spawn.memory.needGather0 = spawn.memory.needGather1;
 		spawn.memory.needGather1 = spawn.memory.needGather2;
 		spawn.memory.needGather2 = spawn.memory.needGather3;
 		spawn.memory.needGather3 = resetValue;
-		
+
 		spawn.memory.harvestId0 = spawn.memory.harvestId1;
 		spawn.memory.harvestId1 = spawn.memory.harvestId2;
 		spawn.memory.harvestId2 = spawn.memory.harvestId3;
 		spawn.memory.harvestId3 = resetValue;
 	}
  }
- 
+
+ function getCreepsInRoom(spawner)
+ {
+   if(creepsInRoom == null || (creepsInRoom != null && creepsInRoom[0].room.name != spawner.room.name))
+   {
+     creepsInRoom = _.filter(Game.creeps, function(object) {
+       return(object.room.name == spawner.room.name);
+     });
+   }
+   return(creepsInRoom);
+ }
+
  //Need to reference how many harvesters we've deployed already
  //Recorded by how many units we've assigned a harvest spot to in this room.
  function getHarvestSpot(spawner)
@@ -223,7 +235,26 @@
 	}
 	return(thisRoom.memory.currentHarvestSpot);
  }
- 
+
+ function getCurrentHarvest(spawner)
+ {
+   var currentHarvest = _.filter(getCreepsInRoom(spawner), function(object) {
+     return(object.memory.role == 'harvest');
+   });
+   var currentValue = 0;
+
+   if(currentHarvest == null || (currentHarvest != null && currentHarvest.length == 0))
+   {
+     spawner.room.memory.currentHarvest = currentValue;
+   }
+   else
+   {
+     currentValue = currentHarvest.length;
+     spawner.room.memory.currentHarvest = currentValue;
+   }
+   return(currentValue);
+ }
+
  function getGatherSpot(spawner)
  {
 	var thisRoom = spawner.room;
@@ -233,17 +264,64 @@
 	}
 	return(thisRoom.memory.currentGatherSpot);
  }
- 
+
+ function getCurrentGather(spawner)
+ {
+   var currentGather = _.filter(getCreepsInRoom(spawner), function(object) {
+     return(object.memory.role == 'gather');
+   });
+   var currentValue = 0;
+
+   if(currentGather == null || (currentGather != null && currentGather.length == 0))
+   {
+     spawner.room.memory.needGatherers = currentValue;
+   }
+   else
+   {
+     currentValue = currentGather.length;
+     spawner.room.memory.needGatherers = currentValue;
+   }
+   return(currentValue);
+ }
+
+ function getCurrentUpgrade(spawner)
+ {
+   var upgraders = _.filter(getCreepsInRoom(spawner), function (object) {
+     return(object.memory.role == 'upgrade' &&
+           object.memory.usingSourceId == spawner.room.controller.id);
+   });
+
+   if(spawner.room.memory.currentUpgraders == null || spawner.room.memory.currentUpgraders < upgraders.length)
+   {
+     if(upgraders.length >= 0)
+     {
+       spawner.room.memory.currentUpgraders = upgraders.length;
+     }
+     else
+     {
+       spawner.room.memory.currentUpgraders = 0;
+     }
+   }
+   return(spawner.room.memory.currentUpgraders);
+ }
+
+//TO DO: We need something else to determine how many possible builders we have to pull from in this room.
+//      Right now all we are doing is measuring the largest group of builders we've ever seen and limiting
+//      that size
+//TO DO: It would be a lot better to when we find this room has = current builders create a certain amount
+//once in memory and put them in the respawn list of this spawner. Then never create builders after this point.
+//Just let the skip logic for builders to govern if it's spawning a relevant builder or not.
  function getBuilders(spawner)
  {
 	var thisRoom = spawner.room;
+
 	if(thisRoom.memory.currentBuilders == null)
 	{
-		thisRoom.memory.currentBuilders = 0;
+      thisRoom.memory.currentBuilders = 0;
 	}
 	return(thisRoom.memory.currentBuilders);
  }
- 
+
  function increaseBuilders(spawner)
  {
 	var thisRoom = spawner.room;
@@ -253,7 +331,7 @@
 	}
 	return(thisRoom.memory.currentBuilders++);
  }
- 
+
  function getAttackers(spawner)
  {
 	var thisRoom = spawner.room;
@@ -263,7 +341,7 @@
 	}
 	return(thisRoom.memory.currentAttackers);
  }
- 
+
  function increaseAttackers(spawner)
  {
 	var thisRoom = spawner.room;
@@ -273,7 +351,7 @@
 	}
 	return(thisRoom.memory.currentAttackers++);
  }
- 
+
  //available energy is how much energy we have to upgrade with
  //baseBody is the body before any upgrades are started
  //upgradeCost is the cost it would take for addToBody to be added to baseBody
@@ -290,7 +368,7 @@
     }
     return(baseBody[0].body);
  }
- 
+
  function upgradeBodyWithin(maxEnergy, targetEnergy, baseBody)
  {
 	if(maxEnergy == targetEnergy)
@@ -314,14 +392,14 @@
 		return(upgradeBody(maxEnergy, baseBody));
 	}
  }
- 
+
  //Caps the body size of a unit based on the stored needs of the task instead of building as big of a unit as possible.
  //If this is a type of unit that isn't supported, simply calls retrieveBody() with the provided information
  function retrieveBodyMod(role, spawner, unitName)
  {
 	var newBody;
 	var availableEnergy = spawner.room.energyAvailable;
-	
+
 	if(unitName != null && role == 'gather' && Memory.creeps[unitName] != null && Memory.creeps[unitName].pathLength != null)
 	{
 		var pathLength = Memory.creeps[unitName].pathLength;
@@ -346,7 +424,7 @@
 		{
 			//console.log(role + ' wants ' + modEnergy + ' cost and room has max of ' + maxEnergy + ' assuming sending ' + divideBy + ' units.');
 		}
-		
+
 		availableEnergy = Math.min(availableEnergy, modEnergy/divideBy);
 
 		//Find out if their are roads where the gather is going to, if so maintain the roads.
@@ -364,11 +442,11 @@
 				return(newBody);
 			}
 		}
-		
+
 		var findRoads = findRoadsIn.room.find(FIND_STRUCTURES, {
 			filter: { structureType: STRUCTURE_ROAD }
 		});
-		
+
 		if(findRoads != null && findRoads.length > 10)
 		{
 			//console.log(spawner.name + ' found roads, spawning gather, wants ' + availableEnergy + '/' + modEnergy + ' in ' + findRoadsIn.room.name + ' for ' + unitName);
@@ -376,7 +454,7 @@
 		}
 		else
 		{
-			console.log(spawner.name + ' no roads, expensive gather, wants ' + availableEnergy + '/' + modEnergy + ' in ' + findRoadsIn.room.name + ' for ' + unitName);
+			//console.log(spawner.name + ' no roads, expensive gather, wants ' + availableEnergy + '/' + modEnergy + ' in ' + findRoadsIn.room.name + ' for ' + unitName);
 			newBody = upgradeBodyWithin(spawner.room.energyAvailable, availableEnergy, gatherBody);
 		}
 	}
@@ -384,10 +462,10 @@
 	{
 		return(retrieveBody(role, spawner));
 	}
-	
+
 	return(newBody);
  }
- 
+
  function retrieveBody(role, spawner)
  {
     var newBody = null;
@@ -400,12 +478,10 @@
     //used role.role to get the stored role from previous method
     if(role == 'worker' || role == 'flag')
     {
-        newBody = upgradeBody(availableEnergy, workerBody);
-		
 		var findRoads = spawner.room.find(FIND_STRUCTURES, {
 			filter: { structureType: STRUCTURE_ROAD }
 		});
-		
+
 		if(findRoads != null && findRoads.length > 10)
 		{
 			newBody = upgradeBody(availableEnergy, workerRoadBody);
@@ -424,22 +500,37 @@
 		var findRoads = spawner.room.find(FIND_STRUCTURES, {
 			filter: { structureType: STRUCTURE_ROAD }
 		});
-		
+
 		if(findRoads != null && findRoads.length > 20)
 		{
 			//var findConstruction = spawner.room.find(FIND_CONSTRUCTION_SITES, {
 			//	filter: { structureType: STRUCTURE_ROAD }
 			//});
-			
+
 			//If all construction sites for roads have been built (there are no construction found for roads)
 			//Go ahead and build the road version of the gather, otherwise build the gatherBody
-			//if(findConstruction == null)	
+			//if(findConstruction == null)
 				newBody = upgradeBody(availableEnergy, gatherRoadBody);
 		}
 		else
 		{
 			newBody = upgradeBody(availableEnergy, gatherBody);
 		}
+    }
+    else if(role == 'upgrade')
+    {
+      var findRoads = spawner.room.find(FIND_STRUCTURES, {
+        filter: { structureType: STRUCTURE_ROAD }
+      });
+
+      if(findRoads != null && findRoads.length > 10)
+      {
+        newBody = upgradeBody(availableEnergy, builderRoadBody);
+      }
+      else
+      {
+        newBody = upgradeBody(availableEnergy, builderBody);
+      }
     }
     //WORK, WORK, CARRY, MOVE works better at short distance, 6 or under
     //WORK, CARRY, CARRY, MOVE, MOVE works better at longer distance, 7 or higher
@@ -448,13 +539,13 @@
 		var findRoads = spawner.room.find(FIND_STRUCTURES, {
 			filter: { structureType: STRUCTURE_ROAD }
 		});
-		
+
 		if(findRoads != null && findRoads.length > 10)
 		{
 			//Once we get some roads up and running switch over to the builder's with only 1 MOVE
 			newBody = upgradeBody(availableEnergy, builderRoadBody);
 		}
-		else	
+		else
 		{
 			newBody = upgradeBody(availableEnergy, builderBody);
 		}
@@ -488,34 +579,25 @@
 
  function retrieveNameNew(spawner, role)
  {
-    //used role.role from previous method
-    if(role == 'worker' || role == 'flag')
+   if(spawner != null && role != null)
+   {
+    var countFound = 1;
+    var unitLimit = 100;
+    var newName = role + countFound + spawner.room.name;
+    while(Memory.creeps[newName] != null && countFound <= unitLimit)
     {
-        return("worker" + getHarvestSpot(spawner) + spawner.room.name);
+      countFound++;
+      newName = role + countFound + spawner.room.name;
     }
-    else if(role == 'attack')
+
+    if(countFound > unitLimit)
     {
-        return("attack" + getAttackers(spawner) + spawner.room.name);
+      console.log('retrieveNameNew in Spawner is getting out of control, has over ' + countFound + ' of ' + role);
+      return(null);
     }
-    else if(role == 'gather')
-    {
-        return("gather" + getGatherSpot(spawner) + spawner.room.name);
-    }
-	else if(role == 'builder')
-    {
-        return("builder" + getBuilders(spawner) + spawner.room.name);
-    }
-	else if(role == 'scout')
-	{
-		return("scout" + spawner.memory.maxScouts + spawner.room.name);
-		return(null);	//Give random names to scouts
-	}
-    else if(role != 'empty')
-    {
-        //console.log("Name role: " + role);
-        return(null);
-    }
-	return(null);
+    return(newName);
+  }
+  return(null);
  }
 
  function findNextRole(spawner)
@@ -527,21 +609,11 @@
 	//create builders accordingly.
 	var maxBuilders = 2;
 	var maxAttackers = Math.min(5, spawner.room.controller.level);
+
 	setRoomHarvesterMax(spawner.room, 3);    //Allow 3 harvesters per energy node for starter room
 	if(spawner.room.controller.level > 1)   //Expand into nearby territories when level goes up enough for this to make sense
 	{
 		maxBuilders = Math.min(10, spawner.room.controller.level*2);
-	    //var exits = Game.map.describeExits(spawner.room.name);
-	    //for(var exitDirection = 1; exitDirection < exits.length; exitDirection++)
-	    //{
-	        //var currentExit = exits[exitDirection];
-	        //If found a room this direction, this provides the name of the room
-	        //if(currentExit != null)
-	        //{
-	            //creep.pos.findClosest(creep.room.findExitTo(currentExit))
-	        //}
-	    //}
-	    //setRoomHarvesterMax(spawner.room, 1);
 	}
 
 	//If want (for example) double the amount of gathers per harvester, this will need to change
@@ -561,19 +633,31 @@
 	{
 		return('worker');
 	}
-	else if(getBuilders(spawner) < maxBuilders)
+  //TODO: Need more intelligent way of determining how many upgraders is relevant.
+  //      Either measure the work of the units vs controller level. Compare to open
+  //      slots around the controller or some other method.
+  if(getCurrentUpgrade(spawner) < 3)
+  {
+    return('upgrade');
+  }
+	else if(spawner.room.memory.currentBuilders != getBuilders(spawner))
 	{
-		return('builder');
+    console.log(spawner.name + ' making 3 builders in queue');
+    //When we fist discover that builders haven't been created here, create some builders, this only happens once.
+    queueNewUnit(spawner, 'builder');
+    queueNewUnit(spawner, 'builder');
+    queueNewUnit(spawner, 'builder');
+		//return('builder');
+    return(null);
 	}
-	//TO DO: Come up with a alarm system that creates defenders. If so it would create a unit 
-	//every (30/EnergyNodes) per tick. Assuming a 300 unit cost (Cost/10)/EnergyNodes
-	else if(getAttackers(spawner) < maxAttackers)
+	//Towers take care of this need, so disabling this code, will be defenseless at lower levels
+	else if(spawner.room.controller.level > 9 && getAttackers(spawner) < maxAttackers)
 	{
-		return('attack');
+		//return('attack');
 	}
-	else if(spawner.memory.scoutsAlive <= 0 || spawner.memory.requestScout > 0)
+	else if(spawner.room.controller.level > 3 && (spawner.memory.scoutsAlive <= 0 || spawner.memory.requestScout > 0))
 	{
-		if(spawner.room.memory.exitVisited == null || 
+		if(spawner.room.memory.exitVisited == null ||
 			spawner.room.memory.exitVisited != null && spawner.room.memory.exitVisited < spawner.room.memory.exitMax)
 		{
 			return('scout');
@@ -586,28 +670,28 @@
 	}
 	return(null);   //Nothing else to spawn, look to expand buildings or territory
  }
- 
- //Resets scout information in rooms so they can go scout 
+
+ //Resets scout information in rooms so they can go scout
  function removeExitData()
  {
 	for(var spawn in Game.spawns)
 	{
 		var spawner = Game.spawns[spawn];
-		if(spawner.room.memory.exitVisited == null || 
+		if(spawner.room.memory.exitVisited == null ||
 			spawner.room.memory.exitVisited != null && spawner.room.memory.exitVisited < spawner.room.memory.exitMax)
 		{
 			console.log(spawner.name + ' doesnt have a dead end in its room. ' + spawner.room.name);
 			return(false);
 		}
 	}
-	
+
 	for(var room in Memory.rooms)
 	{
 		if(Memory.rooms[room].exitVisited < Memory.rooms[room].exitMax)
 		{
 			Game.notify(room + ' was never scouted completely, exits: ' + Memory.rooms[room].exitVisited + ' of ' + Memory.rooms[room].exitMax + ' but spawns all reported dead ends.', 720);
 		}
-		
+
 		//We should be able to freely skip known owned rooms in the next scout pass
 		if(Memory.rooms[room].owner == null || Memory.rooms[room].owner == 'RaskVann')// || (Memory.rooms[room].owner == null && Memory.rooms[room].exitMax == 1)
 		{
@@ -621,7 +705,7 @@
 	}
 	return(true);
  }
- 
+
  function findRoleWithinName(nextName)
  {
 	var lowestFoundNumber = 99999;
@@ -645,13 +729,13 @@
 	}
 	return(null);
  }
- 
+
  //The unit's name is formated 'Role''Num''Room'. This finds the first possible number in the name
  //and cuts out that and everything right of that, leaving the role to be extracted from the name
  function findDeadUnitRole(spawner, nextName)
  {
 	var foundName = findNameIsLiving(nextName);
-	
+
     if(foundName == false)
     //if(Game.time > getNextRespawnTime(spawner))
     {
@@ -660,7 +744,7 @@
     }
     return(null);
  }
- 
+
  function quickestUnitToDie(currentRole, activeSource)
  {
 	var lowestTick = 1500;	//Lowest tick to live
@@ -682,7 +766,7 @@
 		{
 			secondRole = currentRole;
 		}
-		
+
 		for(var x in Game.creeps)
 		{
 			//Count up relevant body if the unit is going to the same id as the current unit and is the same role
@@ -690,7 +774,7 @@
 			//however until it dies later calls of this have no way of knowing this, so we're going assume all older
 			//units then the current one are marked for death (not to be used in the next cycle) that way we don't go
 			//through an entire list of units trying to mark off 1 unneeded unit and instead mark off all of them.
-			if(Game.creeps[x].memory.usingSourceId == activeSource && 
+			if(Game.creeps[x].memory.usingSourceId == activeSource &&
 				(Game.creeps[x].memory.role == currentRole || Game.creeps[x].memory.role == secondRole) &&
 				Game.creeps[x].ticksToLive < lowestTick)
 			{
@@ -702,7 +786,7 @@
 
 	return(lowestUnit);
  }
- 
+
  //Gets the ideal rate for harvesting at this source. Capacity/RegenRate
  function energyRate(unitName)
  {
@@ -714,7 +798,7 @@
 		var source = Game.getObjectById(Memory.creeps[unitName].usingSourceId);
 		//If you can retrieve the source, use the actual values, otherwise assume we don't have access
 		if(source != null)
-			gatherRate = source.energyCapacity/ticksToRegeneration;	
+			gatherRate = source.energyCapacity/ticksToRegeneration;
 		else
 			gatherRate = 1500/ticksToRegeneration;	//Assume isn't reserved (lower capacity)
 	}
@@ -723,14 +807,14 @@
 
  function findDeadUnitBody(spawner, nextName)
  {
-    //This if statement only avoids going into retrieveBody since it will 
+    //This if statement only avoids going into retrieveBody since it will
     //cause a console log to trigger that I'd rather hear if other things go wrong
     var role = findDeadUnitRole(spawner, nextName);
 
     if(role != null)
     {
 		var returnBody = retrieveBodyMod(role, spawner, nextName);
-		
+
 		//If next dead unit is a gather or worker and we already have enough units fielded for this source, do not spawn and
 		//add to the end of the list.
 		if(role == 'gather')
@@ -741,7 +825,7 @@
 			{
 				pathLength = Memory.creeps[nextName].pathLength;
 			}
-			
+
 			if(Memory.creeps[nextName] != null && pathLength != null)
 			{
 				pathLength = Memory.creeps[nextName].pathLength;
@@ -774,7 +858,7 @@
 			//Leading to 10 Energy/Tick being the optimal harvest rate. So Body*2 should be at or barely above 10
 			if((countActiveWork*2) >= respawnThreshold)
 			{
-				console.log(nextName + ' found ' + (countActiveWork*2) + ' work of needed ' + respawnThreshold + ' moving to end.');
+				//console.log(nextName + ' found ' + (countActiveWork*2) + ' work of needed ' + respawnThreshold + ' moving to end.');
 				moveRespawnToEnd(spawner);
 				return(null);
 			}
@@ -790,16 +874,16 @@
 			}
 			else
 			{
-				console.log(nextName + ' found ' + (countActiveWork*2) + ' work of needed ' + respawnThreshold + ' moving to end.');
+				//console.log(nextName + ' found ' + (countActiveWork*2) + ' work of needed ' + respawnThreshold + ', spawning unit.');
 			}
 		}
-		
+
 		//Otherwise return the body we're interested in as normal
         return(returnBody);
     }
     return(null);
  }
- 
+
  //Goes through all living units, returns the unit with the matching name, otherwise null
  function findUnitByName(nextName)
  {
@@ -815,7 +899,7 @@
 	}
 	return(null);
  }
- 
+
  function countWorkAtSource(unitName)
  {
 	var countActiveWork = 0;	//Counts all relevant work bodies of the same role, going to the same id, ignoring current and older units
@@ -832,7 +916,7 @@
 				//however until it dies later calls of this have no way of knowing this, so we're going assume all older
 				//units then the current one are marked for death (not to be used in the next cycle) that way we don't go
 				//through an entire list of units trying to mark off 1 unneeded unit and instead mark off all of them.
-				if(Game.creeps[x].memory.usingSourceId == activeSource && 
+				if(Game.creeps[x].memory.usingSourceId == activeSource &&
 					(Game.creeps[x].memory.role == 'worker' || Game.creeps[x].memory.role == 'lazy'))// &&
 					//unit.ticksToLive < Game.creeps[x].ticksToLive)
 				{
@@ -841,12 +925,12 @@
 			}
 		}
 	}
-	if(countActiveWork <= 0)
-		console.log(unitName + ' is trying to count work and it came back with ' + countActiveWork);
-	
+	//if(countActiveWork <= 0)
+	//	console.log(unitName + ' is trying to count work and it came back with ' + countActiveWork);
+
 	return(countActiveWork);
  }
- 
+
  function countGatherAtSource(unitName)
  {
 	var countActiveGather = 0;	//Counts all relevant carry bodies of the same role, going to the same id, ignoring current and older units
@@ -854,7 +938,7 @@
 	{
 		var currentRole = Memory.creeps[unitName].role;
 		var activeSource = Memory.creeps[unitName].usingSourceId;
-		if(currentRole == 'gather' && activeSource != null) 
+		if(currentRole == 'gather' && activeSource != null)
 		{
 			for(var x in Game.creeps)
 			{
@@ -863,8 +947,8 @@
 				//however until it dies later calls of this have no way of knowing this, so we're going assume all older
 				//units then the current one are marked for death (not to be used in the next cycle) that way we don't go
 				//through an entire list of units trying to mark off 1 unneeded unit and instead mark off all of them.
-				if(Game.creeps[x].memory.usingSourceId == activeSource && 
-					Game.creeps[x].memory.role == 'gather')// && 
+				if(Game.creeps[x].memory.usingSourceId == activeSource &&
+					Game.creeps[x].memory.role == 'gather')// &&
 					//unit.ticksToLive < Game.creeps[x].ticksToLive)
 				{
 					countActiveGather += Game.creeps[x].getActiveBodyparts(CARRY);
@@ -874,15 +958,15 @@
 	}
 	//if(countActiveGather <= 0)
 		//console.log(unitName + ' is trying to count gather and it came back with ' + countActiveGather);
-	
+
 	return(countActiveGather);
  }
- 
+
  //Returns true if a unit with a matching name is living. Otherwise it's dead and returns false
  function findNameIsLiving(nextName)
  {
 	var foundName = findUnitByName(nextName);
-	
+
 	if(foundName == null)
 	{
 		//console.log(nextName + ' is dead, respawning');
@@ -901,40 +985,12 @@
 	//fixing this issue, this tick if returning true, we'll be looking at a different unit next tick)
     if(foundName == false)
     {
-		//Look at the unit we are trying to spawn here, if we can, look at the usingSourceId
-		//if it is a gatherer and try to find a link next to the source, if it finds one don't
-		//allow this unit to spawn since this source is covered and doesn't need gathers.
-		/**if(Memory.creeps[nextName] != null && Memory.creeps[nextName].role == 'gather' && 
-			Memory.creeps[nextName].usingSourceId != null)
-		{
-			var source = Game.getObjectById(Memory.creeps[nextName].usingSourceId);
-			
-			if(source != null)
-			{
-				var storage = source.room.find(FIND_MY_STRUCTURES, {
-					filter: { structureType: STRUCTURE_STORAGE }
-				});
-				
-				//If there is a link, there isn't a need for a gatherer at this source, this disables 
-				//generation of gathers at sources where a link is found
-				var findLinks = source.pos.findInRange(FIND_MY_STRUCTURES, 2, {
-					filter: { structureType: STRUCTURE_LINK }
-				});
-				
-				if(findLinks.length > 0 && storage.length > 0)
-				{
-					moveRespawnToEnd(spawner);
-					return(null);
-				}
-			}
-		}**/
-		
 		//Otherwise we are doing the normal routine and spawning a unit that is dead
         return(nextName);
     }
     return(null);
  }
- 
+
  //Goes to the end of the respawnTime list and pulls the last from the list.
  function getLastCreatedRespawnTime(spawner)
  {
@@ -948,7 +1004,7 @@
     }
     return(null); //Make it fail the check, respawnTime doesn't exist yet
  }
- 
+
  //Double check the last created unit's spawn time and makes sure at least a buffer amount
  //of time is between that and this new unit. If it has at least that amount it uses the
  //least amount of time possible (approx.) to tell the system to respawn this unit.
@@ -967,25 +1023,25 @@
 	{
 		nextSpawnTime = Game.time+creepMaxLife+(5*3);
 	}
-	
-	//If we have to few units the buffer time is going to be insane (at 10 creeps, 150 ticks 
+
+	//If we have to few units the buffer time is going to be insane (at 10 creeps, 150 ticks
 	//between units). Reduce the buffer if this is the case
 	if(totalCreeps < 10)
 	{
 		buffer = 15;
 	}
-	
+
 	//Measure the time between the spawn time we'd normally input and the unit that will be
 	//spawning before it, if they are right next to each other (less then buffer limit)
 	//increase it accordingly so we have time to collect energy between unit spawns.
-	if(lastTime != null && nextSpawnTime-lastTime < buffer) 
+	if(lastTime != null && nextSpawnTime-lastTime < buffer)
 	{
 	    var convertToInteger = (buffer*1)+(1*lastTime);
         //console.log('1: ' + lastTime + ', 2: ' + buffer + ' becomes ' + convertToInteger);
 		//return(convertToInteger);  //It's acting like a string, convert
 		return(nextSpawnTime);
 	}
-	else 
+	else
 	{
 	    //console.log('regular time: ' + nextSpawnTime);
 		return(nextSpawnTime);
@@ -1001,7 +1057,7 @@
     {
         var respawnTime = spawner.memory.respawnTime;
         //console.log("Getting Time: '" + respawnTime.substring(0, respawnTime.indexOf(",")) + "'");
-        
+
         var nextTime = respawnTime.substring(0, respawnTime.indexOf(","));
         //Send back the next time stored in the list. If we find out that we're at energy capacity however
         //just give back an impossibly low time so we force the next unit to spawn.
@@ -1028,7 +1084,7 @@
     }
     return(Game.time+9999); //Make it fail the check, respawnTime doesn't exist yet
  }
- 
+
  //If a sourceId exists, attempts to find the next dead unit that shares the same sourceId and role.
  //Otherwise just finds the next dead unit that share the same role.
  function nextDeadRoleName(spawner, checkRole, replaceSourceId)
@@ -1048,8 +1104,8 @@
 			if(Memory.creeps[nextName] != null)
 			{
 				memorySource = Memory.creeps[nextName].usingSourceId;
-				if((memorySource == null || replaceSourceId == null || 
-					(memorySource != null && memorySource == replaceSourceId)) && 
+				if((memorySource == null || replaceSourceId == null ||
+					(memorySource != null && memorySource == replaceSourceId)) &&
 					findRoleWithinName(nextName) == checkRole && Game.creeps[nextName] == null)
 				{
 					//Cut name we're spawning out of the list and add it to end
@@ -1083,7 +1139,7 @@
     }
     return(null);
  }
- 
+
  //Temporary creeps are stored here if they couldn't be spawned when the first request is made. Retrieve them on request.
  function getNextRequest(spawner)
  {
@@ -1095,7 +1151,7 @@
     }
     return(null);
  }
- 
+
  function moveRespawnToEnd(spawner)
  {
 	var atEnd = extractNextName(spawner);
@@ -1116,7 +1172,7 @@
 	console.log('ERROR: cant find respawnName from ' + spawner);
     return(null);
  }
- 
+
  function extractRequestCreep(spawner)
  {
 	if(spawner.memory.requestCreep != null)
@@ -1130,7 +1186,7 @@
 	console.log('ERROR: cant find requestCreep from ' + spawner);
     return(null);
  }
- 
+
  //Adds the current name and time to the end of the respawnTime and respawnName
  function addRespawnEnd(spawner, name)
  {
@@ -1146,7 +1202,7 @@
 			return(false);
 		}
 	}
-	
+
 	if(spawner.memory.respawnName == null)
 	{
 		//spawner.memory.respawnTime = calculateRespawnTime(spawner, body).toString()+",";
@@ -1158,7 +1214,7 @@
 		spawner.memory.respawnName += name+",";
 	}
  }
- 
+
  //Looks at the first object in the nextName respawn list and skips it if any prerequisits haven't been met
  //Attackers will only be allowed through if there is enough harvesters and gathers to support the ecconomy
  //Builders will only be allowed through if there is enough harvesters and gatherers, unless we're at the energy cap
@@ -1166,16 +1222,22 @@
  //Additional logic to gate harvesters and gatherers are in the dead unit retrieval (quickestToDieRespawn() and findDeadUnitBody())
  //which only allows harvester/gathers through when we are under the limit for that source or a unit dieing will cause us
  //to be under that limit.
- function checkSkipUnit(spawner, body, harvestersSeen, gatherersSeen, buildersSeen, attackersSeen)
+ function checkSkipUnit(spawner, body)
  {
 	var name = getNextName(spawner);
+  var harvestersSeen = getRoleCount(spawner.room, 'worker');
+  var gatherersSeen = getRoleCount(spawner.room, 'gather');
+  var buildersSeen = getRoleCount(spawner.room, 'builder');
+  var attackersSeen = getRoleCount(spawner.room, 'attack');
+  var upgradersSeen = getRoleCount(spawner.room, 'upgrade');
+
 	if(Game.creeps[name] != null)
 	{
 		moveRespawnToEnd(spawner);
 		//console.log(name + ' is alive. Skipping to check next unit.');
 		return(true);
 	}
-	
+
 	var role = findRoleWithinName(name);
 	if(role == null)
 	{
@@ -1186,9 +1248,9 @@
 		//console.log(spawner.name + ' found null body. Skipping over: ' + name);
 		moveRespawnToEnd(spawner);
 	}
-	
+
 	var seenMod = .67;
-	
+
 	if(spawner.room.storage != null)
 	{
 		if(spawner.room.storage.store.energy > 10000)
@@ -1204,12 +1266,12 @@
 			seenMod = 1.5;
 		}
 	}
-	
+
 	//Skip over gatherers if there are no workers present
 	//or
 	//Skip over gatherers if we can't find a live worker at this source already
-	if(role == 'gather' && 
-		(harvestersSeen <= 0 || 
+	if(role == 'gather' &&
+		(harvestersSeen <= 0 ||
 		(Memory.creeps[name] != null && Memory.creeps[name].usingSourceId != null && quickestUnitToDie('worker', Memory.creeps[name].usingSourceId) == null)))
 	{
 		moveRespawnToEnd(spawner);
@@ -1223,32 +1285,48 @@
 		//console.log('adding ' + name + ' to end of respawn list.');
 		return(true);
 	}
+  else if(role == 'upgrade')
+  {
+    //Get amount of sources in this room (if it is defined) and check if we have at least that may harvesters, skip if we can't find them
+    //TODO : Need more logic for gatherers, we'll need at least as many gatherers as harvesters early on and later only need a few to maintain.
+    var roomSource = spawner.room.memory.maxSources ? spawner.room.memory.maxSources : 0;
+    if(harvestersSeen < roomSource || gatherersSeen < 1)
+    {
+      moveRespawnToEnd(spawner);
+  		//console.log('adding ' + name + ' to end of respawn list.');
+  		return(true);
+    }
+  }
 	//If you're a builder and there isn't enough gatherers and harvesters already, skip over
 	//ignore the gatherer/harvester limit if we are at the energy cap.
-	else if(role == 'builder' && 
-			(Math.min(harvestersSeen*seenMod, gatherersSeen*seenMod) <= buildersSeen+1))// && 
-			//spawner.room.energyAvailable < spawner.room.energyCapacityAvailable))
+	else if(role == 'builder')
+			//(Math.min(harvestersSeen*seenMod, gatherersSeen*seenMod) <= buildersSeen+1))
 	{
-		var totalConstSites = spawner.room.find(FIND_MY_CONSTRUCTION_SITES, { filter: function(object) { return(object.structureType != STRUCTURE_ROAD); } }).length;
-		if(totalConstSites <= 0)
+    //seenMod *= 0.74626865671641791044776119402985;
+    if(Math.min(harvestersSeen, gatherersSeen) <= buildersSeen)
+    {
+      moveRespawnToEnd(spawner);
+      //console.log('adding ' + name + ' to end of respawn list. Construction sites need building.');
+      return(true);
+    }
+
+    var totalConstSites = _.filter(Game.constructionSites, function (object) {
+      return(object.structureType != STRUCTURE_ROAD);
+    });
+    //If there is something the builders can be used to build
+		if(totalConstSites == null || (totalConstSites != null && totalConstSites.length == 0))
 		{
-			//Translates seenMod base to .5 (need 4 worker/gather to make 2 builders)
-			//if we don't have any construction sites but more spawn if we do have contruction sites.
-			seenMod *= 0.74626865671641791044776119402985;
-			
-			if(Math.min(harvestersSeen*seenMod, gatherersSeen*seenMod) <= buildersSeen+1)
-			{
-				//No construction, nerf amount of builders since we only need some for controllers.
-				moveRespawnToEnd(spawner);
-				//console.log('adding ' + name + ' to end of respawn list. No construction needed.');
-				return(true);
-			}
-		}
-		else
-		{	//Construct sites exist, create more builders to take care of the construction.
-			moveRespawnToEnd(spawner);
-			//console.log('adding ' + name + ' to end of respawn list. Construction sites need building.');
-			return(true);
+      //No construction sites to build so we may need to skip, lets check repair.
+      var totalRepairSites = _.filter(Game.structures, function(object) {
+        return(object.hits < (object.hitsMax*.9));
+      });
+      //If don't find repairs needed either, then go ahead and skip this unit
+      if(totalRepairSites == null || (totalRepairSites != null && totalRepairSites.length == 0))
+      {
+        moveRespawnToEnd(spawner);
+        //console.log('adding ' + name + ' to end of respawn list. Construction sites need building.');
+        return(true);
+      }
 		}
 	}
 	else if(role != null && role.startsWith('claim'))
@@ -1259,7 +1337,7 @@
 			moveRespawnToEnd(spawner);
 		}
 		else if(Memory.creeps[name] != null && Memory.creeps[name].usingSourceId != null &&
-			Game.rooms[Memory.creeps[name].usingSourceId] != null && 
+			Game.rooms[Memory.creeps[name].usingSourceId] != null &&
 			Game.rooms[Memory.creeps[name].usingSourceId].controller != null &&
 			Game.rooms[Memory.creeps[name].usingSourceId].controller.reservation != null &&
 			Game.rooms[Memory.creeps[name].usingSourceId].controller.reservation.ticksToEnd > 2500)
@@ -1274,7 +1352,7 @@
 	}
 	return(false);
  }
- 
+
  function nextToDie()
  {
 	var lowestTick = 1500;	//Lowest tick to live
@@ -1289,11 +1367,11 @@
 	}
 	return(lowestUnit);
   }
- 
+
  //Check the next unit to die, if it is critical to have this unit up and running at all times
  //This function will spawn that unit when it hits enough ticks to live so it will die when the unit
  //we're spawning with this function builds itself and has enough time to travel over.
- //Note: This assumes there is always a dead unit to pull from that is assigned to the source we're 
+ //Note: This assumes there is always a dead unit to pull from that is assigned to the source we're
  //		interested in to spawn ahead of the dieing unit to replace it. It simply won't spawn anything
  //		if there isn't anything in the respawn list to take its place.
  function quickestToDieRespawn(spawner, chosenSpawn)
@@ -1305,8 +1383,8 @@
 	var role;
 	if(unit != null)
 	{
-		//Not going to bother calculating something more complicated, estimate 
-		//we're spending 50 energy per body and we can make the highest possible 
+		//Not going to bother calculating something more complicated, estimate
+		//we're spending 50 energy per body and we can make the highest possible
 		//body count we can right now, plus any path we might have stored.
 		estimatedBodyLength = spawner.room.energyAvailable/50;
 		if(unit.memory.pathLength != null)
@@ -1327,10 +1405,10 @@
 		//If can't find a unit, kill it here
 		return(false);
 	}
-	
+
 	//If the spawner is able to handle our request and
 	//If we pass this we have a unit near death that if a unit spawns now can take it's place or close to it when we need it.
-	if(spawner != null && chosenSpawn.spawning == null && 
+	if(spawner != null && chosenSpawn.spawning == null &&
 		unit != null && unit.ticksToLive <= estimatedBodyLength*3+pathLength)
 	{
 		var replaceWithName = nextDeadRoleName(spawner, role, sourceId);
@@ -1343,7 +1421,7 @@
 				var countActiveGather = countGatherAtSource(unit.name);
 				var gatherRate = energyRate(unit.name);
 				var respawnThreshold = (pathLength*2*gatherRate);
-				
+
 				if((countActiveGather-unit.getActiveBodyparts(CARRY))*50 < respawnThreshold &&
 					chosenSpawn.canCreateCreep(returnBody, replaceWithName) == 0)
 				{
@@ -1357,13 +1435,13 @@
 			{
 				var countActiveWork = countWorkAtSource(unit.name);
 				var respawnThreshold = energyRate(unit.name);
-				
+
 				if((countActiveWork-unit.getActiveBodyparts(WORK))*2 < respawnThreshold &&
 					chosenSpawn.canCreateCreep(returnBody, replaceWithName) == 0)
 				{
 					var badSpawn = chosenSpawn.createCreep(returnBody, replaceWithName);
 					//TO DO: Update respawn list, move unit we're spawning here to end.
-					console.log('Spawn: ' + replaceWithName + ' to replace ' + unit.name + ' dieing in ' + unit.ticksToLive + ' ticks. Found ' + (countActiveWork-unit.getActiveBodyparts(WORK))*2 + ' work of needed ' + respawnThreshold);
+					//console.log('Spawn: ' + replaceWithName + ' to replace ' + unit.name + ' dieing in ' + unit.ticksToLive + ' ticks. Found ' + (countActiveWork-unit.getActiveBodyparts(WORK))*2 + ' work of needed ' + respawnThreshold);
 					return(true);
 				}
 			}
@@ -1374,14 +1452,14 @@
 				//Nothing else is as time intensive as these, expand if necessary
 			}
 		}
-		else if(returnRole == 'gather' || returnRole == 'worker' || returnRole == null) 
+		else if(returnRole == 'gather' || returnRole == 'worker' || returnRole == null)
 		{
 			//console.log(unit.name + ' needs replacement but cant find name: ' + replaceWithName + ' role: ' + returnRole + ' or body: ' + returnBody + ' to replace him in ' + unit.ticksToLive + ' ticks.');
 		}
 	}
 	return(false);
  }
- 
+
  function checkForEnemies()
  {
 	for(var x in Game.rooms)
@@ -1389,48 +1467,93 @@
 		var hostileNumbers = Game.rooms[x].find(FIND_HOSTILE_CREEPS).length;
 		if(hostileNumbers > 0)
 		{
-			if(Game.rooms[x].find(FIND_MY_CREEPS).length < hostileNumbers)
+			var activeDefenders = _.filter(Game.creeps, function(object) {
+				return((object.room.name == Game.rooms[x].name || object.memory.usingSourceId == Game.rooms[x].name) &&
+						(object.getActiveBodyparts(ATTACK) > 0 || object.getActiveBodyparts(RANGED_ATTACK) > 0));
+			});
+			if(activeDefenders.length < hostileNumbers)
 				return(true);
 		}
 	}
 	return(false);
  }
 
- function spawnNextInQueue(spawner, chosenSpawn, harvestersSeen, gatherersSeen, buildersSeen, attackersSeen)
+ function setRoleCount(currentRoom, currentRole)
  {
+   var savedMemory = currentRole + 'Count';
+   var countRoles = _.filter(Game.creeps, function(object) {
+     return(object.room.name == currentRoom.name &&
+            object.memory.role.startsWith(currentRole));
+   });
+
+   if(countRoles != null && countRoles.length > 0)
+   {
+     currentRoom.memory[savedMemory] = countRoles.length;
+   }
+   else
+   {
+     currentRoom.memory[savedMemory] = 0;
+   }
+ }
+
+ function getRoleCount(currentRoom, currentRole)
+ {
+   var savedMemory = currentRole + 'Count';
+   return(currentRoom.memory[savedMemory]);
+ }
+
+ function updateRoleCounters(spawner)
+ {
+   var currentTime = Game.time;
+   if(spawner.room.memory.lastUpdatedTick != currentTime)
+   {
+     spawner.room.memory.lastUpdatedTick = currentTime;
+
+     setRoleCount(spawner.room, 'attack');
+     setRoleCount(spawner.room, 'builder');
+     setRoleCount(spawner.room, 'gather');
+     setRoleCount(spawner.room, 'worker');
+     setRoleCount(spawner.room, 'upgrade');
+     setRoleCount(spawner.room, 'claim');
+   }
+   //console.log('upgrade: ' + getRoleCount(spawner.room, 'upgrade'));
+ }
+
+ function spawnNextInQueue(spawner, chosenSpawn)
+ {
+   updateRoleCounters(spawner);
+
 	//Look at respawn list and check if needs to spawn new unit from the dead
     var name = findDeadUnitName(spawner);
     var body = findDeadUnitBody(spawner, name);
     var role = null;
-	
+
+    //If found attackers (this requires attack units, since they hold the code that watches)
+    //replace anything that might be going on by creating a 'defend' unit, no name, attack body
+    if(spawner.room.memory.requestDefender > 0)
+    {
+    	if(checkForEnemies() == true)
+    	{
+    		name = null;
+    		body = retrieveBody('defend', spawner);
+    		role = 'defend';
+    	}
+    	else	//Either enemy is gone or we have at least that many allies addressing them
+    	{
+    		spawner.room.memory.requestDefender = 0;
+    	}
+    }
     //If no found dead units need to respawn, attempt to spawn new unit
-    if(name == null)
+    else if(name == null)
     {
         role = findNextRole(spawner);
         name = retrieveNameNew(spawner, role);
         body = retrieveBody(role, spawner);
     }
-    
-    //If found attackers (this requires attack units, since they hold the code that watches)
-    //replace anything that might be going on by creating a 'defend' unit, no name, attack body
-    if(spawner.room.memory.requestDefender > 0)
-    {
-		if(checkForEnemies() == true)
-		{
-			name = null;
-			body = retrieveBody('defend', spawner);
-			role = 'defend';
-		}
-		else	//Either enemy is gone or we have at least that many allies addressing them
-		{
-			spawner.room.memory.requestDefender = 0;
-		}
-    }
-	
 	//Independent of all other checks in spawnNextInQueue logic, recieves body as a conveniance
 	//to better calculate time more then anything else. If this fails however any work we were
 	//doing in spawnNextInQueue will be stopped and tried again next tick.
-	if(checkSkipUnit(spawner, body, harvestersSeen, gatherersSeen, buildersSeen, attackersSeen))
+	else if(checkSkipUnit(spawner, body))
 	{
 		return(false);
 	}
@@ -1448,7 +1571,7 @@
 	{
 		var _ = require('lodash');
 		var badSpawn;
-		
+
 		//Respawn harvest/gathers when they expire (current 1500 time, no way to reference this)
 		//Have body and name, no role, should only be true for respawning units taking over for dead units
 		if(role == null)
@@ -1457,10 +1580,10 @@
 			role = findRoleWithinName(name);
 			extractNextName(spawner);
 			//extractNextRespawnTime(spawner);
-			
-			//If is a attack or build unit, check if we have at least as many harvesters/gatherers as the amount 
+
+			//If is a attack or build unit, check if we have at least as many harvesters/gatherers as the amount
 			//of attackers/builders we're trying to make, if there isn't, skip them.
-			if(role == 'attack' || role == 'builder' || role == 'gather' || role == 'worker' || 
+			if(role == 'attack' || role == 'builder' || role == 'gather' || role == 'worker' || role == 'upgrade' ||
 				(role != null && role.startsWith('claim')))
 			{
 				badSpawn = chosenSpawn.createCreep(body, name);
@@ -1481,11 +1604,11 @@
 		{
 			badSpawn = chosenSpawn.createCreep(body, name, {'role' : role});
 		}
-		
+
 		if(_.isString(badSpawn))
 		{
 			//badSpawn.notifyWhenAttacked(false);
-			
+
 			//If successfully spawn a new X
 			if(role != null)
 			{
@@ -1532,15 +1655,16 @@
 					spawner.memory.maxScouts++;
 				}
 			}
-		
-			if(role == 'worker' || role == 'gather' || role == 'builder' || role == 'attack' || (role != null && role.startsWith('claim')))
+
+			if(role == 'worker' || role == 'gather' || role == 'builder' || role == 'attack' || role == 'upgrade' ||
+        (role != null && role.startsWith('claim')))
 			{
 				addRespawnEnd(spawner, name);
 				//console.log("time: " + spawner.memory.respawnTime + ", role: " + spawner.memory.respawnName);
 			}
 			return(true);
 		}
-		else 
+		else
 		{
 			console.log('Spawn error: ' + badSpawn + '\n name: ' + name + ' bodyLength: ' + body.length + ' spawner: ' + spawner.name);
 		}
@@ -1553,8 +1677,8 @@
 		{
 			if(Game.creeps[units].name == name)
 			{
-				if(body != null && body.length != null && 
-					Game.creeps[units].hitsMax < body.length*100)
+				if(body != null && body.length != null &&
+					Game.creeps[units].hitsMax < body.length*REPAIR_POWER)
 				{
 					console.log('next unit: ' + name + ' is still alive for ' + Game.creeps[units].ticksToLive + ' but found upgrade (' + Game.creeps[units].hitsMax + '/' + (body.length*100) + ')');
 					Game.creeps[units].suicide();		//Disabling for now, trying to force only high level units to spawn
@@ -1605,7 +1729,98 @@
 		currentRoom.memory.harvesterMax = totalHarvestSpots;
 	}
  }
- 
+
+ //TO DO: May want to only add matching sourceId.
+ //Add in all creeps in memory that match the role we are looking for.
+ //Every once in a while these names get lost for unknown reasons.
+ function regenerateRespawnList(spawner, lookRole)
+ {
+	//console.log(spawner.name + ' cant find ' + lookRole + '. Adding to end of respawnName.');
+
+	var respawnName = spawner.memory.respawnName;
+	if(respawnName != null && lookRole != null)
+	{
+		var newList = "";
+		for(var eachCreep in Memory.creeps)
+		{
+			var role = Memory.creeps[eachCreep].role;
+
+			//If we've found the role we want to use
+			if(role.startsWith(lookRole))
+			{
+				//If already in respawnName, we can skip other checks.
+				if(respawnName.indexOf(eachCreep) >= 0)
+				{
+					return(false);
+				}
+				//and it's not already in the respawnName, add.
+				newList += eachCreep + ',';
+			}
+		}
+
+		if(newList != "")
+		{
+			//Do we want another function to regenerate all regardless of role?
+			//console.log('old respawn: ' + respawnName + '\nnew respawn: ' + newList + '\nfor ' + spawner.name);
+			//spawner.memory.respawnName = newList;
+			console.log('old respawn: ' + respawnName + '\nAppend respawn: ' + newList + '\nfor ' + spawner.name);
+			spawner.memory.respawnName += newList;
+			Game.notify('Role: ' + lookRole + ', missing from ' + spawner.name + '.', 1440);
+			return(true);
+		}
+		else
+		{
+			console.log(lookRole + ' could not be found in Game.creeps, could not add to fix.');
+			return(false);
+		}
+	}
+ }
+
+ function queueNewUnit(spawner, role)
+ {
+  if(spawner != null && role != null)
+  {
+    var newName = retrieveNameNew(spawner, role);
+    if(newName != null)
+    {
+       Memory.creeps[newName] = {'role' : role};
+       spawner.memory.respawnName += (newName + ',');
+       console.log("Trying to place new unit: " + newName + " in " + spawner.name + " with Mem: " + Memory.creeps[newName].role);
+       return(true);
+    }
+    else
+    {
+      console.log(spawner.name + ' trying to make role: ' + role + ' with new name. queueNewUnitSource(,) failed. Abort.')
+    }
+  }
+  console.log(spawner + ' or role: ' + role + ' is null in. queueNewUnitSource(,) failed. Abort.')
+  return(false);
+ }
+
+ //For future use, when given a role it finds a new name for a unit and puts it both in memory and in the spawn queue for future spawning.
+ //Technically should only require spawner and role however first implementation I'm trying with having usingSourceId as well
+ //Returns if successful or not
+ function queueNewUnitSource(spawner, role, sourceId)
+ {
+  if(spawner != null && role != null && sourceId != null)
+  {
+    var newName = retrieveNameNew(spawner, role);
+    if(newName != null)
+    {
+       Memory.creeps[newName] = {'role' : role, 'usingSourceId' : sourceId};
+       spawner.memory.respawnName += (newName + ',');
+       console.log("Trying to place new unit: " + newName + " in " + spawner.name + " with Mem: " + Memory.creeps[newName].role + " and " + Memory.creeps[newName].usingSourceId);
+       return(true);
+    }
+    else
+    {
+      console.log(spawner.name + ' trying to make role: ' + role + ' with new name. queueNewUnit(,,) failed. Abort.')
+    }
+  }
+  console.log(spawner + ' or role: ' + role + ' or source ' + sourceId + ' is null in. queueNewUnit(,,) failed. Abort.')
+  return(false);
+ }
+
  //Spawns a dead unit from the respawn queue with the role and sourceId provided (at spawner provided)
  function respawnPreexisting(spawner, chosenSpawn, role, sourceId)
  {
@@ -1630,11 +1845,17 @@
 	}
 	else
 	{
-		//console.log('Trying to respawn replacement unit failed. Could not find name: ' + replaceWithName + ' role: ' + returnRole + ' or body: ' + returnBody);
+    //TO DO: As long as have role and sourceId populated can create a new name with this information and create a new unit in the list.
+    //TEST: Double check this doesn't spawn way to many of these in the list and that the roles can take over with only sourceId and role assigned
+    if(queueNewUnitSource(spawner, role, sourceId) == false)
+    {
+      regenerateRespawnList(spawner, role);
+      console.log('Trying to respawn replacement "' + role + '" unit failed for ' + sourceId + '. Could not find name: ' + replaceWithName + ' role: ' + returnRole + ' or body: ' + returnBody);
+    }
 	}
 	return(false);
  }
- 
+
  //Every once in a while the spawner(s) will be busy when they need to replace a unit and so a role will be empty at a source
  //'Empty' meaning there will be either 0 gatherers or 0 harvesters at that particular source. We will go through all the rooms
  //we have access to and check all the sources at each, cycling through all alive units for potential matching workers and gathers
@@ -1643,23 +1864,26 @@
  function respawnEmptyRolesAtSources(spawner, chosenSpawn)
  {
 	//If the spawner exists, isn't spawning and we haven't used a lot of cpu this frame. This is a conveniance (optional) function
-	if(spawner != null && chosenSpawn.spawning == null && Game.getUsedCpu() < 30)
+	if(spawner != null && chosenSpawn.spawning == null && Game.cpu.getUsed() < 30)
 	{
 		for(var eachRoom in Game.rooms)
 		{
 			var worker;
 			var gather;
-			for(var eachSource in Game.rooms)
+			var findSource = Game.rooms[eachRoom].find(FIND_SOURCES);
+			for(var eachSource in findSource)
 			{
-				//If there is a link, there isn't a need for a gatherer at this source, this disables 
+				//If there is a link, there isn't a need for a gatherer at this source, this disables
 				//generation of gathers at sources where a link is found
-				//var findLinks = Game.rooms[eachSource].pos.findInRange(FIND_MY_STRUCTURES, 1, {
+				//var findLinks = findSource[eachSource].pos.findInRange(FIND_MY_STRUCTURES, 1, {
 				//	filter: { structureType: STRUCTURE_LINK }
 				//});
-				
+				//if(findLinks.length > 0)
+				//	continue;
+
 				worker = 0;
 				gather = 0;
-				var currentSourceId = Game.rooms[eachSource].id;
+				var currentSourceId = findSource[eachSource].id;
 				for(var eachCreep in Game.creeps)
 				{
 					var roleWithinName = findRoleWithinName(Game.creeps[eachCreep].name);
@@ -1673,13 +1897,13 @@
 					{
 						gather++;
 					}
-					
+
 					if(worker > 0 && gather > 0)
 					{
 						break;	//Success, move to next source
 					}
 				}
-				
+
 				if(worker <= 0)
 				{
 					//No workers at this source, found a missed creep.
@@ -1687,8 +1911,8 @@
 					if(replacementSuccess == false)
 					{
 						//console.log('Source[' + currentSourceId + '] has 0 workers, success of spawn: ' + replacementSuccess + ' no respawnable unit or energy?');
-					} 
-					else 
+					}
+					else
 					{
 						//console.log('Source[' + currentSourceId + '] has 0 workers, creating missed worker');
 						return(replacementSuccess);
@@ -1702,8 +1926,8 @@
 					if(replacementSuccess == false)
 					{
 						//console.log('Source[' + currentSourceId + '] has 0 gatherers, success of spawn: ' + replacementSuccess + ' no respawnable unit or energy?');
-					} 
-					else 
+					}
+					else
 					{
 						//console.log('Source[' + currentSourceId + '] has 0 gatherers, creating missed gather');
 						return(replacementSuccess);
@@ -1711,15 +1935,25 @@
 				}
 			}
 		}
+		//Probably better to just list out regenerate...('builder'),regenerate...('worker'),...
+		//Since far less checks/computation this way, but this tries to see when a object first loses
+		//it's assigned creep and respawn it as soon as possible.
+		//TO DO: Add logic to see if the builders/claims for a given room really have disappeared and add
+		//		just that unit and associated unit if found to be missing.
+		//if(Game.rooms[eachRoom].controller != null && Game.rooms[eachRoom].controller.owner.username == 'RaskVann')
+		  //regenerateRespawnList(spawner, 'builder');
+		//else if(Game.rooms[eachRoom].controller != null)
+    if(spawner.room.controller.level > 3)
+			regenerateRespawnList(spawner, 'claim');
 	}
 	return(false);
  }
- 
+
  function distance(x1, y1, x2, y2)
  {
 	return(Math.sqrt(Math.pow(x1-x2, 2)+Math.pow(y1-y2, 2)));
  }
- 
+
  //Attempts to construct structure as close to closeSpawn as possible, within radius
  function constructOutOfWay(structure, closeSpawn, radius)
  {
@@ -1738,22 +1972,22 @@
 				{
 					continue; //Skip over the location the harvester/builder should be sitting at that this link is for.
 				}
-				
+
 				var nextPosition = new RoomPosition(x, y, closestLocation.roomName);
 				var findTerrain = closeSpawn.room.lookForAt('terrain', x, y);
 				var findFlag = closeSpawn.room.lookForAt('flag', x, y);
 				var findCreep = closeSpawn.room.lookForAt('creep', x, y);
 				var findStructure = closeSpawn.room.lookForAt('structure', x, y);
 				var findConstruction = closeSpawn.room.lookForAt('constructionSite', x, y);
-				
+
 				//console.log('testing: ' + nextPosition + ' range: ' + nextPosition.getRangeTo(closeSpawn) + ' Terrain: ' + findTerrain + ' findFlag: ' + findFlag.length + ' findCreep: ' + findCreep.length + ' findStructure: ' + findStructure.length + ' findConstruction: ' + findConstruction.length);
 				//Terrain should be movable (not constructable otherwise), if there is a flag, structure
 				//or creep this area is being used for something important (usually travel) and so this
 				//should only construct within 2 range of anchor in a buildable, unused spot.
 				//if(findTerrain.length > 0 && (findTerrain[0] == 'plain' || findTerrain[0] == 'swamp') &&
 				if((findTerrain == 'plain' || findTerrain == 'swamp') &&
-					findFlag.length == 0 && findCreep.length == 0 && findStructure.length == 0 && 
-					findConstruction.length == 0 && 
+					findFlag.length == 0 && findCreep.length == 0 && findStructure.length == 0 &&
+					findConstruction.length == 0 &&
 					(closeBuild == null || distance(closeBuild.x, closeBuild.y, closeSpawn.pos.x, closeSpawn.pos.y) > distance(nextPosition.x, nextPosition.y, closeSpawn.pos.x, closeSpawn.pos.y)))
 				{
 					console.log('construct out of way');
@@ -1765,7 +1999,7 @@
 				}
 			}
 		}
-		
+
 		//Build a structure at the closest found location to the spawn
 		if(closeBuild != null)
 		{
@@ -1784,35 +2018,35 @@
 	console.log('structure: ' + structure + ' could not be built around: ' + closeSpawn);
 	return(success);
  }
- 
+
  //If don't find any previous construction sites (already pending construction). attemp to build structure
  function constructIfNotFound(structure, selectSpawn, radius)
  {
 	var findConstruct = selectSpawn.room.find(FIND_CONSTRUCTION_SITES, {
 		filter: { structureType: structure }
 	});
-	
+
 	if(findConstruct.length <= 0)
 	{
 		return(constructOutOfWay(structure, selectSpawn, radius));
 	}
 	return(false);
  }
- 
+
  //If we find less then structureThreshold of the sent in structure, attempts to build structure
  function constructIfFoundLessThen(structure, selectSpawn, radius, structureThreshold)
  {
 	var findStructure = selectSpawn.room.find(FIND_MY_STRUCTURES, {
 		filter: { structureType: structure }
 	});
-	
+
 	if(findStructure.length < structureThreshold)
 	{
 		return(constructIfNotFound(structure, selectSpawn, radius));
 	}
 	return(false);
  }
- 
+
  module.exports.createSpawn = function(nextRoom)
  {
 	//Look through all the rooms we have access to
@@ -1824,7 +2058,7 @@
 		//If we are at controller level 7 we can have 2 spawns, at level 8 we can have 3 in a room
 		var findSpawns = nextRoom.find(FIND_MY_SPAWNS);
 		var radius = 10;
-		
+
 		if(findSpawns.length > 0)
 		{
 			if(nextRoom.controller.level == 3)
@@ -1849,7 +2083,7 @@
 		}
 	}
  }
- 
+
  //Creates a temporary unit that already has its memory written into Memory.creeps that .createCreep will inherit
  module.exports.createTempCreepWithName = function(role, name, spawnRoom)
  {	//Either send in spawn room, or look at the name in memory, extract spawnId and use the room there
@@ -1863,7 +2097,7 @@
 		{
 			console.log('could not find spawnId in createTempCreepWithName and no spawnRoom was sent in');
 		}
-		
+
 		var spawner;
 		for(var spawners in Game.spawns)
 		{
@@ -1873,7 +2107,7 @@
 				break;
 			}
 		}
-		
+
 		if(spawner != null)
 		{
 			var body = retrieveBodyMod(role, spawner, name);
@@ -1887,7 +2121,7 @@
 					console.log(badSpawn + ' created from ' + spawner.name + ' for role ' + role + ' with mem: ' + memToInput);
 					return(true);
 				}
-				else 
+				else
 				{
 					console.log('TEMP Spawn error: ' + badSpawn + ' bodyLength: ' + body.length + ' spawner: ' + spawner.name);
 				}
@@ -1900,7 +2134,7 @@
 	}
 	return(false);
  }
- 
+
  function findExistingCreep(memToInput)
  {
 	for(var x in Memory.creeps)
@@ -1916,7 +2150,7 @@
 	}
 	return(null);
  }
- 
+
  //Find unused spawn if possible, create temp creep with the input data. Returns if successful
  module.exports.createTempCreep = function(role, memToInput, spawnRoom)
  {
@@ -1929,7 +2163,7 @@
 			break;
 		}
 	}
-	
+
 	if(spawner != null)
 	{
 		console.log(memToInput + ' contains path length? ' + memToInput.pathLength);
@@ -1950,13 +2184,13 @@
 			{
 				badSpawn = spawner.createCreep(body, memToInput);
 			}
-			
+
 			if(_.isString(badSpawn))
 			{
 				console.log(badSpawn + ' created from ' + spawner.name + ' for role ' + role + ' with mem: ' + memToInput);
 				return(true);
 			}
-			else 
+			else
 			{
 				console.log('TEMP Spawn error: ' + badSpawn + ' bodyLength: ' + body.length + ' spawner: ' + spawner.name);
 			}
@@ -1964,13 +2198,13 @@
 	}
 	return(false);
  }
- 
+
  //Designate the first spawn as the master and the other 2 as auxilliary to support the first as needed.
  //Only runs once when master is not found, unless the auxilliary can't find the master in which case
  //we have an error and it loops until one is found.
  function installAuxilliarySpawn(spawner, masterSpawner)
  {
-	if(masterSpawner == null)	//spawner.room.controller.level >= 7 && 
+	if(masterSpawner == null)	//spawner.room.controller.level >= 7 &&
 	{
 		var findSpawns = spawner.room.find(FIND_MY_SPAWNS);
 		if(findSpawns.length == 1)
@@ -1980,7 +2214,7 @@
 		else if(findSpawns.length > 1)
 		{
 			spawner.memory.master = false;
-			
+
 			var foundMaster;
 			for(var x in findSpawns)
 			{
@@ -1989,7 +2223,7 @@
 					foundMaster = findSpawns[x];
 				}
 			}
-			
+
 			if(foundMaster != null)
 			{
 				if(findSpawns.length == 2)
@@ -2012,7 +2246,7 @@
 		}
 	}
  }
- 
+
  //If this is the master spawn, return the master spawn if it isn't spawning
  //Otherwise look at the auxilliary spawns if they exist and send them back if
  //they aren't spawning anything. Otherwise return null (can't spawn anything)
@@ -2050,17 +2284,31 @@
 	}
 	return(null);
  }
- 
- module.exports.spawn = function(spawner, harvestersSeen, gatherersSeen, buildersSeen, attackersSeen, scoutsSeen)
+
+ function updateScouts(spawner)
+ {
+   var countScout = _.filter(Game.creeps, function(object) {
+     return(object.memory.role == 'scout');
+   });
+
+   if(countScout == null)
+   {
+     countScout = 0;
+   }
+   spawner.memory.scoutsAlive = countScout;
+   return(countScout);
+ }
+
+ module.exports.spawn = function(spawner)
  {
 	var masterSpawner = spawner.memory.master;
 	installAuxilliarySpawn(spawner, masterSpawner);	//Link spawns in the same room together
-	
+
 	//Only go into internal logic if this is the master, no need to triple the amount of spawning logic in each room.
 	if(masterSpawner == true)
 	{
-		spawner.memory.scoutsAlive = scoutsSeen;
-		
+    updateScouts(spawner);
+
 		//Choose a spawn that isn't occupied with spawning (if null, all occupied and we can't spawn anything)
 		var chosenSpawn = spawnNotSpawning(spawner, masterSpawner);
 		if(chosenSpawn != null)
@@ -2074,7 +2322,7 @@
 				respawnEmptyRolesAtSources(spawner, chosenSpawn);
 			}
 			//If nothing above created a unit, check if we can spawn a new unit, or respawn the next unit in the list (or other needs)
-			if(spawnNextInQueue(spawner, chosenSpawn, harvestersSeen, gatherersSeen, buildersSeen, attackersSeen, scoutsSeen) == false)
+			if(spawnNextInQueue(spawner, chosenSpawn) == false)
 			{
 				//If don't successfully spawn anything in the default spawn functionality, look for temporary units to spawn
 				var requestNextCreep = getNextRequest(spawner);

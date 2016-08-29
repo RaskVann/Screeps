@@ -33,7 +33,7 @@
 		
 		removeFlags();
     }
-	else if(Game.getUsedCpu() < 10)
+	else if(Game.cpu.getUsed() < 10)
 	{
 		//Scouts running delete creep.memory leave empty memory locations, this cleans up
 		for(var y in Memory.creeps)

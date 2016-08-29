@@ -37,7 +37,7 @@
 	}
 	return(useSpawn);
  }
- 
+
  //If we're migrating to a different sourceId remove the direction since the old one we had isn't valid
  function newSourceId(unit, sourceId)
  {
@@ -48,7 +48,7 @@
 		unit.memory.usingSourceId = sourceId;
 	}
  }
- 
+
  //Use this on repair structure and repair wall if creeps keep lining up trying to repair the same thing.
  function newUniqueSourceId(unit, sourceId)
  {
@@ -72,34 +72,39 @@
 	//Unit isn't in a valid 'ready' state, ignore this check
 	return(false);
  }
- 
+
  //Returns true if a new path has been created. Checks if the builder sent in has a path created already at the storage
  //Before a storage is created they path to and from the spawn this switches over to storage instead.
  function createNewPath(unit, findStorage)
  {
 	if(findStorage.length > 0 && unit.memory.usingSourceId != null)
 	{
-		var flagsAtStorage = findStorage[0].pos.findInRange(FIND_FLAGS, 1, {
-			filter: function(object) { 
-				return(object.memory.usingDestinationId == unit.memory.usingSourceId);
-			}
-		});
-		
+    var flagsAtStorage = _.filter(Game.flags, function(object) {
+      return(object.room.name == findStorage[0].room.name &&
+            object.pos.inRangeTo(findStorage[0].pos, 1) &&
+            object.memory.usingDestinationId == unit.memory.usingSourceId);
+    });
+		//var flagsAtStorage = findStorage[0].pos.findInRange(FIND_FLAGS, 1, {
+		//	filter: function(object) {
+		//		return(object.memory.usingDestinationId == unit.memory.usingSourceId);
+		//	}
+		//});
+
 		var buildObject = Game.getObjectById(unit.memory.usingSourceId);
-		
+
 		if(flagsAtStorage.length <= 0 && buildObject != null && findStorage[0].pos.getRangeTo(buildObject) > 2)
 		{
 			//No flag around storage when storage exists, we're going to delete the existing path and path to storage instead
 			//that way all builders get their energy from there instead of the spawns
 			console.log('cleaning path: ' + unit.memory.usingSourceId + ' to re-path to storage.');
-			
+
 			//Only delete old path and create new one if the path is both valid and large enough
 			//createPathFlags has problems with short paths
 			var newPath = findStorage[0].pos.findPathTo(buildObject.pos, {maxOps: 4000, ignoreCreeps: true});
 			if(newPath != null && newPath.length > 2)
 			{
 				cleanMemory.purgeFlagsWithId(unit.memory.usingSourceId);
-				
+
 				followFlagForward.createDefinedPath(unit.room, newPath, unit.memory.usingSourceId, true, findStorage[0].pos);
 				return(true);
 			}
@@ -113,7 +118,7 @@
     if(unit.carry.energy == 0)
 	{
 		var useSavedSpawn = findSpawn(unit);
-		
+
 		//If it's possible for links to be in this room, look for them within reach
 		//If found, try to pull energy from them so builder can continue work.
 		//This is at the bottom so if anything is attempted before this, the builder takes from the link first
@@ -123,19 +128,16 @@
 		{
 			if(unit.room.controller.level >= 4)	//Storage is available
 			{
-				//var findStorage = unit.room.find(FIND_MY_STRUCTURES, {
-				//	filter: { structureType: STRUCTURE_STORAGE }
-				//});
 				var findStorage = unit.room.storage;
-				
-				//var init = Game.getUsedCpu();
-				
+
+				//var init = Game.cpu.getUsed();
+
 				//Recreate paths to go to and from storage instead of spawn for builders then try to get
 				//energy from storage if its available, otherwise retrieve it from spawn.
 				//if(findStorage.length > 0 && createNewPath(unit, findStorage) == false)
 				if(findStorage != null && createNewPath(unit, findStorage) == false)
 				{
-					if(unit.pos.getRangeTo(findStorage.pos) <= 1 && 
+					if(unit.pos.getRangeTo(findStorage.pos) <= 1 &&
 						findStorage.store.energy > 0 &&
 						findStorage.transferEnergy(unit) == 0)
 					{
@@ -150,7 +152,7 @@
 							unit.memory.usingSourceId = null;	//Reset, ready for new source
 							return(true);	//Don't look for anything else, we got some energy
 						}
-						
+
 						unit.moveTo(findStorage);
 						if(unit.memory.direction != null)
 						{
@@ -165,7 +167,7 @@
 							unit.memory.usingSourceId = null;	//Reset, ready for new source
 							return(true);	//Don't look for anything else, we got some energy
 						}
-						
+
 						unit.moveTo(useSavedSpawn);
 						if(unit.memory.direction != null)
 						{
@@ -177,16 +179,20 @@
 						followFlagForward(unit, unit.carry.energy > 0);
 					}
 				}
-				//var storageCpu = Game.getUsedCpu() - init;
+				//var storageCpu = Game.cpu.getUsed() - init;
 				//console.log(unit.name + ' getting energy from storage or link takes cpu: ' + storageCpu);
 			}
-			
+
 			if(unit.room.controller.level >= 5)	//Links are available
 			{
-				var findLinks = unit.pos.findInRange(FIND_MY_STRUCTURES, 1, {
-					filter: { structureType: STRUCTURE_LINK }
-				});
-				
+        var findLinks = _.filter(Game.structures, function(object) {
+          return(object.structureType == STRUCTURE_LINK &&
+                object.pos.inRangeTo(unit.pos, 1));
+        });
+				//var findLinks = unit.pos.findInRange(FIND_MY_STRUCTURES, 1, {
+				//	filter: { structureType: STRUCTURE_LINK }
+				//});
+
 				//Transfer any links within range 1 to the builder that have energy and aren't on cooldown
 				if(findLinks.length > 0)
 				{
@@ -204,11 +210,11 @@
 				}
 			}
 		}
-		
+
 		//TO DO: When carryCapacity is greater then what the spawn holds, this won't work.
 		//As long as spawn exists, and it has energy for the builder, let him approach
 		//otherwise he crowds the spawn and stops drop-off.
-		if(useSavedSpawn != null && Math.abs(unit.pos.getRangeTo(useSavedSpawn.pos)) <= 1 && 
+		if(useSavedSpawn != null && Math.abs(unit.pos.getRangeTo(useSavedSpawn.pos)) <= 1 &&
 			useSavedSpawn.energy >= unit.carryCapacity && useSavedSpawn.transferEnergy(unit, unit.carryCapacity - unit.carry.energy) == 0)
 		{
 			unit.memory.usingSourceId = null;	//Reset, ready for new source
@@ -218,8 +224,8 @@
 			followFlagForward(unit, unit.carry.energy > 0);
 		}
 		else if(unit.memory.usingSourceId == null &&
-				useSavedSpawn != null && 
-				//useSavedSpawn.energyCapacityAvailable >= 300 && 
+				useSavedSpawn != null &&
+				//useSavedSpawn.energyCapacityAvailable >= 300 &&
 				useSavedSpawn.energy > 0 &&
 				Math.abs(unit.pos.getRangeTo(useSavedSpawn.pos)) <= 1)
 		{
@@ -233,39 +239,48 @@
 			//console.log(unit.name + ' returning builder has sourceId: ' + unit.memory.usingSourceId + ' and spawn: ' + useSavedSpawn + ' range: ' + unit.pos.getRangeTo(useSavedSpawn.pos) + ' energy: ' + useSavedSpawn.energy);
 		    //return(true);
 		}
-		
-		
+
+
 		//While we're returning check for nearby energy and pick it up if found
-		var target = unit.pos.findInRange(FIND_DROPPED_ENERGY, 1);
+    var target = unit.pos.lookFor(LOOK_ENERGY); //Find energy at current spot, used to be range 1, but this is much cheaper
+		//var target = unit.pos.findInRange(FIND_DROPPED_ENERGY, 1);
 		if(target.length > 0)
 		{
 			unit.pickup(target[0]);
 		}
-		
-		//Since we have problems with builders crowding the spawn, giving them an
-		//alternative pickup spot if all else fails and nothing is moving. We're not
-		//going to use followFlagForward for this to reduce number of flags to random locations.
-		//var foundEnergy = unit.pos.findClosestByRange(FIND_DROPPED_ENERGY);
-		//if(unit.pickup(foundEnergy) < 0)
-		//{
-		//    unit.moveTo(foundEnergy);
-		//}
 		return(true);
 	}
 	return(false);
  }
- 
+
+ //Look through all your creeps for those assigned to objectId, for those you find
+ //count up all of them that have activeBodyparts matching bodyPart and send back the total.
+ //Used to find out how much WORK you have assigned to a object through builders.
+ function bodyAtId(bodyPart, objectId)
+ {
+	var objectsAssigned = _.filter(Game.creeps, function(object) {
+			return(object.memory.usingSourceId == objectId);
+	});
+
+	var totalBody = 0;
+	for(var x in objectsAssigned)
+	{
+		totalBody += objectsAssigned[x].getActiveBodyparts(bodyPart);
+	}
+
+	return(totalBody);
+ }
+
  var upgradeIncrease = 0;
- 
+
  function upgradeController(unit, builderNumber)
  {
-    var upgradeStart = 0;
-	var upgradeLimit = 2;
-	//When a storage is built the builders no longer need to travel, 1 builder should be sufficient for 15work/tick
-	if(unit.room.storage != null)
+	var upgradeLimit = 30;	//Below level 8, accelerate possible work assigned to controller
+	if(unit.room.controller != null && unit.room.controller.level >= 8)
 	{
-		upgradeLimit = 1;
+		upgradeLimit = 15;	//At level 8 we can only have 15 work assigned
 	}
+
 	//If someone is about to die (we're really doing this for when the controller dies)
 	//Let anyone we possibly can into upgrade while we transition to new unit.
 	if(unit.ticksToLive < 50)
@@ -273,12 +288,22 @@
 		//TO DO: Check for if at least 2 units having sourceId of controller
 		//If so, suicide this unit (near death). So spawners will hopefully start spawning a new one
 		//TO DO: Check if spawners are available for this to be a valid action.
-		upgradeIncrease = builderNumber+1;
+		upgradeIncrease = 5;
+	}
+	else
+	{
+		var findSites = findConstruction(unit);
+		//TO DO: Change logic so 1+ units split off to do construction if it is found.
+		if(findSites != null && findSites.length > 0)
+			upgradeIncrease -= 5;
 	}
 	upgradeLimit += upgradeIncrease;
-	
-    if((builderNumber >= upgradeStart && builderNumber < upgradeLimit) || 
-		(unit.room.controller != null && newUniqueSourceId(unit, unit.room.controller.id) == true))
+
+	//TO DO: Cap unit assignment to the number of units that can fit around the controller.
+	//If controller doesn't have any units assigned to it, assign a unit. Otherwise as long as we
+	//are under the upgradeLimit, keep assigning units to the controller
+    if((unit.room.controller != null && newUniqueSourceId(unit, unit.room.controller.id) == true) ||
+		bodyAtId('WORK', unit.room.controller.id) < upgradeLimit)
 	{
 	    //console.log('unit: ' + unit + ' is builder ' + builderNumber + ' and is upgrading controller');
 		newSourceId(unit, unit.room.controller.id);
@@ -303,26 +328,53 @@
 	return(false);
  }
 
- function buildClosest(unit, builderNumber)
+ //Find closest building site that isn't a road. Roads will take care of themselves
+ function findConstruction(unit)
  {
-	if(construction == null)
+	var tempConst = construction;
+	if((construction != null && construction.length > 0 && construction[0].room.name == unit.room.name) ||
+		construction == null)
 	{
 		//Find closest building site that isn't a road. Roads will take care of themselves
-		construction = unit.pos.findClosestByRange(FIND_CONSTRUCTION_SITES, {
-			filter: function(object) {
-				return(object.structureType != STRUCTURE_ROAD);
-			}
-		});
+    tempConst = _.filter(Game.constructionSites, function(object) {
+      return(object.structureType != STRUCTURE_ROAD);
+    });
+    tempConst = _.sortBy(tempConst, function(object) {
+      return(unit.pos.getRangeTo(object.pos));
+    });
+
+    if(tempConst.length > 0)
+    {
+      tempConst = tempConst[0];
+    }
+    else
+    {
+      tempConst = null;
+    }
+		//tempConst = unit.pos.findClosestByRange(FIND_CONSTRUCTION_SITES, {
+		//	filter: function(object) {
+		//		return(object.structureType != STRUCTURE_ROAD);
+		//	}
+		//});
+		construction = tempConst;
 		//console.log(unit.name + ' finding construction site');
 	}
-	if(construction != null)
+	return(tempConst);
+ }
+
+ function buildClosest(unit, builderNumber)
+ {
+	//Find closest building site that isn't a road. Roads will take care of themselves
+	var tempConst = findConstruction(unit);
+
+	if(tempConst != null)
 	{
-		newSourceId(unit, construction.id);
-		//newUniqueSourceId(unit, construction.id);
+		newSourceId(unit, tempConst.id);
+		//newUniqueSourceId(unit, tempConst.id);
 	    //console.log('unit: ' + unit + ' is builder ' + builderNumber + ' and needs energy');
-		if(Math.abs(unit.pos.getRangeTo(construction)) <= 3 && unit.carry.energy > 0)
+		if(Math.abs(unit.pos.getRangeTo(tempConst)) <= 3 && unit.carry.energy > 0)
 		{
-			var buildError = unit.build(construction);
+			var buildError = unit.build(tempConst);
 			if(buildError < 0)
 			{
 				console.log(unit.name + ' has build error ' + buildError + ' needs to drop energy after finish');
@@ -330,7 +382,7 @@
 			}
 		}
 		//Follows the path until it gets to the destination, continues the operation above until energy depleted and then returns
-		else if(Math.abs(unit.pos.getRangeTo(construction)) > 3 || unit.carry.energy == 0)
+		else if(Math.abs(unit.pos.getRangeTo(tempConst)) > 3 || unit.carry.energy == 0)
 		{
 			followFlagForward(unit, unit.carry.energy > 0);
 		}
@@ -338,7 +390,7 @@
 	}
 	return(false);
  }
- 
+
  //Attempts to repair structure in range, if not tries to get closer by following path
  function repairStructure(unit, repairStructure)
  {
@@ -373,8 +425,8 @@
             if(currentDamageRatio < unit.room.memory.buildRatio && currentDamageRatio < lowestDamageRatio)
 			{
 				//newSourceId(unit, repairTargets[disrepair].id);
-				
-				//If the object is already taken by another builder this will return false in which case we'll try a 
+
+				//If the object is already taken by another builder this will return false in which case we'll try a
 				//different repair target. Otherwise we'll try to use this object unless we find something better in later calls.
 				if(newUniqueSourceId(unit, repairTargets[disrepair].id) == false)
 				{
@@ -384,7 +436,7 @@
 				{
 					lowestDamageRatio = currentDamageRatio;
 				}
-			
+
 			    //console.log('skip ' + skip + ' unit ' + unit.name + ', ' + repairTargets[disrepair].id);
 			    //console.log('unit: ' + unit + ' is builder ' + builderNumber + ' and is repairing ramparts');
 			    //console.log('repair ' + repairTargets[disrepair].structureType + ' health: ' + (repairTargets[disrepair].hits/repairTargets[disrepair].hitsMax));
@@ -427,7 +479,7 @@
 			if(currentDamageRatio < unit.room.memory.buildRatio && currentDamageRatio < lowestDamageRatio)
 			{
 				//newSourceId(unit, findWall[wall].id);
-				
+
 				//This will return false if another builder already is repairing it. Otherwise trigger this as our lowest found
 				//repairable object as we look through the rest of the list.
 				if(newUniqueSourceId(unit, findWall[wall].id) == false)
@@ -438,14 +490,14 @@
 				{
 					lowestDamageRatio = currentDamageRatio;
 				}
-				
+
 			    //console.log('unit: ' + unit + ' is builder ' + builderNumber + ' and repairing walls');
 				//console.log('repair ' + repairTargets[disrepair].structureType + ' health: ' + (repairTargets[disrepair].hits/repairTargets[disrepair].hitsMax));
 			    //repairStructure(unit, findWall[wall]);
 			}
 		}
     //}
-	
+
 	//If we found a object to repair, return true. Otherwise go to another function and find more to do.
 	if(lowestDamageRatio < 1)
 	{
@@ -453,7 +505,7 @@
 	}
     return(false);
  }
- 
+
  //Runs right before builders attempt to upgradeRepairBuild() which moves them along and upgrade,repair,build's their task.
  //the builder repairs or builds any structure it runs over, any movement will continue in upgradeRepairBuild() and so this
  //will only be a 1 tick thing for each object but it won't hamper the movement/work it's otherwise doing, just drains the
@@ -465,7 +517,7 @@
 	{
 		var findStructure = unit.pos.lookFor('structure');
 		var foundRoad = -1;
-		var lowCpuUsage = (Game.getUsedCpu() < 20);
+		var lowCpuUsage = (Game.cpu.getUsed() < 20);
 		for(var x = 0; findStructure != null && x < findStructure.length; x++)
 		{
 			//Go through all structures at current builder's spot, if they have less hits then what the builder
@@ -476,7 +528,7 @@
 				unit.repair(findStructure[x]);
 				return(true);
 			}
-			
+
 			if(findStructure[x].structureType == STRUCTURE_ROAD)
 			{
 				foundRoad = x;	//Keeps track of the last found road at this position, used to build roads at a spot if it's found
@@ -490,7 +542,7 @@
 			var repairInRange = unit.pos.findInRange(FIND_STRUCTURES, 3);
 			for(var z in repairInRange)
 			{
-				if(repairInRange[z] != null && 
+				if(repairInRange[z] != null &&
 					repairInRange[z].hits < (repairInRange[z].hitsMax - (workComponents*100)) &&
 					unit.repair(repairInRange[z]) == 0)
 				{
@@ -498,7 +550,7 @@
 				}
 			}
 		}
-	 
+
 		var findConstruction = unit.pos.lookFor('constructionSite');
 		if(findConstruction != null)
 		{
@@ -517,7 +569,11 @@
 		//Also don't do this unless we're really low on cpuUsage as this is a convienance feature, not needed.
 		else if(foundRoad >= 0 && unit.carry.energy > workComponents && lowCpuUsage)
 		{
-			var constructionInRange = unit.pos.findInRange(FIND_MY_CONSTRUCTION_SITES, 3);
+      var constructionInRange = _.filter(Game.constructionSites, function(object) {
+        return(object.room.name == unit.room.name &&
+              object.pos.inRangeTo(unit.pos, 3));
+      });
+			//var constructionInRange = unit.pos.findInRange(FIND_MY_CONSTRUCTION_SITES, 3);
 			for(var y in constructionInRange)
 			{
 				if(constructionInRange[y] != null && unit.build(constructionInRange[y]) == 0)
@@ -531,7 +587,7 @@
 				}
 			}
 		}
-		
+
 		//We searched through all structures at this spot, no road was found, so build one.
 		if(foundRoad < 0)
 		{
@@ -543,7 +599,7 @@
 	}
 	return(false);
  }
- 
+
  //Once a unit has a usingSourceId and energy it creates (if needed) and follows the path to the object until it gets within
  //1 unit of the object (0-1 needed to upgrade/repair/build). It then attempts to do these tasks and reports error if there
  //is a problem
@@ -567,7 +623,7 @@
 		console.log(unit.name + ' should have a source Id but it is returning null, cannot upgrade/repair/build.');
 		return(false);
 	}
-	
+
 	if(structure.structureType == STRUCTURE_CONTROLLER)
 	{
 		//If the storage exists. Has energy, and the unit is almost empty. Transfer energy from the storage
@@ -575,7 +631,7 @@
 		if(unit.room.controller != null &&
 			unit.room.controller.owner != null &&
 			unit.room.controller.owner.username == 'RaskVann' &&
-			unit.room.controller.level >= 4 && 
+			unit.room.controller.level >= 4 &&
 			unit.room.storage != null &&
 			unit.room.storage.store.energy > 0 &&
 			unit.carry.energy/unit.carryCapacity < .2 &&
@@ -584,7 +640,7 @@
 			//		or find another way to make this room independant
 			unit.room.storage.transferEnergy(unit);
 		}
-	
+
 		//var errorController = unit.upgradeController(unit.room.controller);
 		//var errorController = unit.upgradeController(structure);
 		var errorController = upgradeController(unit, builderNumber);
@@ -608,12 +664,16 @@
 			followFlagForward(unit, unit.carry.energy > 0);	//Not close enough, move builder closer
 		else
 		{	//If it is within build/repair range, check if we need to move to potentially get out of a creeps way
-			var nextToCreep = unit.pos.findInRange(FIND_MY_CREEPS, 1);
+      var nextToCreep = _.filter(Game.creeps, function(object) {
+        return(object.room.name == unit.room.name &&
+              object.pos.inRangeTo(unit.pos, 1));
+      });
+			//var nextToCreep = unit.pos.findInRange(FIND_MY_CREEPS, 1);
 			//This search finds itself, if it finds more then that, move to get out of the way
 			if(nextToCreep.length > 1)
 				followFlagForward(unit, unit.carry.energy > 0);	//Keep it moving so units can move through it.
 		}
-		
+
 		if(structure.hits < structure.hitsMax)
 		{
 			var repairCode = unit.repair(structure);
@@ -657,11 +717,47 @@
 	return(false);
  }
 
- module.exports.units = function (unit, builderNumber)
+ module.exports.buildFromFlag = function (fromRoom)
+ {
+   if(fromRoom != null)// && Game.time % 1500 == 27)
+   {
+     var currentRoom = fromRoom;
+
+     var buildFlags = _.filter(Game.flags, function(object) {
+       return(object.color == COLOR_GREEN &&
+              object.room.name == currentRoom.name);
+     });
+
+     //Needlessly complex
+     //if(currentRoom.energyCapacityAvailable < CONTROLLER_STRUCTURES[STRUCTURE_EXTENSION][currentRoom.controller.level]*EXTENSION_ENERGY_CAPACITY[currentRoom.controller.level]+SPAWN_ENERGY_CAPACITY)
+     var extensionFlags = _.filter(buildFlags, function(object) {
+       return(object.secondaryColor == COLOR_YELLOW);
+     });
+
+     for(var newExtensions in extensionFlags)
+     {
+       if(currentRoom.createConstructionSite(extensionFlags[newExtensions].pos, STRUCTURE_EXTENSION) == 0)
+       {
+         console.log(currentRoom.name + ' built ' + STRUCTURE_EXTENSION + ' at ' + extensionFlags[newExtensions].pos);
+         extensionFlags[newExtensions].remove();
+       }
+       else
+       {
+         //console.log(currentRoom.name + ' could not build ' + STRUCTURE_EXTENSION);
+       }
+     }
+
+     //TODO: Other secondary color combinations to build other structures.
+   }
+ }
+
+ var builderNumber = 0;
+
+ module.exports.units = function (unit)
  {
     if(unit.memory.role == 'builder')
     {
-		//Right before death this unit should clear out that it is/was working 
+		//Right before death this unit should clear out that it is/was working
 		//on usingSourceId that way later builders can be assigned to this object
 		//since this unit can't work on it in death
 		if(unit.ticksToLive <= 2)
@@ -683,7 +779,7 @@
 				delete unit.memory.direction;
 			}
 		}
-		
+
 		if(unit.memory.usingSourceId != null && unit.carry.energy > 0)
 		{
 			buildRoad(unit);
@@ -699,58 +795,55 @@
 		else	//unit.memory.SourceId == null && unit.carry.energy > 0
 		{
 			var foundJob;
-			
+
 			if(unit.room.memory.buildRatio == null)
 			{
 				unit.room.memory.buildRatio = .01;
 			}
-			
-			foundJob = upgradeController(unit, builderNumber);
-			if(foundJob)
-			{
-				//console.log(unit.name + ', upgrade source: ' + unit.memory.usingSourceId);
-				return(true);
-			}
-			
+
 			foundJob = buildClosest(unit, builderNumber);
 			if(foundJob)
 			{
 				//console.log(unit.name + ', build source: ' + unit.memory.usingSourceId);
 				return(true);
 			}
-		   
+
 			if(repairTargets == null)
 			{
-				repairTargets = unit.room.find(FIND_MY_STRUCTURES, {
-					filter: function(object) {
-						return(object.hits < object.hitsMax);
-					}
-				}); //no walls or roads
+        repairTargets = _.filter(Game.structures, function(object) {
+          return(unit.room.name == object.room.name &&
+                object.hits < object.hitsMax);
+        });
+				//repairTargets = unit.room.find(FIND_MY_STRUCTURES, {
+				//	filter: function(object) {
+				//		return(object.hits < object.hitsMax);
+				//	}
+				//}); //no walls or roads
 				//console.log(unit.name + ' finding my structures');
 			}
-			
+
 			foundJob = repairRamparts(unit, builderNumber, repairTargets);
 			if(foundJob)
 			{
 				//console.log(unit.name + ', repair1 source: ' + unit.memory.usingSourceId);
 				return(true);
 			}
-		   
+
 			foundJob = repairWalls(unit, builderNumber);
 			if(foundJob)
 			{
 				//console.log(unit.name + ', repair2 source: ' + unit.memory.usingSourceId);
 				return(true);
 			}
-			
-			if(unit.room.memory.buildRatio < 1)
+
+			if(repairTargets.length > 0 && unit.room.memory.buildRatio < 1)
 			{
 				unit.room.memory.buildRatio += .01;
 				console.log('unit: ' + unit.name + ' in ' + unit.room.name + ' no available contruction, repair or upgrade. Upping Ratio to ' + (unit.room.memory.buildRatio*100) + '%');
 			}
 			else
 			{
-				console.log('unit: ' + unit.name + ' in ' + unit.room.name + ' no available contruction, repair or upgrade. Ratio is full at ' + (unit.room.memory.buildRatio*100) + '%');
+				//console.log('unit: ' + unit.name + ' in ' + unit.room.name + ' no available contruction, repair or upgrade. Ratio is full or complete at ' + (unit.room.memory.buildRatio*100) + '%');
 			}
 		}
 	}

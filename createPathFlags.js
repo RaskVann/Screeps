@@ -7,7 +7,7 @@
  */
 
  var spawnFrom;
- 
+
  //Checks the direction of unit to see if it's moving towards the scout. If the scout is in the way
  //it is sent a move command to move towards the unit so they can move through one another and return true
  //otherwise nothing happens and returns false.
@@ -65,28 +65,28 @@
 
 		var newPos = new RoomPosition(posX, posY, unit.room.name);
 		var nextMoveTerrain = newPos.lookFor('terrain');
-		if(nextMoveTerrain[0] == 'plain' || nextMoveTerrain[0] == 'swamp')
+		if(nextMoveTerrain == 'plain' || nextMoveTerrain == 'swamp')
 		{
 			return(false);
 		}//Else if, check for structure, have to make sure this doesn't run into things on return paths
 		else
 		{
-			console.log(unit.name + ' blocked by ' + nextMoveTerrain[0] + ' removing direction to recalculate path. Consider remove: ' + unit.memory.usingSourceId);
+			console.log(unit.name + ' blocked by ' + nextMoveTerrain + ' removing direction to recalculate path. Consider remove: ' + unit.memory.usingSourceId);
 			delete unit.memory.direction;
 			return(true);
 		}
     }
 	return(false);
  }
- 
+
  //TO DO: Use the spawn that this unit came from. This currently just sends back the first
  //spawn that is in the same room as the unit.
  function findSpawn(unit)
  {
 	var useSpawn;
-	if(unit.memory.spawnID != null)
+	if(unit.memory.spawnId != null)
 	{
-		useSpawn = Game.getObjectById(unit.memory.spawnID);	//A spawn this unit can dump resources to
+		useSpawn = Game.getObjectById(unit.memory.spawnId);	//A spawn this unit can dump resources to
 	}
 	else
 	{
@@ -95,7 +95,7 @@
 			if(unit.room.name == Game.spawns[x].room.name)
 			{
 				useSpawn = Game.spawns[x].id
-				unit.memory.spawnID = useSpawn;
+				unit.memory.spawnId = useSpawn;
 			}
 		}
 	}
@@ -104,26 +104,21 @@
 
  function findFlagAtUnit(unit, findSourceId)
  {
-	var groupedFlags = unit.pos.lookFor('flag');
-	for(var currentFlag in groupedFlags)
+	//var groupedFlags = unit.pos.lookFor('flag');
+  var groupedFlags = unit.pos.lookFor(LOOK_FLAGS);
+  groupedFlags = _.filter(groupedFlags, function(object) {
+    return(isDestinationEqual(object.memory.usingDestinationId, findSourceId) && object.name.startsWith('dir'));
+  });
+
+	if(groupedFlags.length > 0)
 	{
-		//console.log('dir: ' + groupedFlags[currentFlag]);
-		if(groupedFlags[currentFlag].name.startsWith('dir'))
-		{
-			var usingDestinationId = groupedFlags[currentFlag].memory.usingDestinationId;
-			if(findSourceId != null && usingDestinationId == findSourceId)
-			{
-				//console.log(unit.name + ' found flag ' + groupedFlags[currentFlag]);
-				return(groupedFlags[currentFlag]);
-			}
-			else
-			{
-				//console.log('looking for matching flag at ' + unit.name + ' doesnt have SourceId: ' + findSourceId + ' or flag doesnt have destinationId: ' + groupedFlags[currentFlag].memory.usingDestinationId);
-			}
-		}
+		return(groupedFlags[0]);
 	}
-	//console.log('No flag at ' + unit.name + ' with SourceId: ' + findSourceId);
-	return(null);
+	else
+	{
+		//console.log('No flag at ' + unit.name + ' with SourceId: ' + findSourceId);
+		return(null);
+	}
  }
 
  //Goes through the room and finds a flag that matches the findSourceId, if no flag exists, returns null
@@ -137,29 +132,37 @@
 	else
 	{
 		//TO DO: Replace with only look at flags within range X if faster. (unit.pos.findInRange(FIND_FLAGS, range)), both listed as 'average'
-		var flagsInRoom = unit.room.find(FIND_FLAGS);
-		for(var currentFlag in flagsInRoom)
+    var flagsInRoom = _.filter(Game.flags, function(object) {
+      return(object.room.name == unit.room.name &&
+            isDestinationEqual(object.memory.usingDestinationId, findSourceId) &&
+            object.pos.lookFor('creep').length == 0);
+    });
+		//var flagsInRoom = unit.room.find(FIND_FLAGS, {
+		//	filter: function(object) {
+    //    return(isDestinationEqual(object.memory.usingDestinationId, findSourceId) && object.pos.lookFor('creep').length == 0);
+		//	}
+		//});
+
+		if(flagsInRoom.length > 0)
 		{
-			var usingDesintationId = flagsInRoom[currentFlag].memory.usingDestinationId;
-			//Go through all flags in this room, find one that matches destinationId with
-			//units sourceId, also skip over these flags if there is already a creep on it.
-			if(usingDesintationId != null &&
-				usingDesintationId == findSourceId &&
-				flagsInRoom[currentFlag].pos.lookFor('creep').length == 0)
-			{
-				//console.log(unit.name + ' found flag ' + flagsInRoom[currentFlag]);
-				return(flagsInRoom[currentFlag]);
-			}
+			flagsInRoom = _.sortBy(flagsInRoom, function(o) {
+			  return unit.pos.getRangeTo(o.pos);
+			});
+			//console.log(unit.name + ' found flag ' + flagsInRoom[0].name);
+			return(flagsInRoom[0]);
 		}
-		//console.log(unit.name + ' in room ' + unit.room.name + ' found no flag matching: ' + findSourceId);
+		else
+		{
+			//console.log(unit.name + ' in room ' + unit.room.name + ' found no flag matching: ' + findSourceId);
+		}
 	}
 	return(null);
  }
- 
+
  //Note: Technically we shouldn't need to copy over a new pathLength every time we pass
  //over a valid flag, however this in place so if a unit is retooled in any way. Especially
  //scouts who create and update routes all the time
- //WARNING: Scouts don't edit old paths and so these older paths that were created to go to 
+ //WARNING: Scouts don't edit old paths and so these older paths that were created to go to
  //further rooms may not have completely valid path lengths, pathLength in certain instances
  //may be inaccurate with the actual length, depending on the route chosen.
  //WARNING: I don't delete pathLength like I do with .direction so often. So when a unit might
@@ -167,25 +170,24 @@
  //what they're currently doing
  function copyPathLength(unit, foundFlag)
  {
-	if(unit != null && foundFlag != null &&
-		foundFlag.memory.usingDestinationId == unit.memory.usingSourceId)
+	if(unit != null && foundFlag != null)
 	{
-		var flagPathLength = foundFlag.memory.pathLength;
-		var unitPathLength = unit.memory.pathLength;
-		if(flagPathLength != null && 
-		(unitPathLength == null || flagPathLength > unitPathLength))
-		{
-			unit.memory.pathLength = flagPathLength;
-			return(flagPathLength);
-		}
-	}
-	else
-	{
-		//console.log(unit.name + ' not copying path. Flag id: ' + foundFlag.memory.usingDestinationId + ' vs ' + unit.memory.usingSourceId);
+			if(isDestinationEqual(foundFlag.memory.usingDestinationId, unit.memory.usingSourceId))
+			//if(foundFlag.memory.usingDestinationId == unit.memory.usingSourceId)
+			{
+				var flagPathLength = foundFlag.memory.pathLength;
+				var unitPathLength = unit.memory.pathLength;
+				if(flagPathLength != null &&
+				(unitPathLength == null || flagPathLength > unitPathLength))
+				{
+					unit.memory.pathLength = flagPathLength;
+					return(flagPathLength);
+				}
+			}
 	}
 	return(null);
  }
- 
+
  //When a unit at the edge of a map doesn't have enough fatigue to make it through it
  //will attempt to move when on the wrong side of the map, constantly fatiguing itself
  //without going anywhere, this disables movement if the direction won't go anywhere
@@ -238,7 +240,7 @@
 			return(false);	//Unit can't do anything, it's spawning
 			//console.log('look at unit: ' + unit.name + ' remove the direction');
 		}
-		
+
 	    var foundFlag = findFlagAtUnit(unit, unitUsingSourceId);
 		if(foundFlag != null)
 		{
@@ -278,8 +280,8 @@
 	{
 		var returnDirection = findFlag.memory.returnDirection;
 		var forwardDirection = findFlag.memory.direction;
-		//console.log(unit.name + ' found flag ' + findFlag + ' and attempting to move to it.');
-		if(unit.pos.isEqualTo(findFlag.pos) == false)
+		//console.log(unit.name + '(' + unit.pos + ') found flag ' + findFlag.name + '(' + findFlag.pos + ') and attempting to move to it.');
+		if(unit.pos.isEqualTo(findFlag.pos) == 0)
 		{
 			if(unit.moveTo(findFlag) == 0)
 				return(true);
@@ -311,7 +313,7 @@
 		}
 		return(false);
     }
-	
+
 	var newPath;
 	var startPos;
 	if(unitUsingSourceId != null)
@@ -366,7 +368,7 @@
  //If we're going to a new room we don't want the last flag being created to push the unit automatically
  //backwards but going to the source we do. If a gatherer is being used with this path this function is
  //run, otherwise this isn't used.
- function capPathEnd(currentRoom, currentPath, currentSourceId, endOfPath, lastCreatedFlag)
+ function capPathEnd(currentRoom, currentPath, currentSourceId, endOfPath, lastCreatedFlag)//lastCreatedFlag DEPRECATED
  {
 	var backwards;
 	var endPathDirection = currentPath[endOfPath].direction;
@@ -378,49 +380,47 @@
 	{
 		backwards = endPathDirection + 4;
 	}
- 
-	if(lastCreatedFlag < 0 && currentPath.length > 0 && spawnFrom.memory.currentFlags != null)
+
+	//Created a flag on the last block of information on currentPath where we have a valid path and memory to pull from
+	//If there already exists a relevant flag with only a return direction we tack on the new currentSourceId
+	if(currentPath.length > 0 && spawnFrom.memory.currentFlags != null)//&& lastCreatedFlag < 0
 	{
 		//If we got invalid lastCreatedFlag, do previous createFlag logic
-		console.log(currentRoom + ' capping path ' + currentSourceId + ' recieved bad lastCreatedFlag ' + lastCreatedFlag);
-        var flagName = 'dir';
-		flagName += spawnFrom.memory.currentFlags++;
-        var endFlag = currentRoom.createFlag(currentPath[endOfPath].x, currentPath[endOfPath].y, flagName, COLOR_BLUE);
-        if(endFlag < 0)
-    	{
-    		console.log('error creating flag: ' + endFlag);
-    	}
-		else
-		{
-			if(backwards != null && currentSourceId != null)
-			{
-				//Memory.flags[lastCreatedFlag] = {direction: backwards, usingDestinationId: currentSourceId, pathLength: currentPath.length};
-				Memory.flags[endFlag] = {direction: backwards, usingDestinationId: currentSourceId, pathLength: currentPath.length};
-			}
-			else
-			{
-				console.log('flag capping found null: ' + backwards + ', ' + currentSourceId);
-			}
-		}
-	}
-	else if(currentPath.length > 0 && spawnFrom.memory.currentFlags != null)
-    {
-		//Instead of creating a new flag at the last spot, replace the last generated flag with 
-		//the 'return' memory. When capping at a source we need to turn around 2 spots away from
-		//the source since 1 away is where the harvester could sit.
+		console.log(currentRoom + ' capping path ' + currentSourceId);// + ' recieved bad lastCreatedFlag ' + lastCreatedFlag);
+
 		if(backwards != null && currentSourceId != null)
 		{
-			var previousReturn = Memory.flags[lastCreatedFlag].returnDirection;
-			Memory.flags[lastCreatedFlag] = {direction: previousReturn, usingDestinationId: currentSourceId, pathLength: currentPath.length};
-			//Memory.flags[endFlag] = {direction: previousReturn, usingDestinationId: currentSourceId, pathLength: currentPath.length};
+			var foundFlags = currentRoom.getPositionAt(currentPath[endOfPath].x, currentPath[endOfPath].y).lookFor('flag');
+			if(applyToPrevFlag(backwards, null, currentSourceId, foundFlags) == false)
+			{
+				var flagName = 'dir' + spawnFrom.memory.currentFlags++;
+				var endFlag = currentRoom.createFlag(currentPath[endOfPath].x, currentPath[endOfPath].y, flagName, COLOR_BLUE);
+				Memory.flags[endFlag] = {direction: backwards, pathLength: currentPath.length, usingDestinationId: {0: currentSourceId}};
+			}
 		}
 		else
 		{
 			console.log('flag capping found null: ' + backwards + ', ' + currentSourceId);
 		}
-    }
+	}
+	//We have a last created flag to dump new stats into since instead of going back and forth we just want it to return
+	//else if(currentPath.length > 0 && spawnFrom.memory.currentFlags != null)
+    //{
+	//	//Instead of creating a new flag at the last spot, replace the last generated flag with
+	//	//the 'return' memory. When capping at a source we need to turn around 2 spots away from
+	//	//the source since 1 away is where the harvester could sit.
+	//	if(backwards != null && currentSourceId != null)
+	//	{
+	//		var previousReturn = Memory.flags[lastCreatedFlag].returnDirection;
+	//		Memory.flags[lastCreatedFlag] = {direction: previousReturn, pathLength: currentPath.length, usingDestinationId: {0: currentSourceId}};
+	//	}
+	//	else
+	//	{
+	//		console.log('flag capping found null: ' + backwards + ', ' + currentSourceId);
+	//	}
+    //}
  }
- 
+
  function clearPosition(startPos)
  {
 	startPos = new RoomPosition(startPos.x, startPos.y, startPos.roomName);
@@ -478,12 +478,12 @@
 	}
 	return(0);
  }
- 
+
  function onEdgeOfMap(currentPos)
  {
 	return(currentPos.x <= 1 || currentPos.x >= 48 || currentPos.y <= 1 || currentPos.y >= 48);
  }
- 
+
  //When we're checking the edge of the map we don't always have the edge of the map straight
  //RIGHT, LEFT, TOP, BOTTOM from where we end up. Search from that spot for a adjacent
  //clear spot to move into and point there instead of there is a problem.
@@ -496,19 +496,19 @@
 		return(false);
 	}
 	var findTerrain = currentPos.lookFor('terrain');
-	if(findTerrain.length > 0 && findTerrain[0] == 'plain' || findTerrain[0] == 'swamp')
+	if(findTerrain == 'plain' || findTerrain == 'swamp')
 	{
 		return(true);
 	}
-	
+
 	if(findTerrain.length > 0)
-		console.log(currentPos + ', room: ' + currentPos.roomName + ' was found to have ' + findTerrain[0] + ' instead of swamp or plain');
+		console.log(currentPos + ', room: ' + currentPos.roomName + ' was found to have ' + findTerrain + ' instead of swamp or plain');
 	else
 		console.log(currentPos + ', room: ' + currentPos.roomName + ' couldnt find swamp or plain');
-	
+
 	return(false);
  }
- 
+
  //Returns direction needs to go to get to or come from the edge of the map if it is on the edge of the map
  //Otherwise it returns the defaultDirection it was going to use anyway
  function edgeOfMapDirection(currentPos, defaultDirection, movingInside)
@@ -626,6 +626,56 @@
 	return(defaultDirection);
  }
 
+ //Accepts object of allDestinationIds and looks through each of them for the passed in sourceId. True if found inside object.
+ function isDestinationEqual(allDestinationId, sourceId)
+ {
+   for(var eachDestination in allDestinationId)
+   {
+     if(allDestinationId[eachDestination] == sourceId)
+     {
+       return(true);
+     }
+   }
+   return(false);
+ }
+
+ //Returns length of usingDestinationId since .length isn't supported
+ function findLastDestinationId(lookAtFlag)
+ {
+	var count = 0;
+	for(var all in Memory.flags[lookAtFlag].usingDestinationId)
+	{
+		count++;
+	}
+	return(count);
+ }
+
+ //Looks through foundFlags and tries to find a flag with matching forward and backwards directions, if it finds one
+ //It tacks on the curentSourceId to this flag to share this information, otherwise it reports back false in which case
+ //createPathToFlags will create a new flag with this information.
+ function applyToPrevFlag(forwardDirection, backDirection, currentSourceId, foundFlags)
+ {
+	if(forwardDirection == null || foundFlags == null || currentSourceId == null)
+	{
+		console.log(foundFlags + ' tried to find matching direction but forwardDirection is ' + forwardDirection + ' source: ' + currentSourceId);
+		return(false);
+	}
+
+	for(var eachFlag in foundFlags)
+	{
+		var newFlag = foundFlags[eachFlag];
+		if(newFlag.memory.direction != null && newFlag.memory.direction == forwardDirection &&
+			((newFlag.memory.returnDirection == null && backDirection == null) ||
+			(newFlag.memory.returnDirection != null && newFlag.memory.returnDirection == backDirection)) )	//backDirection = null and return = null or backDirection = return
+		{
+			var x = findLastDestinationId(newFlag.name);
+			newFlag.memory.usingDestinationId[x] = currentSourceId;
+			return(true);
+		}
+	}
+	return(false);
+ }
+
  //Direction: If following path forward is true, it's moving this direction, if it's returning it moves in returnDirection's direction.
  //usingDestinationId is used to know where the end of this path is going (unit pairs up their destination with what is stored here)
  //TO DO: pathLength is for the future where measuring the length of all the paths (get 1 flag with same usingDestinationId and pathLength
@@ -641,7 +691,7 @@
 		console.log('Path: ' + currentPath + ' or source ' + currentSourceId + ' is null, abandon creating path');
 		return(false);
 	}
-	
+
 	var previousDirection = -1;
 	if(spawnFrom.memory.currentFlags == null)
 	{
@@ -654,6 +704,7 @@
 	var end = clampEndPos(currentRoom, currentPath);
 	var flagCreationSuccess = false;
 	var createdFlag;
+	var foundFlags;
 	//console.log('start: ' + start + ' end: ' + end + ', length: ' + currentPath.length + ', ' + currentPath[0].x + '/' + currentPath[0].y);
     for(var position = start; position < end; position++)
 	{
@@ -669,29 +720,30 @@
 			if(previousDirection != currentPath[position+1].direction || position >= end-1)
 			{
 				previousDirection = currentPath[position+1].direction;
-				var flagName = 'dir';
-				flagName += spawnFrom.memory.currentFlags++;
+				var flagName;
 
-        		var previousFlagDirection = currentPath[position].direction;
-        		
-        		var foundFlags = currentRoom.getPositionAt(currentPath[position].x, currentPath[position].y).lookFor('flag');
-        		for(var x in foundFlags)
-        		{
-        		    if(foundFlags[x].memory.usingDestinationId == currentSourceId)
-        		    {
-        		        console.log('Already a flag at this location with id: ' + currentSourceId + ' disabling generation of new flags at position: ' + position);
-        		        return(false);
-        		    }
-        		}
-        		
-				createdFlag = currentRoom.createFlag(currentPath[position].x, currentPath[position].y, flagName, COLOR_BLUE);
-				if(createdFlag < 0)
-				{
-				    console.log('error creating flag: ' + createdFlag);
-					return(false);
-				}
-				else
-				{
+    		var previousFlagDirection = currentPath[position].direction;
+
+    		foundFlags = currentRoom.getPositionAt(currentPath[position].x, currentPath[position].y).lookFor('flag');
+    		for(var x in foundFlags)
+    		{
+          if(isDestinationEqual(foundFlags[x].memory.usingDestinationId, currentSourceId))
+					//if(foundFlags[x].memory.usingDestinationId == currentSourceId)
+					{
+						console.log('Already a flag at this location with id: ' + currentSourceId + ' disabling generation of new flags at position: ' + position);
+						return(false);
+					}
+    		}
+
+				//TO DO: Remove on new additions
+				//createdFlag = currentRoom.createFlag(currentPath[position].x, currentPath[position].y, flagName, COLOR_BLUE);
+				//if(createdFlag < 0)
+				//{
+				//    console.log('error creating flag: ' + createdFlag);
+				//	return(false);
+				//}
+				//else
+				//{
 					flagCreationSuccess = true;
 					if(position == start)
 					{
@@ -702,11 +754,23 @@
 								var newPos = new RoomPosition(startPos.x, startPos.y, currentRoom.name);
 								var pathPos = new RoomPosition(currentPath[position].x, currentPath[position].y, currentRoom.name);
 								var returnDir = pathPos.getDirectionTo(newPos);
-								Memory.flags[createdFlag] = {direction: previousDirection, returnDirection: returnDir, usingDestinationId: currentSourceId, pathLength: currentPath.length};
+								if(applyToPrevFlag(previousDirection, returnDir, currentSourceId, foundFlags) == false)
+								{
+									flagName = 'dir' + spawnFrom.memory.currentFlags++;
+									createdFlag = currentRoom.createFlag(currentPath[position].x, currentPath[position].y, flagName, COLOR_BLUE);
+									//Memory.flags[createdFlag] = {direction: previousDirection, returnDirection: returnDir, usingDestinationId: currentSourceId, pathLength: currentPath.length};
+									Memory.flags[createdFlag] = {direction: previousDirection, returnDirection: returnDir, pathLength: currentPath.length, usingDestinationId: {0: currentSourceId}};
+								}
 							}
 							else
 							{	//Otherwise just point to the next flag
-								Memory.flags[createdFlag] = {direction: previousDirection, usingDestinationId: currentSourceId, pathLength: currentPath.length};
+								if(applyToPrevFlag(previousDirection, null, currentSourceId, foundFlags) == false)
+								{
+									flagName = 'dir' + spawnFrom.memory.currentFlags++;
+									createdFlag = currentRoom.createFlag(currentPath[position].x, currentPath[position].y, flagName, COLOR_BLUE);
+									//Memory.flags[createdFlag] = {direction: previousDirection, usingDestinationId: currentSourceId, pathLength: currentPath.length};
+									Memory.flags[createdFlag] = {direction: previousDirection, pathLength: currentPath.length, usingDestinationId: {0: currentSourceId}};
+								}
 							}
 						}
 						else
@@ -724,7 +788,7 @@
 						{
 							backwards = previousFlagDirection + 4;
 						}
-						
+
 						if(previousDirection != null && currentSourceId != null && currentPath != null && backwards != null)
 						{
 							//If at the edge of the map, point to the edge of the map when at the end of the path
@@ -732,12 +796,23 @@
 							if(onEdgeOfMap(currentPath[position]) && capEnd == false && position+1 == end)
 							{
 								var outside = edgeOfMapDirection(currentPath[position], previousDirection, false);
-								//var inside = edgeOfMapDirection(currentPath[position], previousDirection, true);
-								Memory.flags[createdFlag] = {direction: outside, returnDirection: backwards, usingDestinationId: currentSourceId, pathLength: currentPath.length};
+								if(applyToPrevFlag(outside, backwards, currentSourceId, foundFlags) == false)
+								{
+									flagName = 'dir' + spawnFrom.memory.currentFlags++;
+									createdFlag = currentRoom.createFlag(currentPath[position].x, currentPath[position].y, flagName, COLOR_BLUE);
+									//Memory.flags[createdFlag] = {direction: outside, returnDirection: backwards, usingDestinationId: currentSourceId, pathLength: currentPath.length};
+									Memory.flags[createdFlag] = {direction: outside, returnDirection: backwards, pathLength: currentPath.length, usingDestinationId: {0: currentSourceId}};
+								}
 							}
 							else
 							{
-								Memory.flags[createdFlag] = {direction: previousDirection, returnDirection : backwards, usingDestinationId: currentSourceId, pathLength: currentPath.length};
+								if(applyToPrevFlag(previousDirection, backwards, currentSourceId, foundFlags) == false)
+								{
+									flagName = 'dir' + spawnFrom.memory.currentFlags++;
+									createdFlag = currentRoom.createFlag(currentPath[position].x, currentPath[position].y, flagName, COLOR_BLUE);
+									//Memory.flags[createdFlag] = {direction: previousDirection, returnDirection : backwards, usingDestinationId: currentSourceId, pathLength: currentPath.length};
+									Memory.flags[createdFlag] = {direction: previousDirection, returnDirection : backwards, pathLength: currentPath.length, usingDestinationId: {0: currentSourceId}};
+								}
 							}
 						}
 						else
@@ -745,7 +820,7 @@
 							console.log('Arguments null in flag creation, both directions: ' + previousDirection + ', ' + currentSourceId + ', ' + currentPath + ', ' + backwards);
 						}
 					}
-				}
+				//}
 			}
         }
         else
@@ -753,7 +828,7 @@
             console.log('error in flag creation code. currentPath: ' + currentPath + ' [' + start + '] ' + currentPath[start] + ' /' + currentPath[start+1]);
         }
     }
-	
+
     if(currentRoom != null && currentPath != null && currentSourceId != null && capEnd)
 	{
 		capPathEnd(currentRoom, currentPath, currentSourceId, end, createdFlag);
@@ -763,29 +838,43 @@
 	//edge of the map in which case it returns towards the nearby room
 	if(currentRoom != null && startPos != null && flagCreationSuccess == true)
 	{
-		flagName = 'dir' + spawnFrom.memory.currentFlags++;
-		var createdFlag = currentRoom.createFlag(startPos.x, startPos.y, flagName, COLOR_BLUE);
-		if(createdFlag < 0)
-		{
-			console.log('error creating start flag: ' + createdFlag);
-		}
-		else
-		{
+		//flagName = 'dir' + spawnFrom.memory.currentFlags++;
+		//TO DO: Remove on new addition
+		//var createdFlag = currentRoom.createFlag(startPos.x, startPos.y, flagName, COLOR_BLUE);
+		//if(createdFlag < 0)
+		//{
+		//	console.log('error creating start flag: ' + createdFlag);
+		//}
+		//else
+		//{
+			foundFlags = currentRoom.getPositionAt(startPos.x, startPos.y).lookFor('flag');
 			var newPos = new RoomPosition(startPos.x, startPos.y, currentRoom.name);
 			var pathPos = new RoomPosition(currentPath[start].x, currentPath[start].y, currentRoom.name);
 			previousDirection = newPos.getDirectionTo(pathPos);
 			if(onEdgeOfMap(newPos))
 			{
+
 				console.log('When creating path, first flag at edge of map reports posX: ' + newPos.x + ', posY: ' + newPos.y);
-				//var inside = edgeOfMapDirection(newPos, previousDirection, true);
 				var outside = edgeOfMapDirection(newPos, previousDirection, false);
-				Memory.flags[createdFlag] = {direction: previousDirection, returnDirection: outside, usingDestinationId: currentSourceId, pathLength: currentPath.length};
+				if(applyToPrevFlag(previousDirection, outside, currentSourceId, foundFlags) == false)
+				{
+					flagName = 'dir' + spawnFrom.memory.currentFlags++;
+					createdFlag = currentRoom.createFlag(startPos.x, startPos.y, flagName, COLOR_BLUE);
+					//Memory.flags[createdFlag] = {direction: previousDirection, returnDirection: outside, usingDestinationId: currentSourceId, pathLength: currentPath.length};
+					Memory.flags[createdFlag] = {direction: previousDirection, returnDirection: outside, pathLength: currentPath.length, usingDestinationId: {0: currentSourceId}};
+				}
 			}
 			else
 			{
-				Memory.flags[createdFlag] = {direction: previousDirection, usingDestinationId: currentSourceId, pathLength: currentPath.length};
+				if(applyToPrevFlag(previousDirection, null, currentSourceId, foundFlags) == false)
+				{
+					flagName = 'dir' + spawnFrom.memory.currentFlags++;
+					createdFlag = currentRoom.createFlag(startPos.x, startPos.y, flagName, COLOR_BLUE);
+					//Memory.flags[createdFlag] = {direction: previousDirection, usingDestinationId: currentSourceId, pathLength: currentPath.length};
+					Memory.flags[createdFlag] = {direction: previousDirection, pathLength: currentPath.length, usingDestinationId: {0: currentSourceId}};
+				}
 			}
-		}
+		//}
 	}
 	else if(flagCreationSuccess == true)
 	{
@@ -793,18 +882,21 @@
 	}
 	return(flagCreationSuccess);
  }
- 
+
  function updatePathLength(sourceId, newLength)
  {
 	for(var y in Memory.flags)
 	{
-		if(Memory.flags[y].usingDestinationId == sourceId)
-		{
-			Memory.flags[y].pathLength = newLength;
-		}
+    //TO DO: TEST, should technically overwrite all paths, not just the one we're interested in
+    if(isDestinationEqual(Memory.flags[y].usingDestinationId, sourceId))
+    {
+  			Memory.flags[y].pathLength = newLength;
+    }
 	}
  }
- 
+
+ //NEW: Each flag contains many possible destinations but only one pathLength, this length relates to the first destinationId, use the destination
+ //		in the last room to get the length (or look for largest length)
  //SourceId is the sourceId of the path used to identify the group of flags in the path
  //The path already has a length (length of the path found in the room, given at creation) but scouts hold the length it took to arrive to that room
  //and since paths can go across multiple rooms its handy to have this length included, addLength has this previous length that needs included.
@@ -819,12 +911,14 @@
 	{
 		//Since we want to specifically update the flags that were just created, they should have memory entries but not Game.flag entries
 		//Game.flag[y] and Memory.flag[y] should reference the same object, check this.
-		if(Game.flags[y] == null && Memory.flags[y].usingDestinationId == sourceId)
+		if(Game.flags[y] == null && Memory.flags[y].usingDestinationId[0] == sourceId)
+		//if(Game.flags[y] == null && Memory.flags[y].usingDestinationId == sourceId)
 		{
 			console.log('updating ' + Memory.flags[y] + ' in room ' + updateRoom.name + ' with additional length ' + addLength + ' (was ' + Memory.flags[y].pathLength + ')');
 			Memory.flags[y].pathLength += addLength;
 		}
-		else if(Memory.flags[y].usingDestinationId == sourceId)
+		else if(Memory.flags[y].usingDestinationId[0] == sourceId)
+		//else if(Memory.flags[y].usingDestinationId == sourceId)
 		{
 			console.log('Does ' + Memory.flags[y] + ' equal ' + Game.flags[y] + '? ' + y + ' hopefully references the same flag object and memory. NotEqual?' + updateRoom.name + ' and ' + Game.flags[y].room.name);
 			//console.log('Skipped updating ' + Memory.flags[y] + ' because exists in world ' + Game.flags[y] + ' was going to update path length');
@@ -869,7 +963,7 @@
     		var sources = inRoom.find(FIND_SOURCES);
     		for(var i = 0; sources != null && i < sources.length; i++)
     		{
-    			
+
 				(inRoom, findFlag.pos.findPathTo(sources[i].pos.x, sources[i].pos.y, {maxOps: 2000, ignoreCreeps: true}), sources[i].id, true);
     			console.log('creating path in room-' + inRoom.name + ' to go to energy source with id: ' + sources[i].id);
     			pathSpawnToExit(Game.flags.toRoom, sources[i].id);	//Trigger the flag in the spawn room to path here
@@ -926,7 +1020,7 @@
 		var inRoom = startFlag.room;
 		createPathToFlags(inRoom, startFlag.pos.findPathTo(endFlag.pos.x, endFlag.pos.y, {maxOps: 2000, ignoreCreeps: true}), spawnId, false, startFlag.pos);
     	console.log('creating path in room-' + inRoom.name + ' to go to energy source with id: ' + spawnId);
-		
+
 		startFlag.remove();
 		endFlag.remove();
 	}
@@ -944,7 +1038,7 @@
 	//Fix so it always checks for the spawn saved in/retreived from the unit first and when not possible
 	//send through spawnFrom from a more root function.
 	spawnFrom = findSpawn(unit);
-	
+
 	//Place a call in main or relevant and either pass in a (unit, reverse) to get a unit to move along this path or have
 	//the flags referenced below placed in two rooms for new paths to adjoining rooms
 	if(Game.flags.fromRoom != null && Game.flags.toRoom != null)
@@ -995,21 +1089,17 @@
  {
 	//Look for a relevant flag at the current units position, if that fails look
 	//for a flag in the whole room (that matches the findSourceId)
-	var flag = findFlagAtUnit(unit, findSourceId);
-	if(flag == null)
-	{
-		flag = findFlagInRoom(unit, findSourceId);
-	}
+	var flag = findFlagInRoom(unit, findSourceId);
 	return(flag);
  }
- 
+
  //Goes through all flags with this ID and assigns the passed in length. Allows retrospective flags to be updated
  //with real lengths that were previously incomplete.
  module.exports.updatePathLength = function(sourceId, newLength)
  {
 	updatePathLength(sourceId, newLength);
  }
- 
+
  module.exports.addPathLength = function(sourceId, addLength, updateRoom)
  {
 	addPathLength(sourceId, addLength, updateRoom);

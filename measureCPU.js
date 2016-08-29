@@ -19,7 +19,7 @@
 		spawn0.memory.gameTicks += 1;
 	}
 	
-	var currentCpuUsage = Game.getUsedCpu();
+	var currentCpuUsage = Game.cpu.getUsed();
 	if(spawn0.memory.totalCPU == null)
 	{
 		spawn0.memory.totalCPU = 0;
@@ -78,9 +78,9 @@
 		if(limitGrow == 0)
 		{
 			var accountLimit = 30;
-			//var temp = accountLimit - Game.getUsedCpu();
+			//var temp = accountLimit - Game.cpu.getUsed();
 			//console.log('W: limit has not changed from last tick. May want to use improvised account limit: ' + accountLimit + ' to calc limit change (grow): ' + temp);
-			limitGrow = accountLimit - Game.getUsedCpu();
+			limitGrow = accountLimit - Game.cpu.getUsed();
 		}
 		
 		if(limitGrow > 0)
@@ -181,7 +181,7 @@
 		measureCpuLimit(spawn0);
 		
 		//Not used for anything, just for fun to know what value was calculated last tick
-    	spawn0.memory.previousCPU = Game.getUsedCpu();
+    	spawn0.memory.previousCPU = Game.cpu.getUsed();
     }
  }
  
@@ -190,7 +190,7 @@
     if(spawn0 != null)
     {
 		//Cleans average calculations
-		var usedCPU = Game.getUsedCpu();
+		var usedCPU = Game.cpu.getUsed();
 		spawn0.memory.gameTicks = 1;
 		spawn0.memory.totalCPU = usedCPU;
 		spawn0.memory.minCPU = usedCPU;
