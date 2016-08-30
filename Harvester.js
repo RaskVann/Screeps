@@ -1061,12 +1061,7 @@
 							nearExtension = _.filter(nearExtension, function(object) {
 								return(object.pos.inRangeTo(unit.pos, 1));
 							});
-							//var nearExtension = unit.pos.findInRange(FIND_MY_STRUCTURES, 1, {
-							//	filter: function(object) {
-							//		return(object.energy < object.energyCapacity &&
-							//				(object.structureType == STRUCTURE_SPAWN || object.structureType == STRUCTURE_EXTENSION));
-							//	}
-							//});
+
 							if(nearExtension.length > 0 && unit.transfer(nearExtension[0], RESOURCE_ENERGY) == 0)
 							{
 								//Fill objects along the way
@@ -1240,7 +1235,7 @@
 
  function gatherFrom(unit)
  {
-		var returnResources = findSpawn(unit);
+	var returnResources = findSpawn(unit);
 	var unitEnergy = unit.carry.energy;
 	var unitPower;
 	if(unit.carry.power != null)
@@ -1259,11 +1254,11 @@
 	//since it seems like all energy sits in the gatherers if I wait until they are full.
 		//if(unit.carry.energy < unit.carryCapacity)
 	if(unitEnergy == 0 && unitPower == 0 && returnResources != null)
-		{
-				var activeSource;
+	{
+		var activeSource;
 		if(unit.memory.usingSourceId != null)
 		{
-				activeSource = Game.getObjectById(unit.memory.usingSourceId);
+			activeSource = Game.getObjectById(unit.memory.usingSourceId);
 		}
 		else
 		{
@@ -1289,7 +1284,7 @@
 		if(returnResources != null && returnResources.room != null &&
 			returnResources.room.name != unit.room.name)
 		{
-			if(unitEnergy > 0)
+			if(unitEnergy > 0) //Will never be triggered unless move out of the energy <= 0 if above
 				unit.drop(RESOURCE_ENERGY);
 
 			var powerDrop = unit.room.find(FIND_DROPPED_RESOURCES, {
@@ -1306,20 +1301,20 @@
 				}
 			}
 		}
-		}
-		else if(returnResources != null)
-		{
-				fillUpRoomWithEnergy(unit, returnResources);
-		}
+	}
+	else if(returnResources != null)
+	{
+			fillUpRoomWithEnergy(unit, returnResources);
+	}
 
-		if(unitEnergy < unitEnergyCapacity)
-		{
-				var target = unit.pos.findInRange(FIND_DROPPED_ENERGY, 1);
-				if(target.length > 0)
-			{
-						unit.pickup(target[0]);
-				}
-		}
+	if(unitEnergy < unitEnergyCapacity)
+	{
+			var target = unit.pos.findInRange(FIND_DROPPED_ENERGY, 1);
+			if(target.length > 0)
+		  {
+					unit.pickup(target[0]);
+			}
+	}
  }
 
  function distribute(unit)
@@ -1633,9 +1628,10 @@ module.exports.work = function(unit)
 {
   if(unit.memory.role == 'worker' || unit.memory.role == 'lazy')
   {
-    if(unit.memory.task == null)
+    //If just newly created, or respawning again, clean up so the worker will go to its source when it's ready
+    if(unit.memory.task == null || unit.spawning == true)
     {
-      unit.memory.role = 'worker';
+      unit.memory.role = 'worker';//Shouldn't be needed, just for the initial transition when I was origionally testing
       unit.memory.task = 'worker';
     }
 	   //TO DO: Refill builders from harvesters. Possible new unit role.
@@ -1685,7 +1681,7 @@ module.exports.distribute = function(unit)
 	}
 }
 
-//module.exports = function(unit, harvestersSeen, gatherersSeen)
+//module.exports = function(unit)
 //{
 //	if(unit.memory.role == 'idle')
 //		{

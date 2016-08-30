@@ -39,6 +39,7 @@
  }
 
  //If we're migrating to a different sourceId remove the direction since the old one we had isn't valid
+ //Returns if we completed a operation (got a new ID)
  function newSourceId(unit, sourceId)
  {
 	if(sourceId != null && unit.memory.usingSourceId == null)
@@ -46,7 +47,9 @@
 		//console.log('delete for ' + unit.name + ' where dif: ' + unit.memory.usingSourceId + ' vs ' + unit.room.controller.id);
 		delete unit.memory.direction;
 		unit.memory.usingSourceId = sourceId;
+    return(true);
 	}
+  return(false);
  }
 
  //Use this on repair structure and repair wall if creeps keep lining up trying to repair the same thing.
@@ -271,63 +274,6 @@
 	return(totalBody);
  }
 
- var upgradeIncrease = 0;
-
- function upgradeController(unit, builderNumber)
- {
-	var upgradeLimit = 30;	//Below level 8, accelerate possible work assigned to controller
-	if(unit.room.controller != null && unit.room.controller.level >= 8)
-	{
-		upgradeLimit = 15;	//At level 8 we can only have 15 work assigned
-	}
-
-	//If someone is about to die (we're really doing this for when the controller dies)
-	//Let anyone we possibly can into upgrade while we transition to new unit.
-	if(unit.ticksToLive < 50)
-	{
-		//TO DO: Check for if at least 2 units having sourceId of controller
-		//If so, suicide this unit (near death). So spawners will hopefully start spawning a new one
-		//TO DO: Check if spawners are available for this to be a valid action.
-		upgradeIncrease = 5;
-	}
-	else
-	{
-		var findSites = findConstruction(unit);
-		//TO DO: Change logic so 1+ units split off to do construction if it is found.
-		if(findSites != null && findSites.length > 0)
-			upgradeIncrease -= 5;
-	}
-	upgradeLimit += upgradeIncrease;
-
-	//TO DO: Cap unit assignment to the number of units that can fit around the controller.
-	//If controller doesn't have any units assigned to it, assign a unit. Otherwise as long as we
-	//are under the upgradeLimit, keep assigning units to the controller
-    if((unit.room.controller != null && newUniqueSourceId(unit, unit.room.controller.id) == true) ||
-		bodyAtId('WORK', unit.room.controller.id) < upgradeLimit)
-	{
-	    //console.log('unit: ' + unit + ' is builder ' + builderNumber + ' and is upgrading controller');
-		newSourceId(unit, unit.room.controller.id);
-		if(Math.abs(unit.pos.getRangeTo(unit.room.controller)) <= 1 && unit.carry.energy > 0)
-		{
-			var errorController = unit.upgradeController(unit.room.controller);
-			//console.log(unit.name + ' upgrading with code: ' + errorController);
-		}
-		else if(Math.abs(unit.pos.getRangeTo(unit.room.controller)) > 2 || unit.carry.energy == 0)
-		{
-			followFlagForward(unit, unit.carry.energy > 0);
-		}
-		else if(Math.abs(unit.pos.getRangeTo(unit.room.controller)) > 1)
-		{
-			if(unit.moveTo(unit.room.controller) == 0)
-			{
-				delete unit.memory.direction;	//Got to where we need, remove the direction, it's no longer valid.
-			}
-		}
-		return(true);
-	}
-	return(false);
- }
-
  //Find closest building site that isn't a road. Roads will take care of themselves
  function findConstruction(unit)
  {
@@ -362,7 +308,7 @@
 	return(tempConst);
  }
 
- function buildClosest(unit, builderNumber)
+ function buildClosest(unit)
  {
 	//Find closest building site that isn't a road. Roads will take care of themselves
 	var tempConst = findConstruction(unit);
@@ -371,14 +317,24 @@
 	{
 		newSourceId(unit, tempConst.id);
 		//newUniqueSourceId(unit, tempConst.id);
-	    //console.log('unit: ' + unit + ' is builder ' + builderNumber + ' and needs energy');
+
 		if(Math.abs(unit.pos.getRangeTo(tempConst)) <= 3 && unit.carry.energy > 0)
 		{
 			var buildError = unit.build(tempConst);
 			if(buildError < 0)
 			{
-				console.log(unit.name + ' has build error ' + buildError + ' needs to drop energy after finish');
-				//unit.dropEnergy();
+        //If we've constructed the building there is no longer an id, it's completed and this id is bad (doesn't go anywhere)
+        //Go ahead and remove all instances of it, including path to this area.
+        if(buildError == ERR_INVALID_TARGET)
+        {
+          console.log(unit.name + ' has completed ' + tempConst.progress + ' with code ' + buildError + ' should have deleted flags');
+          followFlagForward.deleteFlags(unit.memory.usingSourceId);
+          delete unit.memory.direction;
+      		delete unit.memory.usingSourceId;
+        }
+        else {
+          console.log(unit.name + ' has error ' + buildError + ' on a construction');
+        }
 			}
 		}
 		//Follows the path until it gets to the destination, continues the operation above until energy depleted and then returns
@@ -405,19 +361,16 @@
 	}
  }
 
- function repairRamparts(unit, builderNumber, repairTargets)
+ function repairRamparts(unit, repairTargets)
  {
     var upgradeStart = 3;
     var upgradeLimit = 8;
 	var lowestDamageRatio = 1;
 	var currentDamageRatio = 1;
-    //if(builderNumber >= upgradeStart && builderNumber < upgradeLimit)
-	//{
 	    //Spreads out the builders so that the first unit goes in and repairs
 	    //the first found structure needing repair and the second unit takes the
 	    //second structure and so on, as long as we are within the necessary builder limit
 	    //They each will grab one.
-	    var skip = builderNumber-upgradeStart;
 	    for(var disrepair in repairTargets)
 		{
 			currentDamageRatio = (repairTargets[disrepair].hits/repairTargets[disrepair].hitsMax);
@@ -437,13 +390,10 @@
 					lowestDamageRatio = currentDamageRatio;
 				}
 
-			    //console.log('skip ' + skip + ' unit ' + unit.name + ', ' + repairTargets[disrepair].id);
-			    //console.log('unit: ' + unit + ' is builder ' + builderNumber + ' and is repairing ramparts');
 			    //console.log('repair ' + repairTargets[disrepair].structureType + ' health: ' + (repairTargets[disrepair].hits/repairTargets[disrepair].hitsMax));
 				//repairStructure(unit, repairTargets[disrepair]);
 			}
 		}
-	//}
 	//If we've found and assigned a object to repair, return true. Otherwise nothing was found and we'll look in another function.
 	if(lowestDamageRatio < 1)
 	{
@@ -452,15 +402,13 @@
 	return(false);
  }
 
- function repairWalls(unit, builderNumber)
+ function repairWalls(unit)
  {
     var upgradeStart = 6;
     var upgradeLimit = 12;
 	var currentDamageRatio = 1;
 	var lowestDamageRatio = 1;
-    //if(builderNumber >= upgradeStart && builderNumber < upgradeLimit)
-	//{
-        //Find walls with X% health or lower, if you find something else farther down, do that instead.
+    //Find walls with X% health or lower, if you find something else farther down, do that instead.
 		if(findWall == null)
 		{
 			findWall = unit.room.find(FIND_STRUCTURES, {
@@ -470,7 +418,7 @@
 			}); //finds walls and roads with FIND_STRUCTURES, everything else with FIND_MY_STRUCTURES
 			//console.log(unit.name + ' finding structures.');
 		}
-		var skip = builderNumber-upgradeStart;
+
 		for(var wall in findWall)
 		{
 			currentDamageRatio = (findWall[wall].hits/findWall[wall].hitsMax);
@@ -491,7 +439,6 @@
 					lowestDamageRatio = currentDamageRatio;
 				}
 
-			    //console.log('unit: ' + unit + ' is builder ' + builderNumber + ' and repairing walls');
 				//console.log('repair ' + repairTargets[disrepair].structureType + ' health: ' + (repairTargets[disrepair].hits/repairTargets[disrepair].hitsMax));
 			    //repairStructure(unit, findWall[wall]);
 			}
@@ -603,7 +550,7 @@
  //Once a unit has a usingSourceId and energy it creates (if needed) and follows the path to the object until it gets within
  //1 unit of the object (0-1 needed to upgrade/repair/build). It then attempts to do these tasks and reports error if there
  //is a problem
- function upgradeRepairBuild(unit, builderNumber)
+ function upgradeRepairBuild(unit)
  {
 	var structure;
 	if(unit.memory.usingSourceId != null)
@@ -624,37 +571,7 @@
 		return(false);
 	}
 
-	if(structure.structureType == STRUCTURE_CONTROLLER)
-	{
-		//If the storage exists. Has energy, and the unit is almost empty. Transfer energy from the storage
-		//The storeEnergy code does unnecessary movements that is hurting my through-put.
-		if(unit.room.controller != null &&
-			unit.room.controller.owner != null &&
-			unit.room.controller.owner.username == 'RaskVann' &&
-			unit.room.controller.level >= 4 &&
-			unit.room.storage != null &&
-			unit.room.storage.store.energy > 0 &&
-			unit.carry.energy/unit.carryCapacity < .2 &&
-			builderNumber <= 0)	//Only allow the first unit this luxury, this locks him into the controller
-		{	//TO DO: Either look around controller for more then 1 builder unit assigned to this controller
-			//		or find another way to make this room independant
-			unit.room.storage.transferEnergy(unit);
-		}
-
-		//var errorController = unit.upgradeController(unit.room.controller);
-		//var errorController = unit.upgradeController(structure);
-		var errorController = upgradeController(unit, builderNumber);
-		if(errorController === 0 || errorController === true)
-		{
-			return(true);
-		}
-		else
-		{
-			delete unit.memory.usingSourceId;
-			//console.log(unit.name + ' can not upgrade controller, code: ' + errorController);
-		}
-	}
-	else if(Math.abs(unit.pos.getRangeTo(structure)) > 3 || unit.carry.energy == 0)	//check for energy should never be reached
+	if(Math.abs(unit.pos.getRangeTo(structure)) > 3 || unit.carry.energy == 0)	//check for energy should never be reached
 	{
 		return(followFlagForward(unit, unit.carry.energy > 0));
 	}
@@ -751,8 +668,6 @@
    }
  }
 
- var builderNumber = 0;
-
  module.exports.units = function (unit)
  {
     if(unit.memory.role == 'builder')
@@ -784,7 +699,7 @@
 		{
 			buildRoad(unit);
 			//Move and attempt to carry out assigned task
-			return(upgradeRepairBuild(unit, builderNumber));
+			return(upgradeRepairBuild(unit));
 		}
 		//Return to controller and refill, once done so then remove usingSourceId so can assign a new object
 		else if(unit.carry.energy <= 0)
@@ -801,7 +716,7 @@
 				unit.room.memory.buildRatio = .01;
 			}
 
-			foundJob = buildClosest(unit, builderNumber);
+			foundJob = buildClosest(unit);
 			if(foundJob)
 			{
 				//console.log(unit.name + ', build source: ' + unit.memory.usingSourceId);
@@ -822,14 +737,14 @@
 				//console.log(unit.name + ' finding my structures');
 			}
 
-			foundJob = repairRamparts(unit, builderNumber, repairTargets);
+			foundJob = repairRamparts(unit, repairTargets);
 			if(foundJob)
 			{
 				//console.log(unit.name + ', repair1 source: ' + unit.memory.usingSourceId);
 				return(true);
 			}
 
-			foundJob = repairWalls(unit, builderNumber);
+			foundJob = repairWalls(unit);
 			if(foundJob)
 			{
 				//console.log(unit.name + ', repair2 source: ' + unit.memory.usingSourceId);

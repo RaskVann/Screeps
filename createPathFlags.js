@@ -1104,3 +1104,16 @@
  {
 	addPathLength(sourceId, addLength, updateRoom);
  }
+
+ module.exports.deleteFlags = function(withId)
+ {
+   //TODO: Check all destination ids, not just the first one.
+    var foundForDeletion = _.filter(Game.flags, function(object) {
+      return(object.memory.usingDestinationId[0] == withId);
+    });
+
+    for(var x in foundForDeletion)
+    {
+      foundForDeletion[x].remove();
+    }
+ }

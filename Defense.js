@@ -1544,7 +1544,6 @@
 	if(((roomNameMem != unit.room.name) || (roomNameMem == null || roomNameMem == 'changeRouteFromDeadEnd')) &&
 		(unit.room.name == usingSourceId || (usingSourceId == null || usingSourceId == 'changeRouteFromDeadEnd')) &&
 		scoutsInAllPreviousRooms)// &&
-		//((Game.cpu.getUsed() < 10 && scoutsSeen == 0) || scoutsSeen != 0) )
 	{
 		//Visited all exits from this room, we need to find another room, hopefully down this path
 		//and go to that room to continue exploring
@@ -1690,7 +1689,7 @@
 			var pathLength = 1;
 			//Only the first scout should be performing the creation of harvesters, gatherers and initial paths
 			//TO DO: Only do if passed in status of all scouts is 'ready'
-			for(var x = 0; scoutsSeen == 0 && x < sources.length && Game.cpu.getUsed() < 10; x++)
+			for(var x = 0; unit.memory.scoutLead == true && x < sources.length && Game.cpu.getUsed() < 10; x++)
 			{
 				//console.log('Scout-Room: ' + currentRoom.name + ' with sources: ' + sources.length + ' cpu: ' + Game.cpu.getUsed());
 				if(harvestIdInList(useSpawn, sources[x].id) ||
@@ -1869,7 +1868,7 @@
 	if(canScoutMove(unit, useSpawn, scoutsSeen))
 	{
 		followFlagForward(unit, true);
-		//console.log(unit.name + ' moving at scoutAlive: ' + useSpawn.memory.scoutsAlive + ' room moved: ' + unit.memory.roomsMoved + ' above ' + scoutsSeen);
+
 		var move = Game.cpu.getUsed() - initialize - scoutInit - searchRoom - newRoom - newSource;
 		if(scoutInit + searchRoom + newRoom + newSource + move > 15)
 		{
@@ -1983,22 +1982,18 @@
 	var nextRoomMove;
 	var scoutsAlive = useSpawn.memory.scoutsAlive;
 	var roomsMoved = unit.memory.roomsMoved;
-	if(scoutsSeen == 0)	//If the leader
+	if(unit.memory.scoutLead == true)	//If the leader
 	{
-		nextRoomMove = scoutsAlive != null && roomsMoved != null && (scoutsAlive-roomsMoved > scoutsSeen);
+		nextRoomMove = scoutsAlive != null && roomsMoved != null && (scoutsAlive-roomsMoved > 0);
 	}
 	else
 	{
-		nextRoomMove = scoutsAlive != null && roomsMoved != null && (scoutsAlive-roomsMoved > scoutsSeen+1);
+		nextRoomMove = scoutsAlive != null && roomsMoved != null && (scoutsAlive-roomsMoved > scoutsSeen+1);//Linear room distance to spawn?
 	}
-	//if((edgeOfMap || (harvestEmptyAndRoomUpdated && nextRoomMove)) == false)
-		//console.log(unit.name + '[' + scoutsSeen + '] room: ' + unit.room.name + ', scouts>Seen: ' + (scoutsAlive-roomsMoved) + '>' + scoutsSeen + '=' + ((scoutsAlive-roomsMoved)>scoutsSeen));
 	//TO DO: Fix, should have 1 unit behind(unless at spawn) but don't want to move to next room if the unit ahead hasn't made it out yet (unless its lead)
 	//Possibly move if more then 1 unit in the room, failing that move if have unit in previous room (unless in spawn, just move)
 	//nextRoomMove = scoutInPreviousRoom(unit);	//Move if can find a scout in the room this unit just came from (or just spawned)
 
-	//if((edgeOfMap || (harvestEmptyAndRoomUpdated && nextRoomMove)) == false)
-		//console.log(unit.name + '[' + scoutsSeen + '] harvest: ' + harvestEmptyAndRoomUpdated + ' nextRoom: ' + nextRoomMove + '=' + (edgeOfMap || (harvestEmptyAndRoomUpdated && nextRoomMove)));
 	return(edgeOfMap || (harvestEmptyAndRoomUpdated && nextRoomMove));
  }
 
@@ -2709,11 +2704,10 @@ module.exports.tower = function(nextRoom, enemyInSpawn)
 		//tower.repair()
 
 		//Level 3-5: 1 Tower, Level 6-7: 2 Towers, Level 8: 4 Towers
-		var towers = nextRoom.find(FIND_MY_STRUCTURES, {
-			filter: function(object) {
-				return(object.structureType == STRUCTURE_TOWER && object.energy >= 10);
-			}
-		});
+    var towers = _.filter(Game.structures, function(object) {
+      return(object.room.name == nextRoom.name &&
+            object.structureType == STRUCTURE_TOWER);
+    });
 
 		if(towers.length > 0)
 		{
@@ -2741,32 +2735,41 @@ module.exports.tower = function(nextRoom, enemyInSpawn)
 				//		return(object.hits < object.hitsMax && object.hits < object.hitsMax*buildRatio);
 				//	}
 				//});
+        //Finds walls which is the main problem here
+        var findMyStructure = _.filter(Game.structures, function(object) {
+          return(object.room.name == nextRoom.name &&
+            object.hits < object.hitsMax &&
+            object.hits < object.hitsMax*buildRatio);
+        });
+        //TODO: If this is time consuming place it inside the if statement below and move the outside
+        //else if just below it as well so we only do a find if findMyStructure fails and then this next
+        //find fails as well we go ahead and up the build ratio.
 				var findStructure = towers[0].room.find(FIND_STRUCTURES, {
 					filter: function(object) {
-						return(object.hits < object.hitsMax && object.hits < object.hitsMax*buildRatio && object.structureType != STRUCTURE_ROAD);
+						return(object.room.name == nextRoom.name &&
+              object.hits < object.hitsMax &&
+              object.hits < object.hitsMax*buildRatio &&
+              (object.structureType == STRUCTURE_CONTAINER || object.structureType == STRUCTURE_WALL));
 					}
 				});
 
-				if(findStructure.length > 0)
+				if(findStructure.length > 0 || findMyStructure.length > 0)
 				{
-					repairThis = _.min(findStructure, 'hits');
-					//var findRampart = towers[0].room.find(FIND_MY_STRUCTURES, {
-					//	filter: function(object) {
-					//		return(object.hits < repairThis.hits && object.hits < object.hitsMax && object.structureType != STRUCTURE_ROAD);
-					//	}
-					//});
-					//if(findRampart.length > 0)
-					//	repairThis = _.min(findRampart, 'hits');
+          if(findMyStructure.length > 0)
+          {
+            repairThis = _.min(findMyStructure, 'hits');
+          }
+          else if(findStructure > 0)
+          {
+            repairThis = _.min(findStructure, 'hits');
+          }
 
-					//repairThis = _.min(findStructure, function(str) {
-					//	return str.hits;
-					//});
 					var repairCode;
 
 					for(var tow in towers)
 					{
 						//Keep some amount of energy in the towers for offence if needed.
-						if(towers[tow].energy > 100)
+						if(towers[tow].energy > (TOWER_CAPACITY * .5))
 						{
 							repairCode = towers[tow].repair(repairThis);
 							//console.log('Tower[' + towers[tow].id + '] repair code: ' + repairCode + ', repairing: ' + repairThis);
@@ -2940,33 +2943,51 @@ module.exports.attack = function(unit, attackersSeen)
 	}
 	return(false);	//one of the checks we need haven't been made yet.
  }
-var scoutsSeen = 0; //TODO : Update this to pull from room information. see getRoleCount() in spawner
+var scoutsSeen = 1; //TODO : Update this to pull from room information. see getRoleCount() in spawner
 module.exports.scout = function(unit, previousScoutState)
 {
-	if(unit.memory.role == 'scout' && !unit.spawning)
-	{
-		var initialize = Game.cpu.getUsed();
-		var pastState = scout(unit, scoutsSeen, previousScoutState);
-		trackScoutReadiness(unit, pastState);
-		var scoutTime = Game.cpu.getUsed() - initialize;
-		//If we have plenty of cpu time left, create memory for units to go to this room
-		if(Game.cpu.getUsed() < 10)
-		{
-			createMemoryNew(unit);
-		}
-		var memoryTime = Game.cpu.getUsed() - initialize - scoutTime;
-		//Spawn a route if this unit is in a room we have a pending route to be created (and it doesn't already exist)
-		if(isScoutRouteEmpty() == false)
-		{
-			createPreviousExit(unit);
-		}
-		var createExit = Game.cpu.getUsed() - initialize - scoutTime - memoryTime;
-		if(scoutTime + memoryTime + createExit > 15)
-		{
-			//console.log(unit.name + ' scout: ' + scoutTime + ' memory: ' + memoryTime + ' create: ' + createExit);
-			//Game.notify(unit.name + ' scout: ' + scoutTime + ' memory: ' + memoryTime + ' create: ' + createExit, 480);
-		}
-		return(pastState);
-	}
+  if(unit.memory.role == 'scout')
+  {
+    //Clean up and setup from either the creep first spawning, or coming from a past life.
+    if(unit.spawning == true)
+    {
+      //Delete previous data from the past life.
+      if(unit.memory.scoutLead != null)
+      {
+        delete unit.memory.scoutLead;
+      }
+      //Can reference this from spawn.room.memory.scoutLeadId later
+      if(unit.room.memory.scoutLeadId == null)
+      {
+          unit.room.memory.scoutLeadId = unit.id;
+          unit.memory.scoutLead = true;
+      }
+      else
+      {
+        unit.memory.scoutLead = false;
+      }
+      //TODO : Cleanup scoutLeadId from past lives? This needs to be taken care of as soon as he dies through
+      //so we'll need to clean up or fix some other way.
+    }
+  	else if(!unit.spawning)
+  	{
+  		var pastState = scout(unit, previousScoutState);
+  		trackScoutReadiness(unit, pastState);
+
+  		//If we have plenty of cpu time left, create memory for units to go to this room
+  		if(Game.cpu.getUsed() < 10)
+  		{
+  			createMemoryNew(unit);
+  		}
+
+  		//Spawn a route if this unit is in a room we have a pending route to be created (and it doesn't already exist)
+  		if(isScoutRouteEmpty() == false)
+  		{
+  			createPreviousExit(unit);
+  		}
+
+  		return(pastState);
+  	}
+  }
 	return(null);
 }
