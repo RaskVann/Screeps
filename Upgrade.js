@@ -23,7 +23,9 @@ function upgradeController(unit, controllerStructure)
    {
      unit.memory.task = 'energy';
    }
-   return(false);
+   return(true);
+ }
+ return(false);
 }
 
 function filterStructure(unit, structureType)
@@ -241,8 +243,8 @@ function upgrade(unit)
 //TO DO: Need to decrease number of builders since no longer responsible for upgrading
 module.exports.controller = function (unit)
 {
-   if(unit != null && unit.memory.role == 'upgrade')
-   {
+  if(unit != null && unit.memory.role == 'upgrade')
+  {
    //The direction the unit is moving depends on its position, which changes between death
    //and respawn so we clean up the direction when spawning so it can go the right direction.
    if(unit.spawning == true)
