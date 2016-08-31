@@ -1271,7 +1271,7 @@
 	//or
 	//Skip over gatherers if we can't find a live worker at this source already
 	if(role == 'gather' &&
-		(harvestersSeen <= 0 ||
+		(harvestersSeen <= roomSource ||//harvestersSeen <= 0
 		(Memory.creeps[name] != null && Memory.creeps[name].usingSourceId != null && quickestUnitToDie('worker', Memory.creeps[name].usingSourceId) == null)))
 	{
 		moveRespawnToEnd(spawner);
@@ -1303,7 +1303,11 @@
 			//(Math.min(harvestersSeen*seenMod, gatherersSeen*seenMod) <= buildersSeen+1))
 	{
     //seenMod *= 0.74626865671641791044776119402985;
-    if(Math.min(harvestersSeen, gatherersSeen) <= buildersSeen)
+    //Skip if we don't have harvesters at all of the sources,
+    //Skip if we don't have at least one gather going
+    //SKip if we don't think we have enough production going to support the builder
+    if(harvestersSeen <= roomSource || gatherersSeen < 1 ||
+      Math.min(harvestersSeen, gatherersSeen) <= buildersSeen)
     {
       moveRespawnToEnd(spawner);
       //console.log('adding ' + name + ' to end of respawn list. Construction sites need building.');
@@ -1550,13 +1554,6 @@
         name = retrieveNameNew(spawner, role);
         body = retrieveBody(role, spawner);
     }
-	//Independent of all other checks in spawnNextInQueue logic, recieves body as a conveniance
-	//to better calculate time more then anything else. If this fails however any work we were
-	//doing in spawnNextInQueue will be stopped and tried again next tick.
-	else if(checkSkipUnit(spawner, body))
-	{
-		return(false);
-	}
 
 	var canCreateUnit;
 	if(name == null)
@@ -1694,6 +1691,16 @@
 	}
 	else
 	{
+    //WARNING: running functions that write to this list several times a tick seems to produce duplicates and missing
+    //        entries within the spawn memory. checkSkipUnit, moveRespawnToEnd and potentially others all do this. So skip only
+    //        runs when spawns fail or don't run for whatever reason to remove this issue.
+    //Independent of all other checks in spawnNextInQueue logic, recieves body as a conveniance
+  	//to better calculate time more then anything else. If this fails however any work we were
+  	//doing in spawnNextInQueue will be stopped and tried again next tick.
+  	if(checkSkipUnit(spawner, body))
+  	{
+  		//return(false);
+  	}
 		//console.log('next unit: ' + name + ' isnt spawning, body ' + body);
 	}
 	return(false);

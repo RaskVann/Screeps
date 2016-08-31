@@ -21,39 +21,9 @@ function upgradeController(unit, controllerStructure)
    }
    else
    {
-     //TO DO:Use needEnergy instead?
-     //Get energy back from auxillary sources
-     if(controllerStructure.level >= 4)
-     {
-       //TO DO: Could have a storage to pull from
-     }
-     if(controllerStructure.level >= 5)
-     {
-       //TO DO: Could have links to pull from
-     }
-     if(controllerStructure.level >= 6)
-     {
-       //TO DO: Could have Rampart to pull from
-     }
-     if(controllerStructure.level >= 7)
-     {
-       //TO DO: Could have links to pull from
-     }
-     else
-     {
-       //Otherwise only have containers to pull from, if one exists.
-     }
-
-     //TO DO: Assumes always have some kind of structure to pull from starting at level 3
-     //TO DO: Will error if storage or whatever else we are depending on doesn't exist.
-     if(controllerStructure.pos.getRangeTo(unit.pos) > 1 || controllerStructure.level < 3)
-     {
-        followFlagForward(unit, _.sum(unit.carry) > 0);
-     }
+     unit.memory.task = 'energy';
    }
-   return(true);
- }
- return(false);
+   return(false);
 }
 
 function filterStructure(unit, structureType)
@@ -100,8 +70,39 @@ function findSpawn(unit)
 
 function needEnergy(unit)
 {
-   if(_.sum(unit.carry) == 0)
+  if(_.sum(unit.carry) == 0)
  {
+   //If was sleeping
+   if(unit.memory.task == 'sleep')
+   {
+     //Periodically check if we have enough energy to continue upgrading
+     if(Game.time % 10 == 0 && unit.room.energyAvailable > 200)
+     {
+       unit.memory.task = 'energy';
+       unit.say("I'M AWAKE", true);
+     }
+     return(false);
+   }
+   else if(unit.memory.task == 'energy')
+   {
+     if(unit.room.energyAvailable > 200)  //unit.room.energyAvailable > unit.room.energyCapacityAvailable*.5
+     {
+       //Go get energy below
+     }
+     else
+     {
+       unit.memory.task = 'sleep';
+       unit.say('ZzzZzz', true);
+       return(false);
+     }
+   }
+   else//Don't recognize this task, code in new one.
+   {
+     console.log('Upgrade ' + unit.name + ' doesnt recognize : ' + unit.memory.task);
+     unit.say('What was I doing?');
+     return(false);
+   }
+
    var useSavedSpawn = findSpawn(unit);
 
    //If it's possible for links to be in this room, look for them within reach
@@ -124,7 +125,8 @@ function needEnergy(unit)
              findLinks[i].cooldown == 0 &&
              findLinks[i].transferEnergy(unit, RESOURCE_ENERGY) == 0)
            {
-             unit.memory.usingSourceId = null;	//Reset, ready for new source
+             unit.memory.task = 'upgrade';
+             //unit.memory.usingSourceId = null;	//Reset, ready for new source
              return(true);	//Don't look for anything else, we got some energy
              break;
            }
@@ -145,6 +147,7 @@ function needEnergy(unit)
            findStorage.store.energy > 0 &&
            findStorage.transferEnergy(unit, RESOURCE_ENERGY) == 0)
          {
+           unit.memory.task = 'upgrade';
            return(true);	//Don't look for anything else, we got some energy
          }
          else if(findStorage.store.energy > 0)
@@ -160,7 +163,8 @@ function needEnergy(unit)
          {
            if(useSavedSpawn.transferEnergy(unit, RESOURCE_ENERGY) == 0)
            {
-             unit.memory.usingSourceId = null;	//Reset, ready for new source
+             unit.memory.task = 'upgrade';
+             //unit.memory.usingSourceId = null;	//Reset, ready for new source
              return(true);	//Don't look for anything else, we got some energy
            }
 
@@ -186,13 +190,17 @@ function needEnergy(unit)
      {
        followFlagForward(unit, _.sum(unit.carry) > 0);
        if(unit.withdraw(useSavedSpawn, RESOURCE_ENERGY) == 0)
+       {
+         unit.memory.task = 'upgrade';
          return(true);
+       }
      }
 
      //While we're returning check for nearby energy and pick it up if found
      var target = unit.pos.findInRange(FIND_DROPPED_ENERGY, 1);
      if(target.length > 0)
      {
+       unit.memory.task = 'upgrade';
        unit.pickup(target[0]);
        return(true);
      }
@@ -250,21 +258,25 @@ module.exports.controller = function (unit)
      {
        unit.memory.usingSourceId = unit.room.controller.id;
      }
+     unit.memory.task = 'energy';
    }
+   var task = unit.memory.task;
 
-   if(unit.memory.usingSourceId != null && _.sum(unit.carry) > 0)
+   if(task == 'upgrade')
+   //if(unit.memory.usingSourceId != null && _.sum(unit.carry) > 0)
    {
      //Move and attempt to carry out assigned task
      return(upgrade(unit));
    }
    //Return to controller and refill, once done so then remove usingSourceId so can assign a new object
-   else if(_.sum(unit.carry) <= 0)
-    {
+   if(task == 'energy' || task == 'sleep')
+   //else if(_.sum(unit.carry) <= 0)
+   {
      return(needEnergy(unit));
    }
    else
    {
-       unit.say(unit.memory.usingSourceId);
+       unit.say(unit.memory.usingSourceId + ' task: ' + task);
    }
  }
  else

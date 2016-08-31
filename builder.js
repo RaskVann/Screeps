@@ -283,7 +283,8 @@
 	{
 		//Find closest building site that isn't a road. Roads will take care of themselves
     tempConst = _.filter(Game.constructionSites, function(object) {
-      return(object.structureType != STRUCTURE_ROAD);
+      return(object.room.name == unit.room.name &&
+            object.structureType != STRUCTURE_ROAD);
     });
     tempConst = _.sortBy(tempConst, function(object) {
       return(unit.pos.getRangeTo(object.pos));
@@ -327,7 +328,7 @@
         //Go ahead and remove all instances of it, including path to this area.
         if(buildError == ERR_INVALID_TARGET)
         {
-          console.log(unit.name + ' has completed ' + tempConst.progress + ' with code ' + buildError + ' should have deleted flags');
+          console.log(unit.name + ' has completed with code ' + buildError + ' should have deleted flags');
           followFlagForward.deleteFlags(unit.memory.usingSourceId);
           delete unit.memory.direction;
       		delete unit.memory.usingSourceId;
@@ -501,12 +502,12 @@
 		var findConstruction = unit.pos.lookFor('constructionSite');
 		if(findConstruction != null)
 		{
-			if(unit.carry.energy > 0 && findConstruction[0] != null &&
+			if(unit.carry.energy > 0 && findConstruction != null && findConstruction[0] != null &&
 				unit.build(findConstruction[0]) == 0)
 			{
 				return(true);
 			}
-			else if(findConstruction[0] != null)
+			else if(findConstruction != null && findConstruction[0] != null)
 			{
 				console.log(unit.name + ' failed building road? ' + findConstruction[0] + ' in room ' + unit.room.name + ' with energy ' + unit.carry.energy);
 				return(false);
@@ -729,11 +730,6 @@
           return(unit.room.name == object.room.name &&
                 object.hits < object.hitsMax);
         });
-				//repairTargets = unit.room.find(FIND_MY_STRUCTURES, {
-				//	filter: function(object) {
-				//		return(object.hits < object.hitsMax);
-				//	}
-				//}); //no walls or roads
 				//console.log(unit.name + ' finding my structures');
 			}
 
@@ -750,6 +746,14 @@
 				//console.log(unit.name + ', repair2 source: ' + unit.memory.usingSourceId);
 				return(true);
 			}
+      else if(repairTargets == null || (repairTargets != null && repairTargets.length == 0))
+      {
+        //If got through the construction function (no construction exists outside of roads)
+        //and not only can we not find repair sites, but none exist (everything is full)
+        //Remove this unit, it can only get in the way of the gathers.
+        unit.say('My work is done', true);
+        unit.suicide();
+      }
 
 			if(repairTargets.length > 0 && unit.room.memory.buildRatio < 1)
 			{
