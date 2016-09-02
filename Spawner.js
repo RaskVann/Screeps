@@ -1324,6 +1324,7 @@
       var totalRepairSites = _.filter(Game.structures, function(object) {
         return(object.hits < (object.hitsMax*.9));
       });
+
       //If don't find repairs needed either, then go ahead and skip this unit
       if(totalRepairSites == null || (totalRepairSites != null && totalRepairSites.length == 0))
       {
@@ -1332,6 +1333,7 @@
         return(true);
       }
 		}
+
 	}
 	else if(role != null && role.startsWith('claim'))
 	{
@@ -1525,35 +1527,51 @@
 
  function spawnNextInQueue(spawner, chosenSpawn)
  {
-   updateRoleCounters(spawner);
+  updateRoleCounters(spawner);
+  var name;
+  var body;
+  var role;
 
-	//Look at respawn list and check if needs to spawn new unit from the dead
-    var name = findDeadUnitName(spawner);
-    var body = findDeadUnitBody(spawner, name);
-    var role = null;
+  //If found attackers replace anything that might be going on by creating a 'defend' unit, no name, attack body
+  if(spawner.room.memory.requestDefender > 0)
+  {
+    if(checkForEnemies() == true)
+    {
+      name = null;
+      body = retrieveBody('defend', spawner);
+      role = 'defend';
+    }
+    else	//Either enemy is gone or we have at least that many allies addressing them
+    {
+      spawner.room.memory.requestDefender = 0;
+    }
+  }
+  else//Otherwise, Try to spawn a new unit
+  {
+    role = findNextRole(spawner);
+    name = retrieveNameNew(spawner, role);
+    body = retrieveBody(role, spawner);
+  }
 
-    //If found attackers (this requires attack units, since they hold the code that watches)
-    //replace anything that might be going on by creating a 'defend' unit, no name, attack body
-    if(spawner.room.memory.requestDefender > 0)
+  //If we don't find a new unit to spawn, try to spawn from the existing respawn list.
+  if(role == null || body == null)
+  {
+    //WARNING: running functions that write to this list several times a tick seems to produce duplicates and missing
+    //        entries within the spawn memory. checkSkipUnit, moveRespawnToEnd and potentially others all do this. So skip only
+    //        runs when spawns fail or don't run for whatever reason to remove this issue.
+    //Independent of all other checks in spawnNextInQueue logic. If this fails however any work we were
+    //doing in spawnNextInQueue will be stopped and tried again next tick.
+    if(checkSkipUnit(spawner, body))
     {
-    	if(checkForEnemies() == true)
-    	{
-    		name = null;
-    		body = retrieveBody('defend', spawner);
-    		role = 'defend';
-    	}
-    	else	//Either enemy is gone or we have at least that many allies addressing them
-    	{
-    		spawner.room.memory.requestDefender = 0;
-    	}
+      return(false);
     }
-    //If no found dead units need to respawn, attempt to spawn new unit
-    else if(name == null)
+    else//Otherwise, Look at respawn list and check if needs to respawn previous unit
     {
-        role = findNextRole(spawner);
-        name = retrieveNameNew(spawner, role);
-        body = retrieveBody(role, spawner);
+      name = findDeadUnitName(spawner);
+      body = findDeadUnitBody(spawner, name);
+      role = null;
     }
+  }
 
 	var canCreateUnit;
 	if(name == null)
@@ -1691,16 +1709,6 @@
 	}
 	else
 	{
-    //WARNING: running functions that write to this list several times a tick seems to produce duplicates and missing
-    //        entries within the spawn memory. checkSkipUnit, moveRespawnToEnd and potentially others all do this. So skip only
-    //        runs when spawns fail or don't run for whatever reason to remove this issue.
-    //Independent of all other checks in spawnNextInQueue logic, recieves body as a conveniance
-  	//to better calculate time more then anything else. If this fails however any work we were
-  	//doing in spawnNextInQueue will be stopped and tried again next tick.
-  	if(checkSkipUnit(spawner, body))
-  	{
-  		//return(false);
-  	}
 		//console.log('next unit: ' + name + ' isnt spawning, body ' + body);
 	}
 	return(false);

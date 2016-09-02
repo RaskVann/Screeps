@@ -81,7 +81,11 @@ function needEnergy(unit)
      if(Game.time % 10 == 0 && unit.room.energyAvailable > 200)
      {
        unit.memory.task = 'energy';
-       unit.say("I'M AWAKE", true);
+       unit.say("\u2757", true);
+     }
+     else if(Game.time % 3 == 0)
+     {
+       unit.say("\uD83D\uDCA4", true);
      }
      return(false);
    }
@@ -94,7 +98,7 @@ function needEnergy(unit)
      else
      {
        unit.memory.task = 'sleep';
-       unit.say('ZzzZzz', true);
+       unit.say('\uD83D\uDCA4', true);
        return(false);
      }
    }

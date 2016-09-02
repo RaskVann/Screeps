@@ -676,14 +676,7 @@
 		//Right before death this unit should clear out that it is/was working
 		//on usingSourceId that way later builders can be assigned to this object
 		//since this unit can't work on it in death
-		if(unit.ticksToLive <= 2)
-		{
-			delete unit.memory.usingSourceId;
-			delete unit.memory.direction;
-			unit.suicide();
-			return('death');
-		}
-		else if(unit.spawning == true)
+		if(unit.spawning == true)
 		{
 			//Unit was upgraded or died before it's end of life, clean up for re-assignment.
 			if(unit.memory.usingSourceId != null)
@@ -705,7 +698,13 @@
 		//Return to controller and refill, once done so then remove usingSourceId so can assign a new object
 		else if(unit.carry.energy <= 0)
 		{
-			return(needEnergy(unit));
+      if(unit.room.energyAvailable > 200)
+			   return(needEnergy(unit));
+      else
+      {
+        unit.say("\uD83D\uDCA4", true);
+        return(false);
+      }
 		}
 		//Find a new object to upgrade/repair/build
 		else	//unit.memory.SourceId == null && unit.carry.energy > 0

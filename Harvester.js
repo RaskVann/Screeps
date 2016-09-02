@@ -620,19 +620,19 @@
 
  function lazyHarvest(unit)
  {
-		if(unit.memory.task == 'lazy')
+	if(unit.memory.task == 'lazy')
+	{
+		var activeSource = retrieveSource(unit);
+		//TO DO: This will spawn attackers endlessly for as long as the unit survives. Spawn 1 needed unit and that's it.
+		if(unit.hits < unit.hitsMax)
 		{
-			var activeSource = retrieveSource(unit);
-  		//TO DO: This will spawn attackers endlessly for as long as the unit survives. Spawn 1 needed unit and that's it.
-  		if(unit.hits < unit.hitsMax)
-  		{
-  			var spawner = require('Spawner');
-  			spawner.createTempCreep('attack', {'role': 'attack', 'usingSourceId': activeSource.room.name, 'spawnId': unit.memory.spawnId}, activeSource.room.name);
-  		}
+			var spawner = require('Spawner');
+			spawner.createTempCreep('attack', {'role': 'attack', 'usingSourceId': activeSource.room.name, 'spawnId': unit.memory.spawnId}, activeSource.room.name);
+		}
 
 		//If we've capped out on energy, look around for a gather to drop off on and transfer
-				if(unit.carry.energy == unit.carryCapacity || unit.carryCapacity == 0)
-				{
+		if(unit.carry.energy == unit.carryCapacity || unit.carryCapacity == 0)
+		{
 			var neighbors;
 			//TO DO: Once we completely seperate gathers from spawning if harvesters have links we may
 			//want to change the below neighbors == null check into an else that way only 1 possible search
@@ -652,33 +652,7 @@
 					neighbors = findLinks;	//Disable transfer to gather, already sent to link, can't do 2+ at once
 				}
 			}
-
-			//If we don't find any links, populate with any gathers in range
-			if(neighbors == null || neighbors.length <= 0)
-			{
-				neighbors = _.filter(Game.creeps, function(object) {
-					return(unit.room.name == object.room.name &&
-								unit.name != object.name &&
-								unit.pos.inRangeTo(object.pos, 1) &&
-								object.carry.energy < object.carryCapacity && object.memory != null && object.memory.role == 'gather');
-				});
-				//neighbors = unit.pos.findInRange(FIND_MY_CREEPS, 1, {
-				//	filter: function(object) {
-				//		return(object.carry.energy < object.carryCapacity && object.memory != null && object.memory.role == 'gather');
-				//	}
-				//});
-
-				//Try to transfer to anything in range from lists populated above
-				if(neighbors.length)
-				{
-					for(var i in neighbors)
-					{
-						if(unit.transfer(neighbors[i], RESOURCE_ENERGY) == 0)
-							break;
-					}
-				}
-			}
-				}
+		}
 		else
 		{
 			//In preparation for having links by the harvesters, sooner or later we're going to drop energy
@@ -692,20 +666,21 @@
 		//Harvest by finding based on ID if activeSource == null
 		if(activeSource == null)
 		{
-				activeSource = Game.getObjectById(unit.memory.usingSourceId);
+			activeSource = Game.getObjectById(unit.memory.usingSourceId);
 		}
 		//If can't harvest, assume need to become worker to get back to the spot.
 		//ERR_INVALID_TARGET happens when targeting a source not in this room
 		var harvestCode = unit.harvest(activeSource);
-				if(harvestCode == ERR_NOT_IN_RANGE || harvestCode == ERR_INVALID_TARGET)
-				{
-						unit.memory.task = 'worker';
-				}
+		if(harvestCode == ERR_NOT_IN_RANGE || harvestCode == ERR_INVALID_TARGET)
+		{
+			unit.memory.task = 'worker';
+		}
 		else if(harvestCode < 0 && harvestCode != ERR_BUSY && harvestCode != ERR_NOT_ENOUGH_RESOURCES)
 		{
 			console.log(unit.name + ' can not harvest, harvest error code: ' + harvestCode);
 		}
-		}
+		unit.say('\u2692');
+	}
  }
 
  function creepAtDirection(unit)
@@ -1304,7 +1279,8 @@
 	}
 	else if(returnResources != null)
 	{
-			fillUpRoomWithEnergy(unit, returnResources);
+		unit.say('\u26A1');
+		fillUpRoomWithEnergy(unit, returnResources);
 	}
 
 	if(unitEnergy < unitEnergyCapacity)
@@ -1626,31 +1602,31 @@ module.exports.link = function(nextRoom)
 
 module.exports.work = function(unit)
 {
-  if(unit.memory.role == 'worker' || unit.memory.role == 'lazy')
-  {
-    //If just newly created, or respawning again, clean up so the worker will go to its source when it's ready
-    if(unit.memory.task == null || unit.spawning == true)
-    {
-      unit.memory.role = 'worker';//Shouldn't be needed, just for the initial transition when I was origionally testing
-      unit.memory.task = 'worker';
-    }
-	   //TO DO: Refill builders from harvesters. Possible new unit role.
+	if(unit.memory.role == 'worker' || unit.memory.role == 'lazy')
+	{
+		//If just newly created, or respawning again, clean up so the worker will go to its source when it's ready
+		if(unit.memory.task == null || unit.spawning == true)
+		{
+		  unit.memory.role = 'worker';//Shouldn't be needed, just for the initial transition when I was origionally testing
+		  unit.memory.task = 'worker';
+		}
+		//TO DO: Refill builders from harvesters. Possible new unit role.
 		if(unit.memory.task == 'worker')
 		{
-				if(Object.keys(Game.creeps).length < 2)
-				{
-						autoWorker(unit);							//Sends blindly to selected source (don't leave it on this mode)
-				}
-				else
-				{
-						lazyWorkerFindSource(unit);		//Switch to lazyWorker when the initial 2-3 harvesters are up.
-				}
+			if(Object.keys(Game.creeps).length < 2)
+			{
+				autoWorker(unit);							//Sends blindly to selected source (don't leave it on this mode)
+			}
+			else
+			{
+				lazyWorkerFindSource(unit);		//Switch to lazyWorker when the initial 2-3 harvesters are up.
+			}
 		}
 		else if(unit.memory.task == 'lazy')
 		{
-				lazyHarvest(unit);
+			lazyHarvest(unit);
 		}
-  }
+	}
 }
 
 module.exports.gather = function(unit)
